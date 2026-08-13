@@ -1,0 +1,69 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Local caches and tooling
+.cache/
+.idea/
+.vscode/
+*.iml
+
+# Local API clients
+.postman/
+postman/
+
+# Local AI coding-agent instructions
+AGENTS.md
+**/AGENTS.md
+PLAN.md
+**/PLAN.md
+PROJECT_OVERVIEW.md
+**/PROJECT_OVERVIEW.md
+
+# Java / Maven
+backend/target/
+
+# Node / Expo
+app/node_modules/
+app/.expo/
+app/.expo-shared/
+app/android/
+app/ios/
+app/coverage/
+app/expo-env.d.ts
+
+# Python / uv
+ai/.venv/
+ai/.pytest_cache/
+ai/.ruff_cache/
+ai/.mypy_cache/
+ai/**/__pycache__/
+ai/**/*.py[cod]
+ai/coverage.xml
+ai/.coverage
+
+# AI data and generated artifacts
+ai/datasets/*
+!ai/datasets/README.md
+ai/training/*
+!ai/training/README.md
+ai/models/
+ai/checkpoints/
+ai/artifacts/
+ai/outputs/
+ai/**/*.bin
+ai/**/*.ckpt
+ai/**/*.gguf
+ai/**/*.onnx
+ai/**/*.pt
+ai/**/*.pth
+ai/**/*.safetensors
+
+# Generated and local data
+docker/data/
+*.log
+
+# Native service configuration
+app/google-services.json
+app/GoogleService-Info.plist

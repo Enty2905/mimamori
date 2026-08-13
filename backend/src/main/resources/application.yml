@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: mimamori-backend
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  quartz:
+    job-store-type: jdbc
+    auto-startup: false
+    jdbc:
+      initialize-schema: never
+  ai:
+    model:
+      chat: ${SPRING_AI_MODEL_CHAT:none}
+
+server:
+  port: ${SERVER_PORT:8080}
