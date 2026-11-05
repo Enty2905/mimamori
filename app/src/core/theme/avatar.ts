@@ -1,0 +1,46 @@
+export const AVATAR_PRESETS = [
+  {
+    id: 'watering',
+    label: 'Cụ bà làm vườn',
+    desc: 'Hình cụ bà tưới hoa',
+    source: require('../../../assets/images/hero-senior-watering.jpg'),
+  },
+  {
+    id: 'grandfather',
+    label: 'Cụ ông phúc hậu',
+    desc: 'Hình cụ ông cười ấm áp',
+    source: { uri: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80' },
+  },
+  {
+    id: 'grandmother',
+    label: 'Cụ bà hiền từ',
+    desc: 'Hình cụ bà phúc hậu',
+    source: { uri: 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?auto=format&fit=crop&w=400&q=80' },
+  },
+  {
+    id: 'leaf',
+    label: 'Lá Mimamori AI',
+    desc: 'Biểu tượng thương hiệu',
+    source: require('../../../assets/images/mimamori-leaf-icon.png'),
+  },
+];
+
+export const getAvatarSource = (avatarUrl?: string | null) => {
+  if (!avatarUrl || avatarUrl === 'watering') {
+    return require('../../../assets/images/hero-senior-watering.jpg');
+  }
+  if (avatarUrl === 'leaf') {
+    return require('../../../assets/images/mimamori-leaf-icon.png');
+  }
+  if (avatarUrl === 'grandfather') {
+    return { uri: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80' };
+  }
+  if (avatarUrl === 'grandmother') {
+    return { uri: 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?auto=format&fit=crop&w=400&q=80' };
+  }
+  if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
+    return { uri: avatarUrl };
+  }
+  return require('../../../assets/images/hero-senior-watering.jpg');
+};
+
