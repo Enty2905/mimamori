@@ -3,7 +3,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Mimamori AI',
-  slug: 'mimamori-ai',
+  slug: 'mimamori',
   version: '0.1.0',
   orientation: 'portrait',
   platforms: ['android', 'ios'],
@@ -34,9 +34,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#208AEF',
+        backgroundColor: '#F8F5EF',
         image: './assets/images/splash-icon.png',
-        imageWidth: 76,
+        imageWidth: 120,
       },
     ],
   ],
