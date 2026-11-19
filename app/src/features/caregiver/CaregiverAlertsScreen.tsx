@@ -53,7 +53,8 @@ const formatFullDateVi = (iso?: string | null): string => {
   const dd = String(parsed.getDate()).padStart(2, '0');
   const mm = String(parsed.getMonth() + 1).padStart(2, '0');
   const yyyy = parsed.getFullYear();
-  return `${formatDateDisplayVi(parsed)} (${dd}/${mm}/${yyyy})`;
+  const relativePart = formatDateDisplayVi(parsed).split(' • ')[0];
+  return `${relativePart} • ${dd}/${mm}/${yyyy}`;
 };
 
 export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
@@ -282,7 +283,7 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
       },
       {
         key: 'HIGH',
-        label: 'Mức độ cao',
+        label: 'Mức cao',
         count: summaryCounts.HIGH,
         bg: colors.warning,
         border: colors.warningBorder,
@@ -326,6 +327,8 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
                 <Text
                   style={[styles.summaryCount, { color: card.text, fontSize: fs(20) }]}
                   numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
                 >
                   {card.count}
                 </Text>
@@ -333,6 +336,8 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
               <Text
                 style={[styles.summaryLabel, { color: card.text, fontSize: fs(11.5) }]}
                 numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
               >
                 {card.label}
               </Text>
@@ -368,6 +373,7 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
                 { fontSize: fs(12.5) },
                 isActive && styles.filterChipTextActive,
               ]}
+              numberOfLines={1}
             >
               {chip.label} ({count})
             </Text>
@@ -413,16 +419,33 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
         </View>
 
         {/* Row 2: Alert Title */}
-        <Text style={[styles.cardTitle, { fontSize: fs(16) }]}>{alertTitle}</Text>
+        <Text
+          style={[
+            styles.cardTitle,
+            { fontSize: fs(16), lineHeight: Math.round(fs(16) * 1.35) },
+          ]}
+        >
+          {alertTitle}
+        </Text>
 
         {/* Row 3: Description */}
-        <Text style={[styles.cardDesc, { fontSize: fs(13.5) }]}>
+        <Text
+          style={[
+            styles.cardDesc,
+            { fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.42) },
+          ]}
+        >
           {formatConciseAlertDescription(item.description, elderlyLabel)}
         </Text>
 
         {/* Row 4: Metadata */}
         <View style={styles.cardMetaRow}>
-          <Text style={[styles.cardMetaText, { fontSize: fs(12) }]}>
+          <Text
+            style={[
+              styles.cardMetaText,
+              { fontSize: fs(12), lineHeight: Math.round(fs(12) * 1.4) },
+            ]}
+          >
             {selectedElderlyId !== null
               ? `Loại: ${typeLabel} · ${resolved ? 'Đã xử lý' : 'Chưa xử lý'}`
               : `Người liên quan: ${elderlyLabel} • Loại: ${typeLabel} · ${
@@ -474,7 +497,7 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
                 style={[styles.resolvedPillText, { fontSize: fs(12) }]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.85}
+                minimumFontScale={0.78}
               >
                 {item.resolvedAt
                   ? `Đã xử lý • ${formatTimeHHMM(item.resolvedAt)}`
@@ -543,7 +566,12 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
                 <Feather name="shield" size={28} color={colors.successText} />
               </View>
               <Text style={[styles.emptyTitle, { fontSize: fs(18) }]}>Mọi thứ đang ổn</Text>
-              <Text style={[styles.emptySub, { fontSize: fs(13.5) }]}>
+              <Text
+                style={[
+                  styles.emptySub,
+                  { fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.42) },
+                ]}
+              >
                 Hiện chưa có cảnh báo nào cần xử lý.
               </Text>
               {filter !== 'ALL' && alerts.length > 0 && (
@@ -573,7 +601,7 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <TouchableOpacity
             style={styles.modalBackdrop}
@@ -616,9 +644,17 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
 
                 <ScrollView
                   showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
                   contentContainerStyle={styles.modalScrollContent}
                 >
-                  <Text style={[styles.modalTitle, { fontSize: fs(19) }]}>{modalTitle}</Text>
+                  <Text
+                    style={[
+                      styles.modalTitle,
+                      { fontSize: fs(19), lineHeight: Math.round(fs(19) * 1.32) },
+                    ]}
+                  >
+                    {modalTitle}
+                  </Text>
 
                   <View style={styles.modalMetaBlock}>
                     <View style={styles.modalMetaItem}>
@@ -646,7 +682,12 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
                     <Text style={[styles.modalDescLabel, { fontSize: fs(12) }]}>
                       Nội dung chi tiết
                     </Text>
-                    <Text style={[styles.modalDescText, { fontSize: fs(14) }]}>
+                    <Text
+                      style={[
+                        styles.modalDescText,
+                        { fontSize: fs(14), lineHeight: Math.round(fs(14) * 1.45) },
+                      ]}
+                    >
                       {selectedAlert.description}
                     </Text>
                   </View>
@@ -655,7 +696,12 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
                     <>
                       <View style={styles.confirmExplainBox}>
                         <Feather name="shield" size={16} color={colors.primary} />
-                        <Text style={[styles.confirmExplainText, { fontSize: fs(13) }]}>
+                        <Text
+                          style={[
+                            styles.confirmExplainText,
+                            { fontSize: fs(13), lineHeight: Math.round(fs(13) * 1.42) },
+                          ]}
+                        >
                           Đánh dấu đã xử lý xác nhận bạn đã tiếp nhận kiểm tra cảnh báo này
                         </Text>
                       </View>
@@ -712,7 +758,14 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
                         disabled={resolvingId !== null}
                         activeOpacity={0.75}
                       >
-                        <Text style={[styles.modalCancelText, { fontSize: fs(14) }]}>Hủy</Text>
+                        <Text
+                          style={[styles.modalCancelText, { fontSize: fs(14) }]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.8}
+                        >
+                          Hủy
+                        </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.modalConfirmBtn}
@@ -723,7 +776,12 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
                         {resolvingId === selectedAlert.id ? (
                           <ActivityIndicator size="small" color={colors.textInverse} />
                         ) : (
-                          <Text style={[styles.modalConfirmText, { fontSize: fs(14) }]}>
+                          <Text
+                            style={[styles.modalConfirmText, { fontSize: fs(14) }]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.8}
+                          >
                             Xác nhận đã xử lý
                           </Text>
                         )}
@@ -735,7 +793,14 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
                       onPress={closeAlertModal}
                       activeOpacity={0.8}
                     >
-                      <Text style={[styles.modalConfirmText, { fontSize: fs(14) }]}>Đóng</Text>
+                      <Text
+                        style={[styles.modalConfirmText, { fontSize: fs(14) }]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.85}
+                      >
+                        Đóng
+                      </Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -767,7 +832,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     borderRadius: 14,
     paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     justifyContent: 'center',
     ...shadows.subtle,
   },
@@ -799,6 +864,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 20,
+    minHeight: 38,
     paddingHorizontal: 13,
     paddingVertical: 7,
     alignItems: 'center',
@@ -853,8 +919,11 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   retryLinkBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    minHeight: 36,
+    justifyContent: 'center',
+    flexShrink: 0,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -1075,9 +1144,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   modalCloseBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.surfaceWarm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1106,6 +1175,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   modalMetaText: {
+    flex: 1,
+    minWidth: 0,
     color: colors.textSecondary,
     fontWeight: '600',
     flexShrink: 1,
@@ -1205,8 +1276,9 @@ const styles = StyleSheet.create({
   modalCancelBtn: {
     flex: 1,
     minWidth: 0,
-    paddingVertical: 13,
-    paddingHorizontal: 12,
+    minHeight: 46,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: 12,
     backgroundColor: colors.surfaceWarm,
     borderWidth: 1,
@@ -1217,12 +1289,14 @@ const styles = StyleSheet.create({
   modalCancelText: {
     color: colors.textPrimary,
     fontWeight: '700',
+    flexShrink: 1,
   },
   modalConfirmBtn: {
-    flex: 1.5,
+    flex: 1.7,
     minWidth: 0,
-    paddingVertical: 13,
-    paddingHorizontal: 12,
+    minHeight: 46,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: 12,
     backgroundColor: colors.primary,
     alignItems: 'center',
@@ -1232,5 +1306,6 @@ const styles = StyleSheet.create({
     color: colors.textInverse,
     fontWeight: '800',
     textAlign: 'center',
+    flexShrink: 1,
   },
 });

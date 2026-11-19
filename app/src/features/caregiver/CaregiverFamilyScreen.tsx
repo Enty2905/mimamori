@@ -24,6 +24,7 @@ import {
   FontSizeLevel,
 } from '../../core/accessibility/useAccessibilityStore';
 import { useAuthStore } from '../../core/auth/useAuthStore';
+import { useCaregiverStore } from '../../core/caregiver/useCaregiverStore';
 import { apiClient } from '../../core/api/client';
 import { FamilyMemberDto, formatTimeHHMM } from '../../core/utils/caregiverHelpers';
 import { CaregiverHeader } from '../../components/caregiver/CaregiverHeader';
@@ -75,6 +76,7 @@ export const CaregiverFamilyScreen: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [elderlyUsername, setElderlyUsername] = useState('');
   const [relationship, setRelationship] = useState('Bố');
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
   const [unlinkingId, setUnlinkingId] = useState<number | null>(null);
   const [switchingRole, setSwitchingRole] = useState(false);
@@ -163,25 +165,32 @@ export const CaregiverFamilyScreen: React.FC = () => {
   const openLinkModal = () => {
     setElderlyUsername('');
     setRelationship('Bố');
+    setLinkError(null);
     setModalVisible(true);
   };
 
   const closeLinkModal = () => {
     if (linking) return;
+    setLinkError(null);
     setModalVisible(false);
   };
 
   const handleLink = async () => {
-    const trimmedUsername = elderlyUsername.trim();
-    const trimmedRelationship = relationship.trim() || 'Gia đình';
+    const trimmedUsername = elderlyUsername.trim().replace(/^@+/, '');
+    const trimmedRelationship = relationship.trim();
 
     if (!trimmedUsername) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên đăng nhập của người cao tuổi.');
+      setLinkError('Vui lòng nhập tên đăng nhập của người cao tuổi.');
+      return;
+    }
+    if (!trimmedRelationship) {
+      setLinkError('Vui lòng chọn hoặc nhập mối quan hệ với người thân.');
       return;
     }
 
     try {
       setLinking(true);
+      setLinkError(null);
       const res = await apiClient('/api/family/link', {
         method: 'POST',
         body: JSON.stringify({
@@ -195,13 +204,13 @@ export const CaregiverFamilyScreen: React.FC = () => {
         setModalVisible(false);
         setElderlyUsername('');
         setRelationship('Bố');
+        setLinkError(null);
         fetchMembers(true);
       } else {
-        Alert.alert('Không thể liên kết', res.message || 'Không thể tạo liên kết tài khoản.');
+        setLinkError(res.message || 'Không thể tạo liên kết tài khoản.');
       }
     } catch (err: unknown) {
-      Alert.alert(
-        'Không thể liên kết',
+      setLinkError(
         getErrorMessage(err, 'Vui lòng kiểm tra lại tên đăng nhập của người cao tuổi và thử lại.')
       );
     } finally {
@@ -217,7 +226,15 @@ export const CaregiverFamilyScreen: React.FC = () => {
       });
 
       if (res.success) {
-        setMembers((prev) => prev.filter((m) => m.relationshipId !== item.relationshipId));
+        const remaining = members.filter((m) => m.relationshipId !== item.relationshipId);
+        setMembers(remaining);
+        const { selectedElderlyId, setSelectedElderlyId, setSelectedElderlyName } =
+          useCaregiverStore.getState();
+        if (selectedElderlyId === item.member.id) {
+          const nextElderly = remaining.find((m) => m.member?.role === 'ELDERLY');
+          setSelectedElderlyId(nextElderly ? nextElderly.member.id : null);
+          setSelectedElderlyName(nextElderly ? nextElderly.member.fullName : null);
+        }
         Alert.alert('Đã ngắt kết nối', `Đã gỡ liên kết với ${item.member.fullName}.`);
       } else {
         Alert.alert('Lỗi', res.message || 'Không thể ngắt kết nối tài khoản.');
@@ -380,7 +397,12 @@ export const CaregiverFamilyScreen: React.FC = () => {
       >
         <Feather name="chevron-left" size={22} color={colors.textPrimary} />
       </TouchableOpacity>
-      <Text style={[styles.subHeaderTitle, { fontSize: fs(18.5) }]} numberOfLines={1}>
+      <Text
+        style={[styles.subHeaderTitle, { fontSize: fs(18.5) }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.78}
+      >
         {title}
       </Text>
       <View style={styles.subHeaderSpacer} />
@@ -596,6 +618,9 @@ export const CaregiverFamilyScreen: React.FC = () => {
                           { fontSize: fs(12.5) },
                           isSelected && styles.sliderStepTextActive,
                         ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
                       >
                         {getShortFontLabel(opt.id)}
                       </Text>
@@ -691,6 +716,9 @@ export const CaregiverFamilyScreen: React.FC = () => {
                   { fontSize: fs(13.5) },
                   securityTab === 'change' && styles.segmentTextActive,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
               >
                 Đổi mật khẩu
               </Text>
@@ -709,6 +737,9 @@ export const CaregiverFamilyScreen: React.FC = () => {
                   { fontSize: fs(13.5) },
                   securityTab === 'forgot' && styles.segmentTextActive,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
               >
                 Quên mật khẩu
               </Text>
@@ -1305,64 +1336,98 @@ export const CaregiverFamilyScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.modalHint, { fontSize: fs(12.5) }]}>
-              Nhập tên đăng nhập tài khoản của người thân để đồng bộ sức khỏe và nhắc nhở uống thuốc.
-            </Text>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.modalBodyScroll}
+            >
+              <Text
+                style={[
+                  styles.modalHint,
+                  { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.42) },
+                ]}
+              >
+                Nhập tên đăng nhập tài khoản của người thân để đồng bộ sức khỏe và nhắc nhở uống thuốc.
+              </Text>
 
-            <Text style={[styles.modalLabel, { fontSize: fs(13) }]}>
-              Tên đăng nhập của cụ *
-            </Text>
-            <View style={styles.modalInputWrap}>
-              <Feather name="at-sign" size={16} color={colors.textSecondary} />
-              <TextInput
-                style={[styles.modalInput, { fontSize: fs(14) }]}
-                placeholder="Ví dụ: ong_ba hoặc huyn"
-                value={elderlyUsername}
-                onChangeText={setElderlyUsername}
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholderTextColor={colors.textMuted}
-                editable={!linking}
-              />
-            </View>
-
-            <Text style={[styles.modalLabel, { fontSize: fs(13) }]}>Mối quan hệ *</Text>
-            <View style={styles.presetRow}>
-              {RELATIONSHIP_PRESETS.map((preset) => {
-                const isSelected = relationship.trim() === preset;
-                return (
-                  <TouchableOpacity
-                    key={preset}
-                    style={[styles.presetChip, isSelected && styles.presetChipActive]}
-                    onPress={() => setRelationship(preset)}
-                    disabled={linking}
-                    activeOpacity={0.75}
+              {Boolean(linkError) && (
+                <View style={styles.modalErrorBox}>
+                  <Feather name="alert-circle" size={15} color={colors.dangerText} />
+                  <Text
+                    style={[
+                      styles.modalErrorText,
+                      { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.4) },
+                    ]}
                   >
-                    <Text
-                      style={[
-                        styles.presetChipText,
-                        { fontSize: fs(12.5) },
-                        isSelected && styles.presetChipTextActive,
-                      ]}
-                    >
-                      {preset}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                    {linkError}
+                  </Text>
+                </View>
+              )}
 
-            <View style={styles.modalInputWrap}>
-              <Feather name="heart" size={16} color={colors.textSecondary} />
-              <TextInput
-                style={[styles.modalInput, { fontSize: fs(14) }]}
-                placeholder="Hoặc nhập mối quan hệ khác (VD: Bác, Cô...)"
-                value={relationship}
-                onChangeText={setRelationship}
-                placeholderTextColor={colors.textMuted}
-                editable={!linking}
-              />
-            </View>
+              <Text style={[styles.modalLabel, { fontSize: fs(13) }]}>
+                Tên đăng nhập của cụ *
+              </Text>
+              <View style={styles.modalInputWrap}>
+                <Feather name="at-sign" size={16} color={colors.textSecondary} />
+                <TextInput
+                  style={[styles.modalInput, { fontSize: fs(14) }]}
+                  placeholder="Ví dụ: ong_ba hoặc huyn"
+                  value={elderlyUsername}
+                  onChangeText={(val) => {
+                    setElderlyUsername(val);
+                    if (linkError) setLinkError(null);
+                  }}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholderTextColor={colors.textMuted}
+                  editable={!linking}
+                />
+              </View>
+
+              <Text style={[styles.modalLabel, { fontSize: fs(13) }]}>Mối quan hệ *</Text>
+              <View style={styles.presetRow}>
+                {RELATIONSHIP_PRESETS.map((preset) => {
+                  const isSelected = relationship.trim() === preset;
+                  return (
+                    <TouchableOpacity
+                      key={preset}
+                      style={[styles.presetChip, isSelected && styles.presetChipActive]}
+                      onPress={() => {
+                        setRelationship(preset);
+                        if (linkError) setLinkError(null);
+                      }}
+                      disabled={linking}
+                      activeOpacity={0.75}
+                    >
+                      <Text
+                        style={[
+                          styles.presetChipText,
+                          { fontSize: fs(12.5) },
+                          isSelected && styles.presetChipTextActive,
+                        ]}
+                      >
+                        {preset}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={styles.modalInputWrap}>
+                <Feather name="heart" size={16} color={colors.textSecondary} />
+                <TextInput
+                  style={[styles.modalInput, { fontSize: fs(14) }]}
+                  placeholder="Hoặc nhập mối quan hệ khác (VD: Bác, Cô...)"
+                  value={relationship}
+                  onChangeText={(val) => {
+                    setRelationship(val);
+                    if (linkError) setLinkError(null);
+                  }}
+                  placeholderTextColor={colors.textMuted}
+                  editable={!linking}
+                />
+              </View>
+            </ScrollView>
 
             <View style={styles.modalBtnRow}>
               <TouchableOpacity
@@ -1371,7 +1436,14 @@ export const CaregiverFamilyScreen: React.FC = () => {
                 disabled={linking}
                 activeOpacity={0.75}
               >
-                <Text style={[styles.cancelBtnText, { fontSize: fs(14) }]}>Hủy</Text>
+                <Text
+                  style={[styles.cancelBtnText, { fontSize: fs(14) }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                >
+                  Hủy
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -1383,7 +1455,14 @@ export const CaregiverFamilyScreen: React.FC = () => {
                 {linking ? (
                   <ActivityIndicator color={colors.textInverse} size="small" />
                 ) : (
-                  <Text style={[styles.saveBtnText, { fontSize: fs(14) }]}>Tạo kết nối</Text>
+                  <Text
+                    style={[styles.saveBtnText, { fontSize: fs(14) }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}
+                  >
+                    Tạo kết nối
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1422,9 +1501,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   backBtnCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.borderLight,
@@ -1441,7 +1520,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   subHeaderSpacer: {
-    width: 38,
+    width: 40,
   },
   profileCard: {
     backgroundColor: colors.surface,
@@ -1457,9 +1536,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 14,
     right: 14,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.primaryLight,
     borderWidth: 1,
     borderColor: colors.borderLight,
@@ -1480,12 +1559,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
     flexShrink: 1,
-  },
-  userUsername: {
-    color: colors.textSecondary,
-    marginTop: 2,
-    marginBottom: 10,
-    textAlign: 'center',
   },
   rolePill: {
     flexDirection: 'row',
@@ -1514,6 +1587,7 @@ const styles = StyleSheet.create({
   phoneText: {
     color: colors.textSecondary,
     fontWeight: '600',
+    flexShrink: 1,
   },
   menuCard: {
     backgroundColor: colors.surface,
@@ -1681,13 +1755,19 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   eyeBtn: {
+    minWidth: 40,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 8,
+    flexShrink: 0,
   },
   readonlyBadge: {
     backgroundColor: colors.border,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
+    flexShrink: 0,
   },
   readonlyBadgeText: {
     fontWeight: '700',
@@ -1712,6 +1792,7 @@ const styles = StyleSheet.create({
   primaryActionBtn: {
     backgroundColor: colors.primary,
     borderRadius: 16,
+    minHeight: 48,
     paddingVertical: 14,
     paddingHorizontal: 16,
     alignItems: 'center',
@@ -1723,6 +1804,7 @@ const styles = StyleSheet.create({
     color: colors.textInverse,
     fontWeight: '800',
     textAlign: 'center',
+    flexShrink: 1,
   },
   displayBlock: {
     gap: 4,
@@ -1908,8 +1990,10 @@ const styles = StyleSheet.create({
   sectionTitleWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    minWidth: 0,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 165,
+    minWidth: 155,
     gap: 8,
   },
   sectionTitle: {
@@ -1926,6 +2010,8 @@ const styles = StyleSheet.create({
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
     gap: 5,
     flexShrink: 0,
     backgroundColor: colors.primary,
@@ -2024,6 +2110,7 @@ const styles = StyleSheet.create({
   memberPhone: {
     color: colors.textSecondary,
     fontWeight: '500',
+    flexShrink: 1,
   },
   badgesRow: {
     flexDirection: 'row',
@@ -2034,6 +2121,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    maxWidth: '100%',
     backgroundColor: colors.success,
     borderWidth: 1,
     borderColor: colors.successBorder,
@@ -2044,6 +2132,7 @@ const styles = StyleSheet.create({
   connectedText: {
     fontWeight: '700',
     color: colors.successText,
+    flexShrink: 1,
   },
   permissionTag: {
     flexDirection: 'row',
@@ -2083,9 +2172,11 @@ const styles = StyleSheet.create({
   unlinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
     gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 10,
     backgroundColor: colors.danger,
     borderWidth: 1,
@@ -2099,6 +2190,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    minWidth: 0,
   },
   switchRoleBtn: {
     flexDirection: 'row',
@@ -2143,6 +2235,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 20,
+    maxHeight: '90%',
     borderWidth: 1,
     borderColor: colors.borderLight,
     ...shadows.elevated,
@@ -2161,7 +2254,34 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   modalCloseBtn: {
-    padding: 4,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  modalBodyScroll: {
+    paddingBottom: 4,
+  },
+  modalErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: colors.danger,
+    borderWidth: 1,
+    borderColor: colors.dangerBorder,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
+  modalErrorText: {
+    flex: 1,
+    minWidth: 0,
+    color: colors.dangerText,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   modalHint: {
     color: colors.textSecondary,
@@ -2219,27 +2339,36 @@ const styles = StyleSheet.create({
   modalBtnRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 22,
+    marginTop: 18,
   },
   cancelBtn: {
     flex: 1,
+    minWidth: 0,
+    minHeight: 46,
     backgroundColor: colors.surfaceWarm,
     borderRadius: 14,
     paddingVertical: 12,
+    paddingHorizontal: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
   },
   cancelBtnText: {
     fontWeight: '700',
     color: colors.textSecondary,
+    flexShrink: 1,
   },
   saveBtn: {
     flex: 1,
+    minWidth: 0,
+    minHeight: 46,
     backgroundColor: colors.primary,
     borderRadius: 14,
     paddingVertical: 12,
+    paddingHorizontal: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   saveBtnDisabled: {
     opacity: 0.7,
@@ -2247,5 +2376,6 @@ const styles = StyleSheet.create({
   saveBtnText: {
     fontWeight: '800',
     color: colors.textInverse,
+    flexShrink: 1,
   },
 });
