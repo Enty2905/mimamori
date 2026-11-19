@@ -144,6 +144,7 @@ const styles = StyleSheet.create({
   },
   sosTextCol: {
     flex: 1,
+    minWidth: 0,
   },
   sosTitle: {
     fontWeight: '800',
@@ -211,6 +212,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerText,
     borderRadius: 16,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 52,
@@ -218,11 +220,13 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     color: '#FFFFFF',
     fontWeight: '800',
+    textAlign: 'center',
   },
   cancelButton: {
     backgroundColor: colors.surfaceWarm,
     borderRadius: 16,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 48,
@@ -230,5 +234,6 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: colors.textSecondary,
     fontWeight: '600',
+    textAlign: 'center',
   },
 });

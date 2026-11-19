@@ -274,7 +274,7 @@ export const ElderlyMedicationScreen: React.FC = () => {
                         {adherencePercent}%
                       </Text>
                     </View>
-                    <Text style={[styles.scoreLabel, { fontSize: fs(11) }]} numberOfLines={1}>
+                    <Text style={[styles.scoreLabel, { fontSize: fs(11) }]}>
                       Uống đúng giờ
                     </Text>
                   </View>
@@ -285,7 +285,7 @@ export const ElderlyMedicationScreen: React.FC = () => {
                       <View style={styles.metricIconWrap}>
                         <Feather name="trending-up" size={14} color={colors.primary} />
                       </View>
-                      <View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={[styles.metricLabel, { fontSize: fs(11) }]}>Vận động</Text>
                         <Text style={[styles.metricVal, { fontSize: fs(12.5) }]}>3,200 bước</Text>
                       </View>
@@ -295,7 +295,7 @@ export const ElderlyMedicationScreen: React.FC = () => {
                       <View style={styles.metricIconWrap}>
                         <Feather name="heart" size={14} color="#B83232" />
                       </View>
-                      <View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={[styles.metricLabel, { fontSize: fs(11) }]}>Nhịp tim</Text>
                         <Text style={[styles.metricVal, { fontSize: fs(12.5) }]}>72 nhịp/phút</Text>
                       </View>
@@ -305,7 +305,7 @@ export const ElderlyMedicationScreen: React.FC = () => {
                       <View style={styles.metricIconWrap}>
                         <Feather name="moon" size={14} color="#4F46E5" />
                       </View>
-                      <View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={[styles.metricLabel, { fontSize: fs(11) }]}>Giấc ngủ</Text>
                         <Text style={[styles.metricVal, { fontSize: fs(12.5) }]}>7h 30m ngon giấc</Text>
                       </View>
@@ -315,7 +315,7 @@ export const ElderlyMedicationScreen: React.FC = () => {
                       <View style={styles.metricIconWrap}>
                         <Feather name="droplet" size={14} color="#0284C7" />
                       </View>
-                      <View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={[styles.metricLabel, { fontSize: fs(11) }]}>Nước uống</Text>
                         <Text style={[styles.metricVal, { fontSize: fs(12.5) }]}>5 / 8 cốc</Text>
                       </View>
@@ -507,7 +507,7 @@ export const ElderlyMedicationScreen: React.FC = () => {
         >
           <View style={styles.modalCard}>
             <View style={styles.modalHeaderRow}>
-              <View>
+              <View style={{ flex: 1, marginRight: 12 }}>
                 <Text style={[styles.modalTitle, { fontSize: fs(20) }]}>Thêm đơn thuốc mới</Text>
                 <Text style={[styles.modalSubtitle, { fontSize: fs(13) }]}>
                   Nhập thông tin thuốc cần uống hàng ngày
@@ -637,6 +637,8 @@ const styles = StyleSheet.create({
   },
   headerTitleCol: {
     flex: 1,
+    minWidth: 0,
+    marginRight: 10,
   },
   kickerText: {
     fontWeight: '700',
@@ -649,6 +651,7 @@ const styles = StyleSheet.create({
   },
   addMedHeaderBtn: {
     flexDirection: 'row',
+    flexShrink: 0,
     backgroundColor: colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 9,
@@ -672,7 +675,9 @@ const styles = StyleSheet.create({
   segmentBtn: {
     flex: 1,
     paddingVertical: 10,
+    paddingHorizontal: 6,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 12,
   },
   segmentBtnActive: {
@@ -682,6 +687,8 @@ const styles = StyleSheet.create({
   segmentText: {
     color: colors.textSecondary,
     fontWeight: '600',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   segmentTextActive: {
     color: colors.primary,
@@ -689,6 +696,7 @@ const styles = StyleSheet.create({
   },
   scrollList: {
     paddingHorizontal: 18,
+    paddingBottom: 120,
   },
   centerLoading: {
     paddingVertical: 60,
@@ -709,11 +717,15 @@ const styles = StyleSheet.create({
   },
   overviewTopRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     marginBottom: 14,
   },
   overviewCardTitle: {
+    flex: 1,
+    flexShrink: 1,
     fontWeight: '800',
     color: colors.textPrimary,
   },
@@ -757,6 +769,7 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontWeight: '700',
     textAlign: 'center',
+    maxWidth: 84,
   },
   metricsCol: {
     flex: 1,
@@ -785,11 +798,14 @@ const styles = StyleSheet.create({
   },
   medSectionHeaderRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     marginBottom: 12,
   },
   medSectionTitle: {
+    flexShrink: 1,
     fontWeight: '800',
     color: colors.textPrimary,
   },
@@ -845,8 +861,10 @@ const styles = StyleSheet.create({
   },
   cardHeaderRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     marginBottom: 10,
   },
   timeBadgePill: {
@@ -897,6 +915,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 14,
     paddingVertical: 12,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -908,6 +927,8 @@ const styles = StyleSheet.create({
   confirmFullText: {
     color: '#FFFFFF',
     fontWeight: '800',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   takenFullPill: {
     flexDirection: 'row',
@@ -921,6 +942,7 @@ const styles = StyleSheet.create({
   takenFullText: {
     color: colors.successText,
     fontWeight: '700',
+    flexShrink: 1,
   },
   deleteLinkRow: {
     flexDirection: 'row',
@@ -932,6 +954,7 @@ const styles = StyleSheet.create({
   deleteLinkText: {
     color: colors.textMuted,
     fontWeight: '600',
+    flexShrink: 1,
   },
   historyList: {
     gap: 12,
@@ -946,8 +969,10 @@ const styles = StyleSheet.create({
   },
   historyTopRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     marginBottom: 8,
   },
   historyDate: {
@@ -1022,6 +1047,7 @@ const styles = StyleSheet.create({
   },
   presetPillRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 8,
   },
@@ -1056,6 +1082,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWarm,
     borderRadius: 16,
     paddingVertical: 14,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1068,11 +1095,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 16,
     paddingVertical: 14,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalSaveText: {
     fontWeight: '800',
     color: '#FFFFFF',
+    textAlign: 'center',
   },
 });

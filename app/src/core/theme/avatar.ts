@@ -1,3 +1,8 @@
+const GRANDFATHER_AVATAR_URI =
+  'https://images.unsplash.com/photo-1501797362492-608847952c4d?auto=format&fit=crop&w=400&q=80';
+const GRANDMOTHER_AVATAR_URI =
+  'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?auto=format&fit=crop&w=400&q=80';
+
 export const AVATAR_PRESETS = [
   {
     id: 'watering',
@@ -9,13 +14,13 @@ export const AVATAR_PRESETS = [
     id: 'grandfather',
     label: 'Cụ ông phúc hậu',
     desc: 'Hình cụ ông cười ấm áp',
-    source: { uri: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80' },
+    source: { uri: GRANDFATHER_AVATAR_URI },
   },
   {
     id: 'grandmother',
     label: 'Cụ bà hiền từ',
     desc: 'Hình cụ bà phúc hậu',
-    source: { uri: 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?auto=format&fit=crop&w=400&q=80' },
+    source: { uri: GRANDMOTHER_AVATAR_URI },
   },
   {
     id: 'leaf',
@@ -33,10 +38,10 @@ export const getAvatarSource = (avatarUrl?: string | null) => {
     return require('../../../assets/images/mimamori-leaf-icon.png');
   }
   if (avatarUrl === 'grandfather') {
-    return { uri: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80' };
+    return { uri: GRANDFATHER_AVATAR_URI };
   }
   if (avatarUrl === 'grandmother') {
-    return { uri: 'https://images.unsplash.com/photo-1581579438747-1dc8d17bbce4?auto=format&fit=crop&w=400&q=80' };
+    return { uri: GRANDMOTHER_AVATAR_URI };
   }
   if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
     return { uri: avatarUrl };

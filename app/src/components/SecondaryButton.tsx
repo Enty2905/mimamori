@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
+    paddingVertical: 10,
     backgroundColor: colors.surfaceWarm,
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -82,6 +83,8 @@ const styles = StyleSheet.create({
   text: {
     color: colors.textPrimary,
     fontWeight: '700',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   textDisabled: {
     color: colors.textMuted,

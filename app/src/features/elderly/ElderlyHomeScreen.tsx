@@ -404,6 +404,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 18,
     paddingTop: 12,
+    paddingBottom: 110,
   },
   topGreetingBar: {
     flexDirection: 'row',
@@ -413,6 +414,8 @@ const styles = StyleSheet.create({
   },
   greetingTextCol: {
     flex: 1,
+    minWidth: 0,
+    marginRight: 12,
   },
   greetingSub: {
     color: colors.textSecondary,
@@ -468,6 +471,7 @@ const styles = StyleSheet.create({
   },
   wellnessLeftCol: {
     flex: 1,
+    minWidth: 0,
     paddingRight: 8,
   },
   wellnessBadge: {
@@ -497,6 +501,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.primary,
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 14,
@@ -508,6 +513,7 @@ const styles = StyleSheet.create({
   wellnessBtnText: {
     color: '#FFFFFF',
     fontWeight: '700',
+    flexShrink: 1,
   },
   wellnessRightCol: {
     justifyContent: 'center',
@@ -530,10 +536,11 @@ const styles = StyleSheet.create({
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'space-between',
+    rowGap: 10,
   },
   gridCard: {
-    width: '31%',
+    width: '31.5%',
     backgroundColor: colors.surface,
     borderRadius: 18,
     paddingVertical: 14,
@@ -556,18 +563,23 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 2,
     textAlign: 'center',
+    flexShrink: 1,
   },
   gridCardSub: {
     color: colors.textSecondary,
     textAlign: 'center',
+    flexShrink: 1,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     marginBottom: 10,
   },
   sectionTitle: {
+    flex: 1,
+    flexShrink: 1,
     fontWeight: '800',
     color: colors.textPrimary,
   },
@@ -595,6 +607,7 @@ const styles = StyleSheet.create({
   },
   upcomingTextCol: {
     flex: 1,
+    minWidth: 0,
   },
   upcomingTime: {
     fontWeight: '700',
@@ -616,12 +629,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 12,
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   upcomingConfirmBtnText: {
     color: '#FFFFFF',
     fontWeight: '700',
+    flexShrink: 1,
   },
   allDoneUpcomingCard: {
     flexDirection: 'row',
@@ -643,6 +658,7 @@ const styles = StyleSheet.create({
   },
   allDoneTextCol: {
     flex: 1,
+    minWidth: 0,
   },
   allDoneTitle: {
     fontWeight: '800',
@@ -681,6 +697,7 @@ const styles = StyleSheet.create({
   },
   tipTextCol: {
     flex: 1,
+    minWidth: 0,
   },
   tipKicker: {
     fontWeight: '800',

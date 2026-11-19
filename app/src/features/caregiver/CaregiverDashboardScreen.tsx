@@ -162,15 +162,17 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
     >
       {/* Caregiver Welcome Bar */}
       <View style={styles.topHeader}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 }}>
           <Image
             source={require('../../../assets/images/mimamori-leaf-icon.png')}
             style={{ width: 34, height: 34, marginRight: 10 }}
             resizeMode="contain"
           />
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.caregiverRole}>GIÁM SÁT TỪ XA • MIMAMORI</Text>
-            <Text style={styles.caregiverName}>Chào {user?.fullName || 'Người chăm sóc'}</Text>
+            <Text style={styles.caregiverName} numberOfLines={2}>
+              Chào {user?.fullName || 'Người chăm sóc'}
+            </Text>
           </View>
         </View>
         <TouchableOpacity style={styles.refreshPill} onPress={onRefresh} activeOpacity={0.7}>
@@ -196,11 +198,11 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                   <View style={[styles.pillAvatar, isSelected && styles.pillAvatarActive]}>
                     <Feather name="user" size={14} color={isSelected ? colors.primary : colors.textSecondary} />
                   </View>
-                  <View>
-                    <Text style={[styles.pillName, isSelected && styles.pillNameActive]}>
+                  <View style={{ flexShrink: 1 }}>
+                    <Text style={[styles.pillName, isSelected && styles.pillNameActive]} numberOfLines={1}>
                       {fm.member.fullName}
                     </Text>
-                    <Text style={[styles.pillRelation, isSelected && styles.pillRelationActive]}>
+                    <Text style={[styles.pillRelation, isSelected && styles.pillRelationActive]} numberOfLines={1}>
                       {fm.relationshipType || 'Người thân'} (@{fm.member.username})
                     </Text>
                   </View>
@@ -297,11 +299,11 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
           {/* Today's Detailed Medication Schedule (Synchronized) */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
                 <MaterialCommunityIcons name="pill" size={18} color={colors.primary} style={{ marginRight: 6 }} />
                 <Text style={styles.sectionTitle}>Lịch thuốc của cụ hôm nay</Text>
               </View>
-              <TouchableOpacity onPress={() => onNavigateTab('medication')}>
+              <TouchableOpacity onPress={() => onNavigateTab('medication')} style={{ flexShrink: 0 }}>
                 <Text style={styles.seeAllText}>Quản lý ›</Text>
               </TouchableOpacity>
             </View>
@@ -339,11 +341,11 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
           {/* Active Care Alerts Section */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
                 <Feather name="alert-triangle" size={18} color={colors.dangerText} style={{ marginRight: 6 }} />
                 <Text style={styles.sectionTitle}>Cảnh báo cần chú ý</Text>
               </View>
-              <TouchableOpacity onPress={() => onNavigateTab('alerts')}>
+              <TouchableOpacity onPress={() => onNavigateTab('alerts')} style={{ flexShrink: 0 }}>
                 <Text style={styles.seeAllText}>Xem tất cả ({data?.activeAlerts?.length || 0}) ›</Text>
               </TouchableOpacity>
             </View>
@@ -375,7 +377,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
               <View style={styles.summaryIconWrap}>
                 <Feather name="cpu" size={20} color={colors.primary} />
               </View>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.summaryTitle}>Báo cáo thông minh từ Care Agent</Text>
                 <Text style={styles.summarySub}>Tổng hợp tự động hoạt động và sức khỏe</Text>
               </View>
@@ -406,6 +408,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
+    paddingBottom: 100,
   },
   topHeader: {
     flexDirection: 'row',
@@ -418,15 +421,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.primary,
     letterSpacing: 0.5,
+    flexShrink: 1,
   },
   caregiverName: {
     fontSize: 22,
     fontWeight: '800',
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   refreshPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
     backgroundColor: colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -457,6 +463,7 @@ const styles = StyleSheet.create({
   memberPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    maxWidth: 260,
     backgroundColor: colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -518,6 +525,8 @@ const styles = StyleSheet.create({
   },
   elderlyInfoCol: {
     flex: 1,
+    minWidth: 0,
+    marginRight: 8,
   },
   elderlyName: {
     fontSize: 17,
@@ -532,6 +541,8 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
+    maxWidth: '45%',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
@@ -539,6 +550,7 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 11,
     fontWeight: '800',
+    flexShrink: 1,
   },
   centerBox: {
     paddingVertical: 40,
@@ -573,6 +585,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.textSecondary,
+    flexShrink: 1,
   },
   metricValue: {
     fontSize: 22,
@@ -619,6 +632,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   seeAllText: {
     fontSize: 13,
@@ -650,6 +664,8 @@ const styles = StyleSheet.create({
   },
   medInfoCol: {
     flex: 1,
+    minWidth: 0,
+    marginRight: 8,
   },
   medNameText: {
     fontSize: 14,
@@ -665,6 +681,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    flexShrink: 0,
   },
   medBadgeText: {
     fontSize: 11,

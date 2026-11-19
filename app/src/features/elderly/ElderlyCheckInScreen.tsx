@@ -620,6 +620,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 18,
     paddingTop: 14,
+    paddingBottom: 120,
   },
   stepHeader: {
     marginBottom: 20,
@@ -630,12 +631,14 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     marginBottom: 8,
   },
   stepBadgeText: {
     fontWeight: '800',
     color: colors.primary,
     letterSpacing: 0.5,
+    flexShrink: 1,
   },
   questionTitle: {
     fontWeight: '800',
@@ -691,6 +694,7 @@ const styles = StyleSheet.create({
   },
   optionTextCol: {
     flex: 1,
+    minWidth: 0,
   },
   optionLabel: {
     fontWeight: '700',
@@ -735,12 +739,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWarm,
     borderRadius: 16,
     paddingVertical: 14,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backBtnText: {
     fontWeight: '700',
     color: colors.textSecondary,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   nextBtn: {
     flex: 2,
@@ -748,16 +755,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 16,
     paddingVertical: 14,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   nextBtnText: {
     fontWeight: '800',
     color: '#FFFFFF',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   completedContainer: {
     padding: 20,
     paddingTop: 10,
+    paddingBottom: 120,
     minHeight: '100%',
     backgroundColor: colors.background,
   },
@@ -781,11 +792,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
+    flexShrink: 1,
+    marginHorizontal: 8,
   },
   headerTagText: {
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 12,
+    textAlign: 'center',
   },
   confettiArea: {
     width: '100%',
@@ -894,6 +908,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#456B58',
     borderRadius: 24,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.subtle,
@@ -901,6 +916,7 @@ const styles = StyleSheet.create({
   screen7DoneBtnText: {
     color: '#FFFFFF',
     fontWeight: '800',
+    textAlign: 'center',
   },
   successCard: {
     backgroundColor: colors.surface,

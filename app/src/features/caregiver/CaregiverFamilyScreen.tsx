@@ -9,6 +9,8 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { colors, shadows } from '../../core/theme/colors';
@@ -103,7 +105,7 @@ export const CaregiverFamilyScreen: React.FC = () => {
       {/* Linked Elderly Members */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
             <Feather name="user-check" size={18} color={colors.primary} style={{ marginRight: 6 }} />
             <Text style={styles.sectionTitle}>Người thân đang giám sát</Text>
           </View>
@@ -177,7 +179,10 @@ export const CaregiverFamilyScreen: React.FC = () => {
 
       {/* Modal Link Elderly */}
       <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeaderRow}>
               <Text style={styles.modalTitle}>Liên kết người cao tuổi mới</Text>
@@ -233,7 +238,7 @@ export const CaregiverFamilyScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
   );
@@ -246,6 +251,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
+    paddingBottom: 100,
   },
   profileCard: {
     backgroundColor: colors.surface,
@@ -272,16 +278,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: colors.textPrimary,
+    textAlign: 'center',
   },
   userUsername: {
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 2,
     marginBottom: 8,
+    textAlign: 'center',
   },
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    maxWidth: '100%',
     backgroundColor: colors.primaryLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -291,6 +300,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: colors.primary,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   sectionCard: {
     backgroundColor: colors.surface,
@@ -311,6 +322,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   sectionDesc: {
     fontSize: 12.5,
@@ -321,6 +333,7 @@ const styles = StyleSheet.create({
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
     backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -393,12 +406,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 14,
     paddingVertical: 12,
+    paddingHorizontal: 14,
     marginTop: 6,
   },
   switchRoleText: {
     fontSize: 13,
     fontWeight: '800',
     color: '#FFFFFF',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   logoutBtn: {
     flexDirection: 'row',
@@ -407,6 +423,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
     borderRadius: 16,
     paddingVertical: 14,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: colors.dangerBorder,
     marginBottom: 30,
@@ -415,6 +432,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: colors.dangerText,
+    flexShrink: 1,
   },
   modalOverlay: {
     flex: 1,
@@ -438,6 +456,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: colors.textPrimary,
+    flex: 1,
+    marginRight: 8,
   },
   modalLabel: {
     fontSize: 13,
@@ -457,6 +477,7 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     flex: 1,
+    minWidth: 0,
     paddingVertical: 11,
     color: colors.textPrimary,
     fontSize: 14,

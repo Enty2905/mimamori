@@ -201,7 +201,9 @@ const styles = StyleSheet.create({
   filterBtn: {
     flex: 1,
     paddingVertical: 8,
+    paddingHorizontal: 6,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 8,
   },
   filterBtnActive: {
@@ -216,6 +218,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: colors.textSecondary,
+    textAlign: 'center',
   },
   filterTextActive: {
     color: colors.primary,
@@ -233,7 +236,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 16,
-    paddingBottom: 30,
+    paddingBottom: 100,
   },
   alertCard: {
     backgroundColor: colors.surface,
@@ -251,20 +254,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     marginBottom: 8,
   },
   sevBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    flexShrink: 1,
   },
   sevBadgeText: {
     fontSize: 11,
     fontWeight: '800',
+    flexShrink: 1,
   },
   dateText: {
     fontSize: 12,
     color: colors.textMuted,
+    flexShrink: 0,
   },
   alertTitle: {
     fontSize: 16,
@@ -281,6 +288,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 10,
     paddingVertical: 10,
+    paddingHorizontal: 12,
     alignItems: 'center',
     marginTop: 12,
   },
@@ -288,9 +296,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+    flexShrink: 1,
   },
   resolvedBadge: {
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.successLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -300,7 +311,8 @@ const styles = StyleSheet.create({
   resolvedText: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.success,
+    color: colors.successText,
+    flexShrink: 1,
   },
   emptyCard: {
     backgroundColor: colors.surface,

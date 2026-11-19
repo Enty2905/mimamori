@@ -87,9 +87,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    maxWidth: '100%',
   },
   badgeText: {
     fontWeight: '700',
     letterSpacing: 0.2,
+    flexShrink: 1,
+    textAlign: 'center',
   },
 });

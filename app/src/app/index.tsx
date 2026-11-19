@@ -116,6 +116,9 @@ export default function IndexRoute() {
                   { fontSize: fs(11.5) },
                   elderlyTab === 'home' && styles.navLabelActive,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
               >
                 Trang chủ
               </Text>
@@ -141,6 +144,9 @@ export default function IndexRoute() {
                   { fontSize: fs(11.5) },
                   elderlyTab === 'companion' && styles.navLabelActive,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
               >
                 AI
               </Text>
@@ -166,6 +172,9 @@ export default function IndexRoute() {
                   { fontSize: fs(11.5) },
                   elderlyTab === 'medication' && styles.navLabelActive,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
               >
                 Thuốc
               </Text>
@@ -191,6 +200,9 @@ export default function IndexRoute() {
                   { fontSize: fs(11.5) },
                   elderlyTab === 'checkin' && styles.navLabelActive,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
               >
                 Điểm danh
               </Text>
@@ -216,6 +228,9 @@ export default function IndexRoute() {
                   { fontSize: fs(11.5) },
                   elderlyTab === 'profile' && styles.navLabelActive,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
               >
                 Hồ sơ
               </Text>
@@ -228,6 +243,8 @@ export default function IndexRoute() {
               style={styles.navItem}
               onPress={() => setCaregiverTab('dashboard')}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: caregiverTab === 'dashboard' }}
             >
               <Feather
                 name="activity"
@@ -240,6 +257,9 @@ export default function IndexRoute() {
                   { fontSize: fs(11.5) },
                   caregiverTab === 'dashboard' && styles.navLabelActive,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
               >
                 Giám sát
               </Text>
@@ -250,6 +270,8 @@ export default function IndexRoute() {
               style={styles.navItem}
               onPress={() => setCaregiverTab('alerts')}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: caregiverTab === 'alerts' }}
             >
               <Feather
                 name="alert-triangle"
@@ -262,6 +284,9 @@ export default function IndexRoute() {
                   { fontSize: fs(11.5) },
                   caregiverTab === 'alerts' && styles.navLabelActive,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
               >
                 Cảnh báo
               </Text>
@@ -272,6 +297,8 @@ export default function IndexRoute() {
               style={styles.navItem}
               onPress={() => setCaregiverTab('medication')}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: caregiverTab === 'medication' }}
             >
               <MaterialCommunityIcons
                 name="pill"
@@ -284,6 +311,9 @@ export default function IndexRoute() {
                   { fontSize: fs(11.5) },
                   caregiverTab === 'medication' && styles.navLabelActive,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
               >
                 Lịch thuốc
               </Text>
@@ -294,6 +324,8 @@ export default function IndexRoute() {
               style={styles.navItem}
               onPress={() => setCaregiverTab('family')}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: caregiverTab === 'family' }}
             >
               <Feather
                 name="users"
@@ -306,6 +338,9 @@ export default function IndexRoute() {
                   { fontSize: fs(11.5) },
                   caregiverTab === 'family' && styles.navLabelActive,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
               >
                 Gia đình
               </Text>
@@ -383,6 +418,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 4,
+    paddingHorizontal: 2,
   },
   navIconText: {
     fontSize: 18,

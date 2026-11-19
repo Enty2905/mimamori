@@ -358,7 +358,7 @@ export const ElderlyProfileScreen: React.FC = () => {
               <Feather name="user" size={16} color={colors.primary} style={styles.inputPrefixIcon} />
               <TextInput
                 style={[styles.textInput, { fontSize: fs(15) }]}
-                placeholder="Ví dụ: @BaNguyen hoặc email"
+                placeholder="Ví dụ: BaNguyen hoặc email"
                 value={forgotIdentifier}
                 onChangeText={setForgotIdentifier}
                 placeholderTextColor={colors.textMuted}
@@ -499,7 +499,7 @@ export const ElderlyProfileScreen: React.FC = () => {
             <Feather name="at-sign" size={16} color={colors.textSecondary} style={styles.inputPrefixIcon} />
             <TextInput
               style={[styles.textInput, { fontSize: fs(15), color: colors.textSecondary }]}
-              value={`@${user?.username || 'BaNguyen'}`}
+              value={(user?.username || 'BaNguyen').replace(/^@+/, '')}
               editable={false}
             />
             <View style={styles.readonlyBadge}>
@@ -757,7 +757,7 @@ export const ElderlyProfileScreen: React.FC = () => {
             <View style={styles.menuIconBox}>
               <Feather name="user" size={18} color={colors.primary} />
             </View>
-            <View>
+            <View style={{ flex: 1, flexShrink: 1 }}>
               <Text style={[styles.menuTitleText, { fontSize: fs(15) }]}>
                 Thông tin cá nhân
               </Text>
@@ -862,7 +862,7 @@ export const ElderlyProfileScreen: React.FC = () => {
             <View style={styles.menuIconBox}>
               <Feather name="shield" size={18} color={colors.primary} />
             </View>
-            <View>
+            <View style={{ flex: 1, flexShrink: 1 }}>
               <Text style={[styles.menuTitleText, { fontSize: fs(15) }]}>
                 Bảo mật & Quyền riêng tư
               </Text>
@@ -944,7 +944,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 18,
     paddingTop: 10,
-    paddingBottom: 24,
+    paddingBottom: 120,
   },
   topHeaderRow: {
     flexDirection: 'row',
@@ -970,6 +970,9 @@ const styles = StyleSheet.create({
     ...shadows.subtle,
   },
   screenHeaderTitle: {
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
     fontWeight: '800',
     color: colors.textPrimary,
   },
@@ -1002,15 +1005,19 @@ const styles = StyleSheet.create({
   },
   profileHeroInfo: {
     flex: 1,
+    minWidth: 0,
+    marginRight: 8,
   },
   heroNameText: {
     fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: 2,
+    flexShrink: 1,
   },
   heroUsernameText: {
     color: colors.textSecondary,
     marginBottom: 8,
+    flexShrink: 1,
   },
   heroRolePill: {
     backgroundColor: '#E6EEE7',
@@ -1047,6 +1054,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
@@ -1055,6 +1063,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    minWidth: 0,
   },
   menuIconBox: {
     width: 32,
@@ -1068,14 +1077,17 @@ const styles = StyleSheet.create({
   menuTitleText: {
     fontWeight: '700',
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   menuItemHint: {
     color: colors.textMuted,
     marginTop: 2,
+    flexShrink: 1,
   },
   menuRightRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
   },
   menuRightSubtext: {
     color: colors.textSecondary,
@@ -1153,6 +1165,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
+    minWidth: 0,
     paddingVertical: 12,
     color: colors.textPrimary,
   },
@@ -1172,8 +1185,10 @@ const styles = StyleSheet.create({
   },
   roleStaticRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
     marginTop: 16,
     paddingTop: 12,
     borderTopWidth: 1,
@@ -1182,11 +1197,13 @@ const styles = StyleSheet.create({
   roleStaticLabel: {
     color: colors.textSecondary,
     fontWeight: '600',
+    flexShrink: 1,
   },
   primaryActionBtn: {
     backgroundColor: '#456B58',
     borderRadius: 18,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,
@@ -1195,20 +1212,26 @@ const styles = StyleSheet.create({
   primaryActionBtnText: {
     color: '#FFFFFF',
     fontWeight: '800',
+    textAlign: 'center',
   },
 
   // Avatar Picker
   avatarPickerRow: {
     flexDirection: 'row',
-    gap: 16,
-    marginTop: 4,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 12,
+    marginTop: 6,
   },
   avatarPickItem: {
+    width: '48%',
     alignItems: 'center',
-    padding: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surfaceWarm,
     position: 'relative',
   },
   avatarPickItemActive: {
@@ -1219,12 +1242,12 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   avatarCheckBadge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
+    top: 8,
+    right: 8,
     width: 20,
     height: 20,
     borderRadius: 10,
@@ -1235,6 +1258,8 @@ const styles = StyleSheet.create({
   avatarPickLabel: {
     color: colors.textSecondary,
     fontWeight: '600',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   avatarPickLabelActive: {
     color: '#456B58',
@@ -1254,7 +1279,9 @@ const styles = StyleSheet.create({
   segmentBtn: {
     flex: 1,
     paddingVertical: 10,
+    paddingHorizontal: 6,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 12,
   },
   segmentBtnActive: {
@@ -1264,6 +1291,8 @@ const styles = StyleSheet.create({
   segmentText: {
     color: colors.textSecondary,
     fontWeight: '600',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   segmentTextActive: {
     color: '#456B58',
@@ -1285,6 +1314,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   commitmentTitle: {
+    flex: 1,
+    flexShrink: 1,
     fontWeight: '800',
     color: '#166534',
   },
@@ -1350,8 +1381,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sliderStepItem: {
+    flex: 1,
     alignItems: 'center',
-    minWidth: 54,
   },
   sliderDotBase: {
     width: 24,
@@ -1385,6 +1416,7 @@ const styles = StyleSheet.create({
   sliderStepText: {
     color: colors.textSecondary,
     fontWeight: '600',
+    textAlign: 'center',
   },
   sliderStepTextActive: {
     color: '#456B58',
@@ -1399,6 +1431,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderLight,
   },
   toggleTitle: {
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 12,
     fontWeight: '700',
     color: colors.textPrimary,
   },
@@ -1406,6 +1441,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#456B58',
     borderRadius: 20,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
@@ -1414,6 +1450,7 @@ const styles = StyleSheet.create({
   saveSettingsBtnText: {
     color: '#FFFFFF',
     fontWeight: '800',
+    textAlign: 'center',
   },
 
   // Demo Box
@@ -1443,9 +1480,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#7C3AED',
     borderRadius: 12,
     paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   switchRoleBtnText: {
     color: '#FFFFFF',
     fontWeight: '700',
+    flexShrink: 1,
+    textAlign: 'center',
   },
 });

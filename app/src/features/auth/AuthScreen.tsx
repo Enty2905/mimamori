@@ -157,7 +157,7 @@ export const AuthScreen: React.FC = () => {
       {/* Auth Bottom Sheet Modal */}
       <Modal visible={showAuthModal} animationType="slide" transparent>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalBackdrop}
         >
           <View style={styles.modalCard}>
@@ -172,7 +172,11 @@ export const AuthScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 40 }}
+            >
               {/* Demo 1-Tap Login Section */}
               <View style={styles.demoBox}>
                 <View style={styles.demoKickerRow}>
@@ -316,7 +320,7 @@ export const AuthScreen: React.FC = () => {
                         color={role === 'ELDERLY' ? colors.primary : colors.textSecondary}
                         style={{ marginRight: 6 }}
                       />
-                      <Text style={[styles.roleBtnText, role === 'ELDERLY' && styles.roleBtnTextActive]}>
+                      <Text style={[styles.roleBtnText, { fontSize: fs(13) }, role === 'ELDERLY' && styles.roleBtnTextActive]}>
                         Người cao tuổi
                       </Text>
                     </TouchableOpacity>
@@ -331,7 +335,7 @@ export const AuthScreen: React.FC = () => {
                         color={role === 'CAREGIVER' ? colors.primary : colors.textSecondary}
                         style={{ marginRight: 6 }}
                       />
-                      <Text style={[styles.roleBtnText, role === 'CAREGIVER' && styles.roleBtnTextActive]}>
+                      <Text style={[styles.roleBtnText, { fontSize: fs(13) }, role === 'CAREGIVER' && styles.roleBtnTextActive]}>
                         Người chăm sóc
                       </Text>
                     </TouchableOpacity>
@@ -398,7 +402,7 @@ const styles = StyleSheet.create({
   welcomeScroll: {
     paddingHorizontal: 22,
     paddingTop: Platform.OS === 'ios' ? 12 : 24,
-    paddingBottom: 30,
+    paddingBottom: 40,
   },
   brandHeader: {
     flexDirection: 'row',
@@ -463,6 +467,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 14,
     left: 14,
+    maxWidth: '90%',
     backgroundColor: 'rgba(255, 254, 252, 0.94)',
     flexDirection: 'row',
     alignItems: 'center',
@@ -477,6 +482,7 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '700',
     color: colors.primaryDark,
+    flexShrink: 1,
   },
   valuePillarsRow: {
     flexDirection: 'row',
@@ -485,6 +491,7 @@ const styles = StyleSheet.create({
   },
   valueCard: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 12,
@@ -506,6 +513,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: 4,
+    textAlign: 'center',
   },
   valueSub: {
     color: colors.textSecondary,
@@ -516,6 +524,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 18,
     paddingVertical: 16,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 56,
@@ -530,6 +539,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
     letterSpacing: 0.3,
+    textAlign: 'center',
   },
   signInLinkBtn: {
     alignItems: 'center',
@@ -596,6 +606,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.textSecondary,
     letterSpacing: 0.5,
+    flexShrink: 1,
   },
   demoCardGrid: {
     flexDirection: 'row',
@@ -619,6 +630,7 @@ const styles = StyleSheet.create({
   },
   demoCardTextCol: {
     alignItems: 'center',
+    width: '100%',
   },
   demoCardTitle: {
     fontWeight: '800',
@@ -643,6 +655,8 @@ const styles = StyleSheet.create({
   dividerText: {
     color: colors.textMuted,
     marginHorizontal: 10,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   tabToggleRow: {
     flexDirection: 'row',
@@ -654,7 +668,9 @@ const styles = StyleSheet.create({
   tabButton: {
     flex: 1,
     paddingVertical: 10,
+    paddingHorizontal: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 10,
   },
   tabButtonActive: {
@@ -664,6 +680,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontWeight: '600',
     color: colors.textSecondary,
+    textAlign: 'center',
   },
   tabTextActive: {
     fontWeight: '800',
@@ -698,12 +715,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 12,
+    minHeight: 48,
   },
   inputIcon: {
     marginRight: 8,
   },
   inputField: {
     flex: 1,
+    minWidth: 0,
     paddingVertical: 12,
     color: colors.textPrimary,
   },
@@ -717,6 +736,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.surfaceWarm,
     paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -731,6 +751,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: colors.textSecondary,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   roleBtnTextActive: {
     fontWeight: '800',
@@ -740,6 +762,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 16,
     paddingVertical: 15,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,
@@ -748,5 +771,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FFFFFF',
     fontWeight: '800',
+    textAlign: 'center',
   },
 });

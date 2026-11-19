@@ -315,11 +315,14 @@ const styles = StyleSheet.create({
   },
   topBarInfo: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 12,
+    marginRight: 8,
   },
   companionName: {
     fontWeight: '800',
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   onlineBadgeRow: {
     flexDirection: 'row',
@@ -336,6 +339,7 @@ const styles = StyleSheet.create({
   onlineStatusText: {
     color: colors.textSecondary,
     fontWeight: '500',
+    flexShrink: 1,
   },
   voiceHeaderPill: {
     flexDirection: 'row',
@@ -401,6 +405,7 @@ const styles = StyleSheet.create({
   },
   bubbleCol: {
     maxWidth: '82%',
+    flexShrink: 1,
   },
   bubble: {
     borderRadius: 18,
@@ -453,6 +458,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   suggestionsHeader: {
+    flex: 1,
+    flexShrink: 1,
     fontWeight: '700',
     color: colors.textSecondary,
   },

@@ -2,7 +2,7 @@ spring:
   application:
     name: mimamori-backend
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/mimamori?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/mimamori?useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&serverTimezone=UTC}
     username: ${SPRING_DATASOURCE_USERNAME:mimamori}
     password: ${SPRING_DATASOURCE_PASSWORD:mimamori_password}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -47,3 +47,8 @@ mimamori:
 
 server:
   port: ${SERVER_PORT:8080}
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
