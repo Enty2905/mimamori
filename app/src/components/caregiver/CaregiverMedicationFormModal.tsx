@@ -291,7 +291,7 @@ export const CaregiverMedicationFormModal: React.FC<CaregiverMedicationFormModal
                   <Feather name="plus-circle" size={15} color={colors.primary} />
                   <TextInput
                     style={[styles.textInput, { fontSize: fs(13.5) }]}
-                    placeholder="Giờ khác (VD: 14:30)"
+                    placeholder="Giờ khác (14:30)"
                     placeholderTextColor={colors.textMuted}
                     value={customTimeInput}
                     onChangeText={setCustomTimeInput}
@@ -478,6 +478,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    maxWidth: '100%',
     paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: 11,
@@ -492,6 +493,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontWeight: '700',
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   chipTextActive: {
     color: colors.textInverse,
@@ -504,6 +506,7 @@ const styles = StyleSheet.create({
   },
   customTimeInputWrap: {
     flex: 1,
+    minWidth: 0,
   },
   addCustomTimeBtn: {
     paddingHorizontal: 14,
@@ -534,7 +537,10 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 13,
+    minWidth: 0,
+    minHeight: 46,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 14,
     backgroundColor: colors.surfaceWarm,
     borderWidth: 1,
@@ -545,10 +551,15 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontWeight: '700',
     color: colors.textPrimary,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   saveBtn: {
-    flex: 1.6,
-    paddingVertical: 13,
+    flex: 1.8,
+    minWidth: 0,
+    minHeight: 46,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 14,
     backgroundColor: colors.primary,
     alignItems: 'center',
@@ -560,6 +571,7 @@ const styles = StyleSheet.create({
   saveBtnText: {
     fontWeight: '800',
     color: colors.textInverse,
+    flexShrink: 1,
     textAlign: 'center',
   },
 });

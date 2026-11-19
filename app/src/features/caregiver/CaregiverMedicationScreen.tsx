@@ -217,6 +217,8 @@ export const CaregiverMedicationScreen: React.FC = () => {
   const todayKey = formatDateKey(today);
   const selectedDateKey = formatDateKey(selectedDate);
   const isTodaySelected = selectedDateKey === todayKey;
+  // Scale the HH:mm rail width with font scale so "20:00" never wraps or clips at 130% fs()
+  const timelineTimeWidth = Math.max(58, Math.ceil(fs(13) * 3.9));
 
   const recentDates = useMemo(() => {
     return Array.from({ length: RECENT_DAYS_COUNT }, (_, idx) => addLocalDays(today, -idx));
@@ -420,10 +422,10 @@ export const CaregiverMedicationScreen: React.FC = () => {
       <View key={`${log.id}-${log.scheduledTime}`} style={styles.timelineRow}>
         <View style={styles.timelineRail}>
           <Text
-            style={[styles.timelineTime, { fontSize: fs(13) }]}
+            style={[styles.timelineTime, { fontSize: fs(13), width: timelineTimeWidth }]}
             numberOfLines={1}
             adjustsFontSizeToFit
-            minimumFontScale={0.8}
+            minimumFontScale={0.85}
           >
             {formatTimeHHMM(log.scheduledTime)}
           </Text>
@@ -455,7 +457,9 @@ export const CaregiverMedicationScreen: React.FC = () => {
               color={colors.primary}
               style={styles.medIcon}
             />
-            <Text style={[styles.medName, { fontSize: fs(15.5) }]}>{log.medicationName}</Text>
+            <Text style={[styles.medName, styles.medNameFlex, { fontSize: fs(15.5) }]}>
+              {log.medicationName}
+            </Text>
           </View>
 
           {log.status === 'TAKEN' && Boolean(log.takenTime) && (
@@ -470,7 +474,9 @@ export const CaregiverMedicationScreen: React.FC = () => {
           {Boolean(noteText) && (
             <View style={styles.noteBox}>
               <Feather name="file-text" size={13} color={colors.textSecondary} style={styles.noteIcon} />
-              <Text style={[styles.noteText, { fontSize: fs(12.5) }]}>{noteText}</Text>
+              <Text style={[styles.noteText, { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.44) }]}>
+                {noteText}
+              </Text>
             </View>
           )}
         </View>
@@ -505,7 +511,9 @@ export const CaregiverMedicationScreen: React.FC = () => {
               color={colors.primary}
               style={styles.medIcon}
             />
-            <Text style={[styles.medName, { fontSize: fs(15.5) }]}>{log.medicationName}</Text>
+            <Text style={[styles.medName, styles.medNameFlex, { fontSize: fs(15.5) }]}>
+              {log.medicationName}
+            </Text>
           </View>
           <Text style={[styles.medDosage, { fontSize: fs(13) }]}>Liều lượng: {log.dosage}</Text>
 
@@ -521,7 +529,9 @@ export const CaregiverMedicationScreen: React.FC = () => {
           {Boolean(noteText) && (
             <View style={styles.noteBox}>
               <Feather name="file-text" size={13} color={colors.textSecondary} style={styles.noteIcon} />
-              <Text style={[styles.noteText, { fontSize: fs(12.5) }]}>{noteText}</Text>
+              <Text style={[styles.noteText, { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.44) }]}>
+                {noteText}
+              </Text>
             </View>
           )}
         </View>
@@ -568,7 +578,7 @@ export const CaregiverMedicationScreen: React.FC = () => {
         {Boolean(med.instructions?.trim()) && (
           <View style={styles.noteBox}>
             <Feather name="info" size={13} color={colors.primary} style={styles.noteIcon} />
-            <Text style={[styles.noteText, { fontSize: fs(12.5) }]}>
+            <Text style={[styles.noteText, { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.44) }]}>
               Hướng dẫn: {med.instructions?.trim()}
             </Text>
           </View>
@@ -586,7 +596,14 @@ export const CaregiverMedicationScreen: React.FC = () => {
             disabled={isDeleting}
           >
             <Feather name="edit-2" size={14} color={colors.primaryDark} />
-            <Text style={[styles.cardSecondaryBtnText, { fontSize: fs(13) }]}>Chỉnh sửa</Text>
+            <Text
+              style={[styles.cardSecondaryBtnText, { fontSize: fs(13) }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+            >
+              Chỉnh sửa
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.cardDangerBtn, isDeleting && styles.btnDisabled]}
@@ -598,7 +615,14 @@ export const CaregiverMedicationScreen: React.FC = () => {
             ) : (
               <>
                 <Feather name="slash" size={14} color={colors.dangerText} />
-                <Text style={[styles.cardDangerBtnText, { fontSize: fs(13) }]}>Ngừng thuốc</Text>
+                <Text
+                  style={[styles.cardDangerBtnText, { fontSize: fs(13) }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
+                >
+                  Ngừng thuốc
+                </Text>
               </>
             )}
           </TouchableOpacity>
@@ -659,7 +683,7 @@ export const CaregiverMedicationScreen: React.FC = () => {
         {Boolean(cond.symptomsOrNotes?.trim()) && (
           <View style={styles.noteBox}>
             <Feather name="file-text" size={13} color={colors.textSecondary} style={styles.noteIcon} />
-            <Text style={[styles.noteText, { fontSize: fs(13) }]}>
+            <Text style={[styles.noteText, { fontSize: fs(13), lineHeight: Math.round(fs(13) * 1.42) }]}>
               {cond.symptomsOrNotes?.trim()}
             </Text>
           </View>
@@ -676,12 +700,17 @@ export const CaregiverMedicationScreen: React.FC = () => {
 
         <View style={styles.cardActionRow}>
           <TouchableOpacity
-            style={styles.cardSecondaryBtn}
+            style={[styles.cardSecondaryBtn, styles.cardActionPrimaryWide]}
             onPress={() => openEditCondition(cond)}
             disabled={isDeleting}
           >
             <Feather name="refresh-cw" size={14} color={colors.primaryDark} />
-            <Text style={[styles.cardSecondaryBtnText, { fontSize: fs(13) }]}>
+            <Text
+              style={[styles.cardSecondaryBtnText, { fontSize: fs(13) }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.78}
+            >
               Cập nhật tái khám
             </Text>
           </TouchableOpacity>
@@ -695,7 +724,14 @@ export const CaregiverMedicationScreen: React.FC = () => {
             ) : (
               <>
                 <Feather name="trash-2" size={14} color={colors.dangerText} />
-                <Text style={[styles.cardDangerBtnText, { fontSize: fs(13) }]}>Xóa</Text>
+                <Text
+                  style={[styles.cardDangerBtnText, { fontSize: fs(13) }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
+                >
+                  Xóa
+                </Text>
               </>
             )}
           </TouchableOpacity>
@@ -773,16 +809,18 @@ export const CaregiverMedicationScreen: React.FC = () => {
             >
               <Feather
                 name="clock"
-                size={14}
+                size={15}
                 color={mainTab === 'schedule' ? colors.primaryDark : colors.textSecondary}
               />
               <Text
                 style={[
                   styles.switcherText,
-                  { fontSize: fs(13) },
+                  { fontSize: fs(12) },
                   mainTab === 'schedule' && styles.switcherTextActive,
                 ]}
                 numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
               >
                 Lịch uống
               </Text>
@@ -797,16 +835,18 @@ export const CaregiverMedicationScreen: React.FC = () => {
             >
               <MaterialCommunityIcons
                 name="pill"
-                size={15}
+                size={16}
                 color={mainTab === 'prescriptions' ? colors.primaryDark : colors.textSecondary}
               />
               <Text
                 style={[
                   styles.switcherText,
-                  { fontSize: fs(13) },
+                  { fontSize: fs(12) },
                   mainTab === 'prescriptions' && styles.switcherTextActive,
                 ]}
                 numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
               >
                 Đơn thuốc ({medications.length})
               </Text>
@@ -821,16 +861,18 @@ export const CaregiverMedicationScreen: React.FC = () => {
             >
               <Feather
                 name="activity"
-                size={14}
+                size={15}
                 color={mainTab === 'conditions' ? colors.primaryDark : colors.textSecondary}
               />
               <Text
                 style={[
                   styles.switcherText,
-                  { fontSize: fs(13) },
+                  { fontSize: fs(12) },
                   mainTab === 'conditions' && styles.switcherTextActive,
                 ]}
                 numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
               >
                 Bệnh lý ({conditions.length})
               </Text>
@@ -949,7 +991,14 @@ export const CaregiverMedicationScreen: React.FC = () => {
                       accessibilityLabel="Ngày trước"
                     >
                       <Feather name="chevron-left" size={16} color={colors.primary} />
-                      <Text style={[styles.dayStepText, { fontSize: fs(12.5) }]}>Trước</Text>
+                      <Text
+                        style={[styles.dayStepText, { fontSize: fs(12.5) }]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
+                      >
+                        Trước
+                      </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -960,7 +1009,12 @@ export const CaregiverMedicationScreen: React.FC = () => {
                       accessibilityLabel="Chọn nhanh ngày trong 7 ngày gần đây"
                     >
                       <Feather name="calendar" size={14} color={colors.primary} />
-                      <Text style={[styles.dayCenterText, { fontSize: fs(13.5) }]} numberOfLines={1}>
+                      <Text
+                        style={[styles.dayCenterText, { fontSize: fs(13) }]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.72}
+                      >
                         {formatDateDisplayVi(selectedDate)}
                       </Text>
                       <Feather name="chevron-down" size={14} color={colors.textSecondary} />
@@ -980,6 +1034,9 @@ export const CaregiverMedicationScreen: React.FC = () => {
                           { fontSize: fs(12.5) },
                           isTodaySelected && styles.dayStepTextDisabled,
                         ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
                       >
                         Sau
                       </Text>
@@ -1065,7 +1122,12 @@ export const CaregiverMedicationScreen: React.FC = () => {
                   <Text style={[styles.bannerActionTitle, { fontSize: fs(16) }]}>
                     Đơn thuốc đang dùng ({medications.length})
                   </Text>
-                  <Text style={[styles.bannerActionDesc, { fontSize: fs(12.5) }]}>
+                  <Text
+                    style={[
+                      styles.bannerActionDesc,
+                      { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.44) },
+                    ]}
+                  >
                     Thêm thuốc mới sau mỗi lần đi khám hoặc điều chỉnh liều lượng khi tái khám.
                   </Text>
                 </View>
@@ -1100,7 +1162,12 @@ export const CaregiverMedicationScreen: React.FC = () => {
                   <Text style={[styles.bannerActionTitle, { fontSize: fs(16) }]}>
                     Theo dõi bệnh lý & Tái khám ({conditionSummary.total})
                   </Text>
-                  <Text style={[styles.bannerActionDesc, { fontSize: fs(12.5) }]}>
+                  <Text
+                    style={[
+                      styles.bannerActionDesc,
+                      { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.44) },
+                    ]}
+                  >
                     Ghi chú bệnh nền, diễn biến sau mỗi lần đi khám và lịch hẹn bác sĩ tiếp theo.
                   </Text>
                   {conditionSummary.total > 0 && (
@@ -1341,12 +1408,13 @@ const styles = StyleSheet.create({
   switcherTab: {
     flex: 1,
     minWidth: 0,
-    flexDirection: 'row',
+    minHeight: 50,
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
+    gap: 3,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
     borderRadius: 12,
   },
   switcherTabActive: {
@@ -1450,6 +1518,7 @@ const styles = StyleSheet.create({
   },
   subModeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginHorizontal: 18,
     marginBottom: 12,
     gap: 8,
@@ -1461,6 +1530,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    maxWidth: '100%',
   },
   subModeChipActive: {
     backgroundColor: colors.primaryLight,
@@ -1469,6 +1539,7 @@ const styles = StyleSheet.create({
   subModeChipText: {
     fontWeight: '700',
     color: colors.textSecondary,
+    flexShrink: 1,
   },
   subModeChipTextActive: {
     color: colors.primaryDark,
@@ -1483,18 +1554,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 16,
     paddingVertical: 6,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 6,
+    gap: 4,
     ...shadows.subtle,
   },
   dayStepBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+    minHeight: 40,
     paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     borderRadius: 10,
     flexShrink: 0,
   },
@@ -1510,41 +1582,48 @@ const styles = StyleSheet.create({
   },
   dayCenterBtn: {
     flex: 1,
-    minWidth: 110,
+    minWidth: 0,
+    minHeight: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 4,
     paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     borderRadius: 11,
     backgroundColor: colors.primaryLight,
   },
   dayCenterText: {
     fontWeight: '800',
     color: colors.primaryDark,
-    flexShrink: 0,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   sectionBlock: {
     paddingHorizontal: 18,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
+    rowGap: 8,
     marginBottom: 12,
   },
   sectionTitle: {
     fontWeight: '800',
     color: colors.textPrimary,
+    flexGrow: 1,
     flexShrink: 1,
+    minWidth: 145,
   },
   sectionActionsRight: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 6,
-    flexShrink: 0,
+    flexShrink: 1,
   },
   jumpTodayChip: {
     paddingHorizontal: 10,
@@ -1579,7 +1658,6 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   timelineRail: {
-    width: 86,
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingTop: 14,
@@ -1588,8 +1666,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   timelineTime: {
-    width: 56,
-    minWidth: 54,
+    minWidth: 56,
     flexShrink: 0,
     fontWeight: '800',
     color: colors.textPrimary,
@@ -1638,13 +1715,16 @@ const styles = StyleSheet.create({
   },
   cardTopRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+    rowGap: 6,
   },
   medDosageTop: {
-    flex: 1,
-    minWidth: 0,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 105,
     color: colors.textSecondary,
     fontWeight: '600',
   },
@@ -1663,10 +1743,13 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   medName: {
-    flex: 1,
-    minWidth: 0,
+    flexShrink: 1,
     fontWeight: '800',
     color: colors.textPrimary,
+  },
+  medNameFlex: {
+    flex: 1,
+    minWidth: 0,
   },
   medDosage: {
     marginTop: 3,
@@ -1683,9 +1766,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     flexShrink: 0,
+    maxWidth: '100%',
   },
   statusPillText: {
     fontWeight: '700',
+    flexShrink: 1,
   },
   takenMetaRow: {
     flexDirection: 'row',
@@ -1717,7 +1802,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexShrink: 1,
     color: colors.textPrimary,
-    lineHeight: 19,
   },
   historyList: {
     gap: 10,
@@ -1732,9 +1816,11 @@ const styles = StyleSheet.create({
   },
   historyTopRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+    rowGap: 6,
     marginBottom: 10,
   },
   historyDateBadge: {
@@ -1775,7 +1861,6 @@ const styles = StyleSheet.create({
   },
   bannerActionDesc: {
     color: colors.textSecondary,
-    lineHeight: 18,
     fontWeight: '500',
   },
   primaryCtaBtn: {
@@ -1791,6 +1876,8 @@ const styles = StyleSheet.create({
   primaryCtaBtnText: {
     color: colors.textInverse,
     fontWeight: '800',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   conditionStatsRow: {
     flexDirection: 'row',
@@ -1893,30 +1980,37 @@ const styles = StyleSheet.create({
   cardSecondaryBtn: {
     flex: 1,
     minWidth: 0,
-    minHeight: 42,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: colors.primaryLight,
     borderWidth: 1,
     borderColor: colors.borderLight,
   },
+  cardActionPrimaryWide: {
+    flex: 1.85,
+  },
   cardSecondaryBtnText: {
     color: colors.primaryDark,
     fontWeight: '700',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   cardDangerBtn: {
     flex: 1,
     minWidth: 0,
-    minHeight: 42,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: colors.danger,
     borderWidth: 1,
@@ -1925,6 +2019,8 @@ const styles = StyleSheet.create({
   cardDangerBtnText: {
     color: colors.dangerText,
     fontWeight: '700',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   btnDisabled: {
     opacity: 0.6,
@@ -1941,9 +2037,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 9,
     borderWidth: 1,
+    maxWidth: '100%',
   },
   severityPillText: {
     fontWeight: '700',
+    flexShrink: 1,
   },
   conditionDateText: {
     marginLeft: 'auto',
@@ -1970,6 +2068,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     marginTop: 10,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -1981,6 +2080,7 @@ const styles = StyleSheet.create({
   nextCheckupText: {
     color: colors.primaryDark,
     fontWeight: '700',
+    flexShrink: 1,
   },
   modalBackdrop: {
     flex: 1,

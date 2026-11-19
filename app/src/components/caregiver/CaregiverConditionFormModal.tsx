@@ -308,7 +308,10 @@ export const CaregiverConditionFormModal: React.FC<CaregiverConditionFormModalPr
               <Text style={[styles.label, { fontSize: fs(13) }]}>Diễn biến bệnh & Dặn dò bác sĩ</Text>
               <View style={styles.textAreaWrap}>
                 <TextInput
-                  style={[styles.textAreaInput, { fontSize: fs(14) }]}
+                  style={[
+                    styles.textAreaInput,
+                    { fontSize: fs(14), lineHeight: Math.round(fs(14) * 1.42) },
+                  ]}
                   placeholder="Ví dụ: Tái khám ngày hôm nay huyết áp 135/85 mmHg, bác sĩ kê thêm thuốc B buổi tối và dặn giảm mặn."
                   placeholderTextColor={colors.textMuted}
                   value={symptomsOrNotes}
@@ -335,7 +338,7 @@ export const CaregiverConditionFormModal: React.FC<CaregiverConditionFormModalPr
 
               <Text style={[styles.label, { fontSize: fs(13) }]}>Ngày khám / Ghi nhận (DD/MM/YYYY) *</Text>
               <View style={styles.dateRow}>
-                <View style={[styles.inputRow, { flex: 1 }]}>
+                <View style={[styles.inputRow, { flex: 1, minWidth: 0 }]}>
                   <Feather name="calendar" size={16} color={colors.primary} />
                   <TextInput
                     style={[styles.textInput, { fontSize: fs(14) }]}
@@ -509,7 +512,6 @@ const styles = StyleSheet.create({
   textAreaInput: {
     minHeight: 84,
     color: colors.textPrimary,
-    lineHeight: 20,
   },
   chipWrap: {
     flexDirection: 'row',
@@ -518,6 +520,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   chip: {
+    maxWidth: '100%',
     paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: 11,
@@ -532,6 +535,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontWeight: '700',
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   chipTextActive: {
     color: colors.textInverse,
@@ -565,7 +569,10 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 13,
+    minWidth: 0,
+    minHeight: 46,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 14,
     backgroundColor: colors.surfaceWarm,
     borderWidth: 1,
@@ -576,10 +583,15 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     fontWeight: '700',
     color: colors.textPrimary,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   saveBtn: {
-    flex: 1.6,
-    paddingVertical: 13,
+    flex: 1.8,
+    minWidth: 0,
+    minHeight: 46,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 14,
     backgroundColor: colors.primary,
     alignItems: 'center',
@@ -591,6 +603,7 @@ const styles = StyleSheet.create({
   saveBtnText: {
     fontWeight: '800',
     color: colors.textInverse,
+    flexShrink: 1,
     textAlign: 'center',
   },
 });
