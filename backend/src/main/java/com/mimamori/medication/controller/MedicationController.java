@@ -66,6 +66,15 @@ public class MedicationController {
         return ApiResponse.ok(medicationService.getHistory(userId, elderlyId));
     }
 
+    @PutMapping("/{id}")
+    @Operation(summary = "Update an existing medication and its reminder schedules")
+    public ApiResponse<MedicationDto> updateMedication(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable("id") Long medicationId,
+            @Valid @RequestBody CreateMedicationRequest request) {
+        return ApiResponse.ok("Medication updated successfully", medicationService.updateMedication(userId, medicationId, request));
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Deactivate/delete a medication")
     public ApiResponse<Void> deleteMedication(

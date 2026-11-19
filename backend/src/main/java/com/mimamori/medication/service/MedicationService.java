@@ -164,6 +164,51 @@ public class MedicationService {
     }
 
     @Transactional
+    public MedicationDto updateMedication(Long currentUserId, Long medicationId, CreateMedicationRequest request) {
+        Medication medication = medicationRepository.findById(medicationId)
+                .orElseThrow(() -> new ApiException(404, "Medication not found"));
+
+        User elderly = medication.getElderly();
+        Long elderlyId = elderly.getId();
+        if (!elderlyId.equals(currentUserId) && !relationshipRepository.existsByCaregiverIdAndElderlyId(currentUserId, elderlyId)) {
+            throw new ApiException(403, "You do not have permission to update this medication");
+        }
+
+        medication.setName(request.getName());
+        medication.setDosage(request.getDosage());
+        medication.setInstructions(request.getInstructions());
+        medication.setStartDate(request.getStartDate());
+        medication.setEndDate(request.getEndDate());
+
+        LocalDate today = LocalDate.now();
+        logRepository.deletePendingLogsFrom(medicationId, today.atStartOfDay());
+        logRepository.clearScheduleLinks(medicationId);
+
+        medication.getSchedules().clear();
+        medication = medicationRepository.saveAndFlush(medication);
+
+        for (LocalTime time : request.getReminderTimes()) {
+            MedicationSchedule schedule = new MedicationSchedule(medication, time, request.getDosage());
+            schedule = scheduleRepository.save(schedule);
+            medication.getSchedules().add(schedule);
+
+            if (!today.isBefore(request.getStartDate()) && (request.getEndDate() == null || !today.isAfter(request.getEndDate()))) {
+                LocalDateTime scheduledTime = LocalDateTime.of(today, time);
+                MedicationLog log = new MedicationLog();
+                log.setSchedule(schedule);
+                log.setMedication(medication);
+                log.setElderly(elderly);
+                log.setScheduledTime(scheduledTime);
+                log.setStatus(MedicationStatus.PENDING);
+                logRepository.save(log);
+            }
+        }
+
+        medication = medicationRepository.save(medication);
+        return MedicationDto.fromEntity(medication);
+    }
+
+    @Transactional
     public void deleteMedication(Long currentUserId, Long medicationId) {
         Medication medication = medicationRepository.findById(medicationId)
                 .orElseThrow(() -> new ApiException(404, "Medication not found"));
@@ -175,6 +220,7 @@ public class MedicationService {
 
         medication.setIsActive(false);
         medicationRepository.save(medication);
+        logRepository.deletePendingLogsFrom(medicationId, LocalDate.now().atStartOfDay());
     }
 
     private Long resolveElderlyId(Long currentUserId, Long targetElderlyId) {
