@@ -295,16 +295,21 @@ export default function IndexRoute() {
               <Text
                 style={[
                   styles.navLabel,
-                  { fontSize: fs(11.5) },
+                  { fontSize: Math.min(fs(11.5), 14) },
                   caregiverTab === 'dashboard' && styles.navLabelActive,
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.8}
+                minimumFontScale={0.75}
               >
                 Giám sát
               </Text>
-              {caregiverTab === 'dashboard' && <View style={styles.activeDot} />}
+              <View
+                style={[
+                  styles.activeDot,
+                  caregiverTab !== 'dashboard' && styles.activeDotHidden,
+                ]}
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -336,16 +341,21 @@ export default function IndexRoute() {
               <Text
                 style={[
                   styles.navLabel,
-                  { fontSize: fs(11.5) },
+                  { fontSize: Math.min(fs(11.5), 14) },
                   caregiverTab === 'alerts' && styles.navLabelActive,
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.8}
+                minimumFontScale={0.75}
               >
                 Cảnh báo
               </Text>
-              {caregiverTab === 'alerts' && <View style={styles.activeDot} />}
+              <View
+                style={[
+                  styles.activeDot,
+                  caregiverTab !== 'alerts' && styles.activeDotHidden,
+                ]}
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -370,16 +380,21 @@ export default function IndexRoute() {
               <Text
                 style={[
                   styles.navLabel,
-                  { fontSize: fs(11.5) },
+                  { fontSize: Math.min(fs(11.5), 14) },
                   caregiverTab === 'medication' && styles.navLabelActive,
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.8}
+                minimumFontScale={0.75}
               >
                 Lịch thuốc
               </Text>
-              {caregiverTab === 'medication' && <View style={styles.activeDot} />}
+              <View
+                style={[
+                  styles.activeDot,
+                  caregiverTab !== 'medication' && styles.activeDotHidden,
+                ]}
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -404,16 +419,21 @@ export default function IndexRoute() {
               <Text
                 style={[
                   styles.navLabel,
-                  { fontSize: fs(11.5) },
+                  { fontSize: Math.min(fs(11.5), 14) },
                   caregiverTab === 'family' && styles.navLabelActive,
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.8}
+                minimumFontScale={0.75}
               >
                 Gia đình
               </Text>
-              {caregiverTab === 'family' && <View style={styles.activeDot} />}
+              <View
+                style={[
+                  styles.activeDot,
+                  caregiverTab !== 'family' && styles.activeDotHidden,
+                ]}
+              />
             </TouchableOpacity>
           </>
         )}
@@ -516,6 +536,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     marginTop: 3,
   },
+  activeDotHidden: {
+    opacity: 0,
+  },
   caregiverIconWrap: {
     position: 'relative',
     paddingHorizontal: 10,
@@ -530,7 +553,7 @@ const styles = StyleSheet.create({
   alertBadge: {
     position: 'absolute',
     top: -3,
-    right: 0,
+    right: -2,
     minWidth: 17,
     height: 17,
     borderRadius: 8.5,

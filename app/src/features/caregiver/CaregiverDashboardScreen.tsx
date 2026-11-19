@@ -403,10 +403,20 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                   style={styles.elderlyAvatar}
                 />
                 <View style={styles.elderlyInfoCol}>
-                  <Text style={[styles.elderlyName, { fontSize: fs(17) }]}>
+                  <Text
+                    style={[
+                      styles.elderlyName,
+                      { fontSize: fs(17), lineHeight: Math.round(fs(17) * 1.32) },
+                    ]}
+                  >
                     {elderlyName}
                   </Text>
-                  <Text style={[styles.elderlyMeta, { fontSize: fs(12.5) }]}>
+                  <Text
+                    style={[
+                      styles.elderlyMeta,
+                      { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.4) },
+                    ]}
+                  >
                     {selectedMember?.relationshipType
                       ? `Quan hệ: ${selectedMember.relationshipType}`
                       : 'Người cao tuổi'}
@@ -458,7 +468,11 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                   <Text
                     style={[
                       styles.reasonText,
-                      { color: careStatusMeta.text, fontSize: fs(13) },
+                      {
+                        color: careStatusMeta.text,
+                        fontSize: fs(13),
+                        lineHeight: Math.round(fs(13) * 1.45),
+                      },
                     ]}
                   >
                     {statusReason}
@@ -506,7 +520,12 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                   />
                 </View>
 
-                <Text style={[styles.metricFooterText, { fontSize: fs(12) }]}>
+                <Text
+                  style={[
+                    styles.metricFooterText,
+                    { fontSize: fs(12), lineHeight: Math.round(fs(12) * 1.4) },
+                  ]}
+                >
                   {medMetrics.taken}/{totalMeds} cữ đã uống
                 </Text>
               </View>
@@ -542,12 +561,22 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                       Đã hoàn thành
                     </Text>
 
-                    <Text style={[styles.checkInDetailText, { fontSize: fs(12.5) }]}>
+                    <Text
+                      style={[
+                        styles.checkInDetailText,
+                        { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.4) },
+                      ]}
+                    >
                       <Text style={styles.checkInDetailLabel}>Tâm trạng: </Text>
                       {todayCheckIn.mood}
                     </Text>
 
-                    <Text style={[styles.checkInDetailText, { fontSize: fs(12.5) }]}>
+                    <Text
+                      style={[
+                        styles.checkInDetailText,
+                        { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.4) },
+                      ]}
+                    >
                       <Text style={styles.checkInDetailLabel}>Thể trạng: </Text>
                       {todayCheckIn.physicalHealth}
                     </Text>
@@ -571,7 +600,12 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                     >
                       Chưa điểm danh hôm nay
                     </Text>
-                    <Text style={[styles.metricFooterText, { fontSize: fs(12) }]}>
+                    <Text
+                      style={[
+                        styles.metricFooterText,
+                        { fontSize: fs(12), lineHeight: Math.round(fs(12) * 1.4) },
+                      ]}
+                    >
                       Người thân chưa gửi thông tin thăm hỏi trong ngày.
                     </Text>
                   </>
@@ -644,7 +678,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                             {med.medicationName}
                           </Text>
                           <Text style={[styles.medDoseText, { fontSize: fs(12) }]}>
-                            {timeStr} • Liều: {med.dosage}
+                            {med.dosage ? `${timeStr} • Liều: ${med.dosage}` : timeStr}
                           </Text>
                         </View>
 
@@ -698,7 +732,12 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                   <Text style={[styles.emptyAlertsTitle, { fontSize: fs(14) }]}>
                     Tình trạng ổn định
                   </Text>
-                  <Text style={[styles.emptyAlertsSub, { fontSize: fs(12.5) }]}>
+                  <Text
+                    style={[
+                      styles.emptyAlertsSub,
+                      { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.4) },
+                    ]}
+                  >
                     Hôm nay chưa có cảnh báo nào. Người thân của bạn đang được theo dõi.
                   </Text>
                 </View>
@@ -755,7 +794,12 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                         </Text>
 
                         {Boolean(alert.description?.trim()) && (
-                          <Text style={[styles.alertItemDesc, { fontSize: fs(12.5) }]}>
+                          <Text
+                            style={[
+                              styles.alertItemDesc,
+                              { fontSize: fs(12.5), lineHeight: Math.round(fs(12.5) * 1.4) },
+                            ]}
+                          >
                             {formatConciseAlertDescription(
                               alert.description,
                               alert.elderlyName || elderlyName
@@ -796,7 +840,12 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
               {hasAiSummary ? (
                 <View style={styles.summaryContent}>
                   {Boolean(checkinSummaryText) && (
-                    <Text style={[styles.summaryText, { fontSize: fs(13.5) }]}>
+                    <Text
+                      style={[
+                        styles.summaryText,
+                        { fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.45) },
+                      ]}
+                    >
                       <Text style={styles.summaryTextBold}>Điểm danh: </Text>
                       {checkinSummaryText}
                     </Text>
@@ -806,7 +855,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                     <Text
                       style={[
                         styles.summaryText,
-                        { fontSize: fs(13.5) },
+                        { fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.45) },
                         Boolean(checkinSummaryText) && styles.summaryTextSpaced,
                       ]}
                     >
@@ -819,7 +868,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                     <Text
                       style={[
                         styles.summaryText,
-                        { fontSize: fs(13.5) },
+                        { fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.45) },
                         Boolean(checkinSummaryText || checkInAiText) &&
                           styles.summaryTextSpaced,
                       ]}
@@ -902,6 +951,7 @@ const styles = StyleSheet.create({
   elderlyTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 12,
   },
   elderlyAvatar: {
@@ -913,7 +963,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   elderlyInfoCol: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 170,
     minWidth: 0,
   },
   elderlyName: {
@@ -924,7 +976,6 @@ const styles = StyleSheet.create({
   elderlyMeta: {
     color: colors.textSecondary,
     marginTop: 2,
-    lineHeight: 18,
     flexShrink: 1,
   },
   statusBadge: {
@@ -959,7 +1010,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexShrink: 1,
     fontWeight: '600',
-    lineHeight: 19,
   },
   elderlyFooter: {
     flexDirection: 'row',
@@ -985,7 +1035,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     backgroundColor: colors.surface,
-    padding: 14,
+    padding: 12,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.borderLight,
@@ -1030,7 +1080,6 @@ const styles = StyleSheet.create({
   metricFooterText: {
     color: colors.textSecondary,
     fontWeight: '500',
-    lineHeight: 17,
     flexShrink: 1,
   },
   checkInStatusDone: {
@@ -1047,7 +1096,6 @@ const styles = StyleSheet.create({
   },
   checkInDetailText: {
     color: colors.textPrimary,
-    lineHeight: 18,
     marginTop: 2,
     flexShrink: 1,
   },
@@ -1097,6 +1145,8 @@ const styles = StyleSheet.create({
   },
   seeAllButton: {
     flexShrink: 0,
+    minHeight: 44,
+    justifyContent: 'center',
     paddingVertical: 4,
     paddingHorizontal: 6,
   },
@@ -1189,7 +1239,6 @@ const styles = StyleSheet.create({
   emptyAlertsSub: {
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 18,
     paddingHorizontal: 8,
   },
   alertList: {
@@ -1229,11 +1278,11 @@ const styles = StyleSheet.create({
   },
   alertItemDesc: {
     color: colors.textPrimary,
-    lineHeight: 18,
     flexShrink: 1,
   },
   alertsActionBtn: {
     marginTop: 12,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1290,7 +1339,6 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     color: colors.textPrimary,
-    lineHeight: 20,
     flexShrink: 1,
   },
   summaryTextBold: {

@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 16,
     gap: 10,
-    maxWidth: 230,
+    maxWidth: 268,
     ...shadows.subtle,
   },
   pillSelected: {

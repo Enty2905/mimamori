@@ -49,10 +49,24 @@ export const CaregiverHeader: React.FC<CaregiverHeaderProps> = ({
           )}
         </View>
 
-        <Text style={[styles.title, { fontSize: fs(22) }]}>{title}</Text>
+        <Text
+          style={[
+            styles.title,
+            { fontSize: fs(22), lineHeight: Math.round(fs(22) * 1.32) },
+          ]}
+        >
+          {title}
+        </Text>
 
         {Boolean(subtitle) && (
-          <Text style={[styles.subtitle, { fontSize: fs(13.5) }]}>{subtitle}</Text>
+          <Text
+            style={[
+              styles.subtitle,
+              { fontSize: fs(13.5), lineHeight: Math.round(fs(13.5) * 1.45) },
+            ]}
+          >
+            {subtitle}
+          </Text>
         )}
       </View>
 
@@ -131,13 +145,11 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: '800',
     color: colors.textPrimary,
-    lineHeight: 29,
     flexShrink: 1,
   },
   subtitle: {
     color: colors.textSecondary,
     fontWeight: '500',
-    lineHeight: 20,
     marginTop: 3,
     flexShrink: 1,
   },
@@ -149,8 +161,8 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   refreshBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     backgroundColor: colors.surface,
     borderWidth: 1,
