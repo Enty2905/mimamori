@@ -1,402 +1,845 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
-  RefreshControl,
-  Alert,
   Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, shadows } from '../../core/theme/colors';
+import { getAvatarSource } from '../../core/theme/avatar';
+import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
 import { useAuthStore } from '../../core/auth/useAuthStore';
+import { useCaregiverStore } from '../../core/caregiver/useCaregiverStore';
 import { apiClient } from '../../core/api/client';
-
-interface FamilyMember {
-  relationshipId: number;
-  member: {
-    id: number;
-    fullName: string;
-    username: string;
-    role: string;
-    phoneNumber?: string;
-  };
-  relationshipType: string;
-  status: string;
-}
+import {
+  CareAlertDto,
+  CaregiverUserDto,
+  DailyCheckInDto,
+  DailySummaryDto,
+  FamilyMemberDto,
+  MedicationLogDto,
+  formatConciseAlertDescription,
+  formatTimeHHMM,
+  getAlertTitle,
+  getCareStatusMeta,
+  getMedicationDisplayStatus,
+  getSeverityMeta,
+  isAlertResolved,
+} from '../../core/utils/caregiverHelpers';
+import { CaregiverHeader } from '../../components/caregiver/CaregiverHeader';
+import { FamilyMemberSelector } from '../../components/caregiver/FamilyMemberSelector';
 
 interface DashboardOverview {
-  elderly: {
-    id: number;
-    fullName: string;
-    username: string;
-    phoneNumber?: string;
+  elderly: CaregiverUserDto & {
+    phoneNumber?: string | null;
   };
-  careStatus: 'NORMAL' | 'REMINDER_REQUIRED' | 'NEEDS_ATTENTION' | 'CRITICAL';
+  careStatus: 'NORMAL' | 'REMINDER_REQUIRED' | 'NEEDS_ATTENTION' | 'CRITICAL' | string;
   medicationAdherence: number;
-  todayCheckIn?: {
-    id: number;
-    mood: string;
-    physicalHealth: string;
-    sleepQuality: string;
-    appetite: string;
-    notes?: string;
-    aiAnalysis?: string;
-  };
-  todayMedications: Array<{
-    id: number;
-    medicationName: string;
-    dosage: string;
-    scheduledTime: string;
-    status: 'PENDING' | 'TAKEN' | 'MISSED' | 'SKIPPED';
-  }>;
-  activeAlerts: Array<{
-    id: number;
-    alertType: string;
-    title: string;
-    description: string;
-    severity: string;
-    createdAt: string;
-  }>;
-  recentSummary?: {
-    summaryDate: string;
-    checkinSummary: string;
-    medicationAdherenceRate: number;
-    aiHealthNote: string;
-  };
+  todayCheckIn?: (DailyCheckInDto & { aiAnalysis?: string | null }) | null;
+  todayMedications: MedicationLogDto[];
+  activeAlerts: CareAlertDto[];
+  recentSummary?: DailySummaryDto | null;
 }
 
 interface Props {
   onNavigateTab: (tab: 'dashboard' | 'alerts' | 'family' | 'medication') => void;
 }
 
+function extractShortName(fullName?: string | null): string {
+  const trimmed = fullName?.trim();
+  if (!trimmed) return '';
+  const parts = trimmed.split(/\s+/);
+  return parts[parts.length - 1] || trimmed;
+}
+
+function formatNowHHMM(): string {
+  return `${formatTimeHHMM(new Date().toISOString())} hôm nay`;
+}
+
+function deriveCareStatusReason(
+  data: DashboardOverview | null,
+  unresolvedAlerts: CareAlertDto[]
+): string | null {
+  if (!data) return null;
+
+  const needsReason =
+    (data.careStatus && data.careStatus !== 'NORMAL') || unresolvedAlerts.length > 0;
+  if (!needsReason) return null;
+
+  const firstAlert = unresolvedAlerts[0];
+  if (firstAlert) {
+    const alertDesc = formatConciseAlertDescription(
+      firstAlert.description,
+      firstAlert.elderlyName || data.elderly?.fullName
+    );
+    if (alertDesc) return alertDesc;
+    return getAlertTitle(firstAlert.alertType, firstAlert.title);
+  }
+
+  const meds = data.todayMedications ?? [];
+  let missedCount = 0;
+  let overdueCount = 0;
+  let pendingCount = 0;
+
+  for (const med of meds) {
+    const status = getMedicationDisplayStatus(med);
+    if (status.key === 'MISSED') missedCount += 1;
+    else if (status.key === 'OVERDUE') overdueCount += 1;
+    else if (status.key === 'PENDING') pendingCount += 1;
+  }
+
+  if (missedCount > 0) {
+    return `Có ${missedCount} cữ thuốc đã bỏ lỡ hôm nay.`;
+  }
+  if (overdueCount > 0) {
+    return `Có ${overdueCount} cữ thuốc đã quá giờ uống.`;
+  }
+  if (!data.todayCheckIn) {
+    return 'Người thân chưa thực hiện điểm danh hôm nay.';
+  }
+  if (data.todayCheckIn.concerningFlag) {
+    return 'Điểm danh hôm nay ghi nhận dấu hiệu sức khỏe cần lưu ý.';
+  }
+  if (pendingCount > 0) {
+    return `Còn ${pendingCount} cữ thuốc đang chờ uống hôm nay.`;
+  }
+
+  return 'Cần theo dõi thêm tình trạng trong ngày hôm nay.';
+}
+
 export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => {
   const { user } = useAuthStore();
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
-  const [selectedElderlyId, setSelectedElderlyId] = useState<number | null>(null);
+  const { fs } = useAccessibilityStore();
+
+  const [familyMembers, setFamilyMembers] = useState<FamilyMemberDto[]>([]);
+  const { selectedElderlyId, setSelectedElderlyId, setSelectedElderlyName } = useCaregiverStore();
+  const [statusByMemberId, setStatusByMemberId] = useState<Record<number, string | undefined>>({});
   const [data, setData] = useState<DashboardOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  // 1. Fetch linked family members
-  const fetchFamilyMembers = async () => {
-    try {
-      const res = await apiClient<FamilyMember[]>('/api/family/members');
-      if (res.success && res.data && res.data.length > 0) {
-        setFamilyMembers(res.data);
-        if (!selectedElderlyId) {
-          setSelectedElderlyId(res.data[0].member.id);
-        }
-      }
-    } catch {
-      // Handled
-    }
-  };
-
-  // 2. Fetch overview for selected elderly
-  const fetchOverview = async (targetId?: number | null) => {
-    try {
-      const idToFetch = targetId !== undefined ? targetId : selectedElderlyId;
-      const url = idToFetch ? `/api/dashboard/overview?elderlyId=${idToFetch}` : '/api/dashboard/overview';
-      const res = await apiClient<DashboardOverview>(url);
-      if (res.success && res.data) {
-        setData(res.data);
-        if (!selectedElderlyId && res.data.elderly?.id) {
-          setSelectedElderlyId(res.data.elderly.id);
-        }
-      }
-    } catch {
-      // Handled
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
+  const selectedElderlyIdRef = useRef<number | null>(null);
   useEffect(() => {
-    fetchFamilyMembers();
-  }, []);
-
-  useEffect(() => {
-    if (selectedElderlyId) {
-      setLoading(true);
-      fetchOverview(selectedElderlyId);
-    } else {
-      fetchOverview();
-    }
+    selectedElderlyIdRef.current = selectedElderlyId;
   }, [selectedElderlyId]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchFamilyMembers();
-    fetchOverview(selectedElderlyId);
-  };
+  const fetchMemberStatusesInBackground = useCallback(
+    async (members: FamilyMemberDto[], activeId: number | null) => {
+      const others = members.filter((m) => m.member.id !== activeId);
+      if (others.length === 0) return;
 
-  const getStatusVisuals = (status?: string) => {
-    switch (status) {
-      case 'NORMAL':
-        return { label: 'BÌNH THƯỜNG', color: colors.successText, bg: colors.success, iconName: 'check-circle' as const };
-      case 'REMINDER_REQUIRED':
-        return { label: 'CẦN NHẮC NHỞ', color: '#995C17', bg: '#FEF6EC', iconName: 'bell' as const };
-      case 'NEEDS_ATTENTION':
-        return { label: 'CẦN LƯU Ý', color: '#C2410C', bg: '#FFEDD5', iconName: 'alert-triangle' as const };
-      case 'CRITICAL':
-        return { label: 'CẢNH BÁO KHẨN', color: colors.dangerText, bg: colors.danger, iconName: 'alert-octagon' as const };
-      default:
-        return { label: 'BÌNH THƯỜNG', color: colors.successText, bg: colors.success, iconName: 'check-circle' as const };
+      const results = await Promise.allSettled(
+        others.map((m) =>
+          apiClient<DashboardOverview>(`/api/dashboard/overview?elderlyId=${m.member.id}`)
+        )
+      );
+
+      setStatusByMemberId((prev) => {
+        const next = { ...prev };
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled' && result.value.success && result.value.data) {
+            const memberId = others[index].member.id;
+            next[memberId] = result.value.data.careStatus;
+          }
+        });
+        return next;
+      });
+    },
+    []
+  );
+
+  const fetchOverview = useCallback(
+    async (targetId?: number | null, isRefresh = false) => {
+      if (!isRefresh) {
+        setLoading(true);
+      }
+      setErrorMessage(null);
+
+      try {
+        const idToFetch = targetId !== undefined ? targetId : selectedElderlyIdRef.current;
+        const url = idToFetch
+          ? `/api/dashboard/overview?elderlyId=${idToFetch}`
+          : '/api/dashboard/overview';
+        const res = await apiClient<DashboardOverview>(url);
+
+        if (res.success && res.data) {
+          setData(res.data);
+          setLastUpdated(formatNowHHMM());
+          const elderlyId = res.data.elderly?.id;
+          if (elderlyId) {
+            setStatusByMemberId((prev) => ({
+              ...prev,
+              [elderlyId]: res.data.careStatus,
+            }));
+            if (!selectedElderlyIdRef.current) {
+              setSelectedElderlyId(elderlyId);
+            }
+          }
+        } else {
+          setErrorMessage(res.message || 'Không thể tải dữ liệu tổng quan.');
+        }
+      } catch (err: any) {
+        setErrorMessage(err?.message || 'Không thể kết nối máy chủ.');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    []
+  );
+
+  const fetchFamilyMembers = useCallback(
+    async (isRefresh = false) => {
+      try {
+        const res = await apiClient<FamilyMemberDto[]>('/api/family/members');
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const members = res.data;
+          setFamilyMembers(members);
+
+          const currentId = selectedElderlyIdRef.current;
+          const stillExists = currentId && members.some((m) => m.member.id === currentId);
+          const nextSelectedId = stillExists ? currentId : members[0].member.id;
+
+          if (nextSelectedId !== currentId) {
+            setSelectedElderlyId(nextSelectedId);
+          } else {
+            await fetchOverview(nextSelectedId, isRefresh);
+          }
+
+          fetchMemberStatusesInBackground(members, nextSelectedId);
+        } else {
+          setFamilyMembers([]);
+          await fetchOverview(null, isRefresh);
+        }
+      } catch {
+        await fetchOverview(selectedElderlyIdRef.current, isRefresh);
+      }
+    },
+    [fetchMemberStatusesInBackground, fetchOverview, setSelectedElderlyId]
+  );
+
+  useEffect(() => {
+    fetchFamilyMembers(false);
+  }, [fetchFamilyMembers]);
+
+  useEffect(() => {
+    if (selectedElderlyId !== null) {
+      fetchOverview(selectedElderlyId, false);
     }
-  };
+  }, [selectedElderlyId, fetchOverview]);
 
-  const statusVisual = getStatusVisuals(data?.careStatus);
-  const adherencePercent = Math.round((data?.medicationAdherence ?? 1.0) * 100);
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchFamilyMembers(true);
+  }, [fetchFamilyMembers]);
+
+  const handleSelectMember = useCallback(
+    (elderlyId: number) => {
+      if (elderlyId === selectedElderlyId) {
+        fetchOverview(elderlyId, true);
+        return;
+      }
+      setSelectedElderlyId(elderlyId);
+    },
+    [selectedElderlyId, fetchOverview, setSelectedElderlyId]
+  );
+
+  const shortName = useMemo(() => extractShortName(user?.fullName), [user?.fullName]);
+  const headerTitle = `Xin chào, ${shortName || 'Người chăm sóc'} 👋`;
+  const headerSubtitle =
+    familyMembers.length > 0
+      ? `Hôm nay bạn đang theo dõi ${familyMembers.length} người thân`
+      : 'Theo dõi sức khỏe gia đình từ xa';
+
+  const selectedMember = useMemo(
+    () =>
+      familyMembers.find(
+        (fm) => fm.member.id === (data?.elderly?.id ?? selectedElderlyId)
+      ) ?? null,
+    [familyMembers, data?.elderly?.id, selectedElderlyId]
+  );
+
+  const elderlyName =
+    data?.elderly?.fullName || selectedMember?.member?.fullName || 'Người cao tuổi';
+  const elderlyPhone =
+    data?.elderly?.phone || data?.elderly?.phoneNumber || selectedMember?.member?.phone;
+
+  useEffect(() => {
+    const resolvedName = data?.elderly?.fullName || selectedMember?.member?.fullName || null;
+    if (resolvedName) {
+      setSelectedElderlyName(resolvedName);
+    }
+  }, [data?.elderly?.fullName, selectedMember?.member?.fullName, setSelectedElderlyName]);
+  const elderlyAvatar =
+    data?.elderly?.avatarUrl ?? selectedMember?.member?.avatarUrl;
+
+  const careStatusMeta = getCareStatusMeta(data?.careStatus);
+
+  const unresolvedAlerts = useMemo(
+    () => (data?.activeAlerts ?? []).filter((a) => !isAlertResolved(a)),
+    [data?.activeAlerts]
+  );
+
+  const statusReason = useMemo(
+    () => deriveCareStatusReason(data, unresolvedAlerts),
+    [data, unresolvedAlerts]
+  );
+
+  // Medication KPI calculations
+  const todayMeds = useMemo(
+    () => data?.todayMedications ?? [],
+    [data?.todayMedications]
+  );
+  const totalMeds = todayMeds.length;
+
+  const medMetrics = useMemo(() => {
+    let taken = 0;
+    let missedOrOverdue = 0;
+
+    for (const med of todayMeds) {
+      const display = getMedicationDisplayStatus(med);
+      if (display.key === 'TAKEN') taken += 1;
+      else if (display.key === 'MISSED' || display.key === 'OVERDUE') missedOrOverdue += 1;
+    }
+
+    const rawAdherence = data?.medicationAdherence ?? (totalMeds > 0 ? taken / totalMeds : 1);
+    const scaled = rawAdherence > 1 ? Math.round(rawAdherence) : Math.round(rawAdherence * 100);
+    const percent = Math.max(0, Math.min(100, scaled));
+
+    let color: string = colors.successText;
+    if (missedOrOverdue > 0) {
+      color = colors.dangerText;
+    } else if ((totalMeds > 0 && taken === totalMeds) || percent >= 80) {
+      color = colors.successText;
+    } else {
+      color = colors.warningText;
+    }
+
+    return { taken, percent, color };
+  }, [todayMeds, totalMeds, data?.medicationAdherence]);
+
+  // Check-in KPI details
+  const todayCheckIn = data?.todayCheckIn ?? null;
+  const checkInTime = todayCheckIn?.createdAt ? formatTimeHHMM(todayCheckIn.createdAt) : null;
+  const hasValidCheckInTime = Boolean(checkInTime && checkInTime !== '--:--');
+
+  // AI Summary real backend fields
+  const checkinSummaryText = data?.recentSummary?.checkinSummary?.trim() || '';
+  const aiHealthNoteText = data?.recentSummary?.aiHealthNote?.trim() || '';
+  const checkInAiText =
+    (todayCheckIn?.aiAnalysisSummary ?? todayCheckIn?.aiAnalysis)?.trim() || '';
+  const hasAiSummary = Boolean(checkinSummaryText || aiHealthNoteText || checkInAiText);
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[colors.primary]}
+          tintColor={colors.primary}
+        />
+      }
       showsVerticalScrollIndicator={false}
     >
-      {/* Caregiver Welcome Bar */}
-      <View style={styles.topHeader}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 }}>
-          <Image
-            source={require('../../../assets/images/mimamori-leaf-icon.png')}
-            style={{ width: 34, height: 34, marginRight: 10 }}
-            resizeMode="contain"
+      {/* A. Header */}
+      <CaregiverHeader
+        title={headerTitle}
+        subtitle={headerSubtitle}
+        lastUpdated={lastUpdated}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+      />
+
+      {/* B. Family Member Selector */}
+      {familyMembers.length > 0 && (
+        <View style={styles.selectorSection}>
+          <FamilyMemberSelector
+            members={familyMembers}
+            selectedId={selectedElderlyId}
+            onSelect={handleSelectMember}
+            statusByMemberId={statusByMemberId}
           />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.caregiverRole}>GIÁM SÁT TỪ XA • MIMAMORI</Text>
-            <Text style={styles.caregiverName} numberOfLines={2}>
-              Chào {user?.fullName || 'Người chăm sóc'}
+        </View>
+      )}
+
+      <View style={styles.body}>
+        {loading && !data ? (
+          <View style={styles.centerBox}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { fontSize: fs(14) }]}>
+              Đang đồng bộ dữ liệu sức khỏe...
             </Text>
           </View>
-        </View>
-        <TouchableOpacity style={styles.refreshPill} onPress={onRefresh} activeOpacity={0.7}>
-          <Feather name="refresh-cw" size={13} color={colors.primary} style={{ marginRight: 5 }} />
-          <Text style={styles.refreshText}>Cập nhật</Text>
-        </TouchableOpacity>
-      </View>
+        ) : (
+          <>
+            {Boolean(errorMessage) && (
+              <TouchableOpacity
+                style={styles.errorBanner}
+                onPress={onRefresh}
+                activeOpacity={0.8}
+              >
+                <Feather name="wifi-off" size={16} color={colors.dangerText} />
+                <Text style={[styles.errorBannerText, { fontSize: fs(13) }]}>
+                  {errorMessage} Nhấn để thử lại.
+                </Text>
+              </TouchableOpacity>
+            )}
 
-      {/* Linked Elderly Selector Pills (Synchronized with Family Relationships) */}
-      {familyMembers.length > 0 && (
-        <View style={styles.selectorWrap}>
-          <Text style={styles.selectorLabel}>CHỌN NGƯỜI THÂN ĐANG THEO DÕI:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.selectorRow}>
-            {familyMembers.map((fm) => {
-              const isSelected = selectedElderlyId === fm.member.id;
-              return (
-                <TouchableOpacity
-                  key={fm.member.id}
-                  style={[styles.memberPill, isSelected && styles.memberPillActive]}
-                  onPress={() => setSelectedElderlyId(fm.member.id)}
-                  activeOpacity={0.75}
-                >
-                  <View style={[styles.pillAvatar, isSelected && styles.pillAvatarActive]}>
-                    <Feather name="user" size={14} color={isSelected ? colors.primary : colors.textSecondary} />
-                  </View>
-                  <View style={{ flexShrink: 1 }}>
-                    <Text style={[styles.pillName, isSelected && styles.pillNameActive]} numberOfLines={1}>
-                      {fm.member.fullName}
-                    </Text>
-                    <Text style={[styles.pillRelation, isSelected && styles.pillRelationActive]} numberOfLines={1}>
-                      {fm.relationshipType || 'Người thân'} (@{fm.member.username})
-                    </Text>
-                  </View>
-                  {isSelected && (
-                    <Feather name="check" size={14} color={colors.primary} style={{ marginLeft: 6 }} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
+            {/* C. Elderly Status Card */}
+            <View style={styles.elderlyCard}>
+              <View style={styles.elderlyTopRow}>
+                <Image
+                  source={getAvatarSource(elderlyAvatar)}
+                  style={styles.elderlyAvatar}
+                />
+                <View style={styles.elderlyInfoCol}>
+                  <Text style={[styles.elderlyName, { fontSize: fs(17) }]}>
+                    {elderlyName}
+                  </Text>
+                  <Text style={[styles.elderlyMeta, { fontSize: fs(12.5) }]}>
+                    {selectedMember?.relationshipType
+                      ? `Quan hệ: ${selectedMember.relationshipType}`
+                      : 'Người cao tuổi'}
+                    {elderlyPhone ? ` • ${elderlyPhone}` : ''}
+                  </Text>
+                </View>
 
-      {/* Monitored Elderly Banner */}
-      <View style={styles.elderlyCard}>
-        <View style={styles.elderlyAvatar}>
-          <Feather name="user" size={24} color={colors.primary} />
-        </View>
-        <View style={styles.elderlyInfoCol}>
-          <Text style={styles.elderlyName}>{data?.elderly?.fullName || 'Người cao tuổi'}</Text>
-          <Text style={styles.elderlyRelation}>
-            Tài khoản: @{data?.elderly?.username || 'nguoi_cao_tuoi'}
-            {data?.elderly?.phoneNumber ? ` • SĐT: ${data.elderly.phoneNumber}` : ''}
-          </Text>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusVisual.bg }]}>
-          <Feather name={statusVisual.iconName} size={13} color={statusVisual.color} style={{ marginRight: 4 }} />
-          <Text style={[styles.statusBadgeText, { color: statusVisual.color }]}>
-            {statusVisual.label}
-          </Text>
-        </View>
-      </View>
-
-      {loading ? (
-        <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Đang đồng bộ dữ liệu người cao tuổi...</Text>
-        </View>
-      ) : (
-        <>
-          {/* Key Metrics Grid */}
-          <View style={styles.metricsRow}>
-            {/* Adherence Rate */}
-            <View style={styles.metricCard}>
-              <View style={styles.metricHeaderRow}>
-                <MaterialCommunityIcons name="pill" size={18} color={colors.primary} />
-                <Text style={styles.metricLabel}>Uống thuốc</Text>
-              </View>
-              <Text style={[styles.metricValue, { color: adherencePercent >= 80 ? colors.successText : '#C2410C' }]}>
-                {adherencePercent}%
-              </Text>
-              <View style={styles.progressBarBg}>
                 <View
                   style={[
-                    styles.progressBarFill,
+                    styles.statusBadge,
                     {
-                      width: `${adherencePercent}%`,
-                      backgroundColor: adherencePercent >= 80 ? colors.primary : '#F97316',
+                      backgroundColor: careStatusMeta.bg,
+                      borderColor: careStatusMeta.border,
                     },
                   ]}
-                />
+                >
+                  <Feather
+                    name={careStatusMeta.icon}
+                    size={13}
+                    color={careStatusMeta.text}
+                  />
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      { color: careStatusMeta.text, fontSize: fs(11.5) },
+                    ]}
+                  >
+                    {careStatusMeta.label}
+                  </Text>
+                </View>
               </View>
-              <Text style={styles.metricSub}>
-                Hôm nay: {data?.todayMedications?.filter((m) => m.status === 'TAKEN').length || 0}/
-                {data?.todayMedications?.length || 0} cữ đã uống
-              </Text>
+
+              {Boolean(statusReason) && (
+                <View
+                  style={[
+                    styles.reasonBox,
+                    {
+                      backgroundColor: careStatusMeta.bg,
+                      borderColor: careStatusMeta.border,
+                    },
+                  ]}
+                >
+                  <Feather
+                    name={careStatusMeta.icon}
+                    size={15}
+                    color={careStatusMeta.text}
+                    style={styles.reasonIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.reasonText,
+                      { color: careStatusMeta.text, fontSize: fs(13) },
+                    ]}
+                  >
+                    {statusReason}
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.elderlyFooter}>
+                <Feather name="clock" size={12} color={colors.textMuted} />
+                <Text style={[styles.elderlyUpdatedText, { fontSize: fs(11.5) }]}>
+                  Cập nhật lần cuối: {lastUpdated || formatNowHHMM()}
+                </Text>
+              </View>
             </View>
 
-            {/* Check-in Status */}
-            <View style={styles.metricCard}>
-              <View style={styles.metricHeaderRow}>
-                <Feather name="check-circle" size={16} color={data?.todayCheckIn ? colors.primary : '#D97706'} />
-                <Text style={styles.metricLabel}>Điểm danh</Text>
+            {/* D. Two KPI Health Cards side-by-side */}
+            <View style={styles.metricsRow}>
+              {/* Card 1: Uống thuốc */}
+              <View style={styles.metricCard}>
+                <View style={styles.metricHeaderRow}>
+                  <View style={styles.metricIconBadge}>
+                    <MaterialCommunityIcons name="pill" size={16} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.metricLabel, { fontSize: fs(13) }]}>Uống thuốc</Text>
+                </View>
+
+                <Text
+                  style={[
+                    styles.metricBigValue,
+                    { color: medMetrics.color, fontSize: fs(26) },
+                  ]}
+                >
+                  {medMetrics.percent}%
+                </Text>
+
+                <View style={styles.progressBarBg}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      {
+                        width: `${medMetrics.percent}%`,
+                        backgroundColor: medMetrics.color,
+                      },
+                    ]}
+                  />
+                </View>
+
+                <Text style={[styles.metricFooterText, { fontSize: fs(12) }]}>
+                  {medMetrics.taken}/{totalMeds} cữ đã uống
+                </Text>
               </View>
-              {data?.todayCheckIn ? (
-                <>
-                  <Text style={[styles.metricValue, { color: colors.successText }]}>Đã xong</Text>
-                  <Text style={styles.checkInDetailText} numberOfLines={1}>
-                    Tâm trạng: {data.todayCheckIn.mood}
+
+              {/* Card 2: Điểm danh */}
+              <View style={styles.metricCard}>
+                <View style={styles.metricHeaderRow}>
+                  <View
+                    style={[
+                      styles.metricIconBadge,
+                      {
+                        backgroundColor: todayCheckIn ? colors.success : colors.warning,
+                      },
+                    ]}
+                  >
+                    <Feather
+                      name="check-circle"
+                      size={15}
+                      color={todayCheckIn ? colors.successText : colors.warningText}
+                    />
+                  </View>
+                  <Text style={[styles.metricLabel, { fontSize: fs(13) }]}>Điểm danh</Text>
+                </View>
+
+                {todayCheckIn ? (
+                  <>
+                    <Text
+                      style={[
+                        styles.checkInStatusDone,
+                        { fontSize: fs(16) },
+                      ]}
+                    >
+                      Đã hoàn thành
+                    </Text>
+
+                    <Text style={[styles.checkInDetailText, { fontSize: fs(12.5) }]}>
+                      <Text style={styles.checkInDetailLabel}>Tâm trạng: </Text>
+                      {todayCheckIn.mood}
+                    </Text>
+
+                    <Text style={[styles.checkInDetailText, { fontSize: fs(12.5) }]}>
+                      <Text style={styles.checkInDetailLabel}>Thể trạng: </Text>
+                      {todayCheckIn.physicalHealth}
+                    </Text>
+
+                    {hasValidCheckInTime && (
+                      <View style={styles.checkInTimeRow}>
+                        <Feather name="clock" size={11} color={colors.textMuted} />
+                        <Text style={[styles.checkInTimeText, { fontSize: fs(11.5) }]}>
+                          Lúc {checkInTime}
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Text
+                      style={[
+                        styles.checkInStatusPending,
+                        { fontSize: fs(15) },
+                      ]}
+                    >
+                      Chưa điểm danh hôm nay
+                    </Text>
+                    <Text style={[styles.metricFooterText, { fontSize: fs(12) }]}>
+                      Người thân chưa gửi thông tin thăm hỏi trong ngày.
+                    </Text>
+                  </>
+                )}
+              </View>
+            </View>
+
+            {/* E. Today's Medication Card */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionTitleWrap}>
+                  <MaterialCommunityIcons
+                    name="pill"
+                    size={18}
+                    color={colors.primary}
+                  />
+                  <Text style={[styles.sectionTitle, { fontSize: fs(15.5) }]}>
+                    Lịch thuốc hôm nay
                   </Text>
-                  <Text style={styles.checkInDetailText} numberOfLines={1}>
-                    Thể trạng: {data.todayCheckIn.physicalHealth}
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => onNavigateTab('medication')}
+                  style={styles.seeAllButton}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.seeAllText, { fontSize: fs(13) }]}>
+                    Xem tất cả →
                   </Text>
-                </>
+                </TouchableOpacity>
+              </View>
+
+              {todayMeds.length === 0 ? (
+                <View style={styles.emptyInlineBox}>
+                  <Feather name="calendar" size={22} color={colors.textMuted} />
+                  <Text style={[styles.emptyInlineText, { fontSize: fs(13) }]}>
+                    Hôm nay chưa có lịch uống thuốc nào.
+                  </Text>
+                </View>
               ) : (
-                <>
-                  <Text style={[styles.metricValue, { color: '#D97706' }]}>Chưa gửi</Text>
-                  <Text style={styles.metricSub}>Cụ chưa gửi thông tin thăm hỏi hôm nay</Text>
-                </>
+                <View style={styles.medList}>
+                  {todayMeds.slice(0, 4).map((med, idx) => {
+                    const displayStatus = getMedicationDisplayStatus(med);
+                    const timeStr = formatTimeHHMM(med.scheduledTime);
+                    const isLast = idx === Math.min(todayMeds.length, 4) - 1;
+
+                    return (
+                      <View
+                        key={med.id}
+                        style={[styles.medRowItem, isLast && styles.medRowItemLast]}
+                      >
+                        <View
+                          style={[
+                            styles.medStatusDot,
+                            {
+                              backgroundColor: displayStatus.bg,
+                              borderColor: displayStatus.border,
+                            },
+                          ]}
+                        >
+                          <Feather
+                            name={displayStatus.icon}
+                            size={13}
+                            color={displayStatus.text}
+                          />
+                        </View>
+
+                        <View style={styles.medInfoCol}>
+                          <Text style={[styles.medNameText, { fontSize: fs(14) }]}>
+                            {med.medicationName}
+                          </Text>
+                          <Text style={[styles.medDoseText, { fontSize: fs(12) }]}>
+                            {timeStr} • Liều: {med.dosage}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.medBadge,
+                            {
+                              backgroundColor: displayStatus.bg,
+                              borderColor: displayStatus.border,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.medBadgeText,
+                              { color: displayStatus.text, fontSize: fs(11.5) },
+                            ]}
+                          >
+                            {displayStatus.label}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
               )}
             </View>
-          </View>
 
-          {/* Today's Detailed Medication Schedule (Synchronized) */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
-                <MaterialCommunityIcons name="pill" size={18} color={colors.primary} style={{ marginRight: 6 }} />
-                <Text style={styles.sectionTitle}>Lịch thuốc của cụ hôm nay</Text>
+            {/* F. Active Alerts Quick Card */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionTitleWrap}>
+                  <Feather
+                    name="alert-triangle"
+                    size={18}
+                    color={
+                      unresolvedAlerts.length > 0 ? colors.dangerText : colors.primary
+                    }
+                  />
+                  <Text style={[styles.sectionTitle, { fontSize: fs(15.5) }]}>
+                    Cảnh báo cần chú ý ({unresolvedAlerts.length})
+                  </Text>
+                </View>
               </View>
-              <TouchableOpacity onPress={() => onNavigateTab('medication')} style={{ flexShrink: 0 }}>
-                <Text style={styles.seeAllText}>Quản lý ›</Text>
+
+              {unresolvedAlerts.length === 0 ? (
+                <View style={styles.emptyAlertsBox}>
+                  <View style={styles.shieldIconWrap}>
+                    <Feather name="shield" size={24} color={colors.successText} />
+                  </View>
+                  <Text style={[styles.emptyAlertsTitle, { fontSize: fs(14) }]}>
+                    Tình trạng ổn định
+                  </Text>
+                  <Text style={[styles.emptyAlertsSub, { fontSize: fs(12.5) }]}>
+                    Hôm nay chưa có cảnh báo nào. Người thân của bạn đang được theo dõi.
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.alertList}>
+                  {unresolvedAlerts.slice(0, 3).map((alert) => {
+                    const sevMeta = getSeverityMeta(alert.severity);
+                    const alertTitle = getAlertTitle(alert.alertType, alert.title);
+                    const alertTime = formatTimeHHMM(alert.createdAt);
+
+                    return (
+                      <View
+                        key={alert.id}
+                        style={[
+                          styles.alertItem,
+                          {
+                            backgroundColor: sevMeta.bg,
+                            borderColor: sevMeta.border,
+                          },
+                        ]}
+                      >
+                        <View style={styles.alertTopRow}>
+                          <View
+                            style={[
+                              styles.severityBadge,
+                              {
+                                backgroundColor: colors.surface,
+                                borderColor: sevMeta.border,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.severityBadgeText,
+                                { color: sevMeta.text, fontSize: fs(11) },
+                              ]}
+                            >
+                              {sevMeta.label}
+                            </Text>
+                          </View>
+
+                          <Text style={[styles.alertTimeText, { fontSize: fs(11.5) }]}>
+                            {alertTime}
+                          </Text>
+                        </View>
+
+                        <Text
+                          style={[
+                            styles.alertItemTitle,
+                            { color: sevMeta.text, fontSize: fs(14) },
+                          ]}
+                        >
+                          {alertTitle}
+                        </Text>
+
+                        {Boolean(alert.description?.trim()) && (
+                          <Text style={[styles.alertItemDesc, { fontSize: fs(12.5) }]}>
+                            {formatConciseAlertDescription(
+                              alert.description,
+                              alert.elderlyName || elderlyName
+                            )}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={styles.alertsActionBtn}
+                onPress={() => onNavigateTab('alerts')}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.alertsActionText, { fontSize: fs(13) }]}>
+                  Xem tất cả cảnh báo
+                </Text>
+                <Feather name="arrow-right" size={15} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
-            {(!data?.todayMedications || data.todayMedications.length === 0) ? (
-              <View style={styles.emptyInlineBox}>
-                <Feather name="calendar" size={24} color={colors.textMuted} style={{ marginBottom: 6 }} />
-                <Text style={styles.emptyInlineText}>Hôm nay cụ chưa có lịch uống thuốc nào.</Text>
-              </View>
-            ) : (
-              data.todayMedications.map((med) => {
-                const isTaken = med.status === 'TAKEN';
-                return (
-                  <View key={med.id} style={styles.medRowItem}>
-                    <View style={[styles.medStatusDot, { backgroundColor: isTaken ? colors.primary : colors.border }]}>
-                      <Feather name={isTaken ? 'check' : 'clock'} size={12} color={isTaken ? '#FFFFFF' : colors.textSecondary} />
-                    </View>
-                    <View style={styles.medInfoCol}>
-                      <Text style={styles.medNameText}>{med.medicationName}</Text>
-                      <Text style={styles.medDoseText}>
-                        Liều: {med.dosage} • Giờ: {med.scheduledTime ? med.scheduledTime.slice(0, 5) : '08:00'}
-                      </Text>
-                    </View>
-                    <View style={[styles.medBadge, { backgroundColor: isTaken ? colors.success : colors.surfaceWarm }]}>
-                      <Text style={[styles.medBadgeText, { color: isTaken ? colors.successText : colors.textSecondary }]}>
-                        {isTaken ? 'Đã uống' : med.status === 'MISSED' ? 'Trễ giờ' : 'Chờ uống'}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })
-            )}
-          </View>
-
-          {/* Active Care Alerts Section */}
-          <View style={styles.sectionCard}>
-            <View style={styles.sectionHeaderRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
-                <Feather name="alert-triangle" size={18} color={colors.dangerText} style={{ marginRight: 6 }} />
-                <Text style={styles.sectionTitle}>Cảnh báo cần chú ý</Text>
-              </View>
-              <TouchableOpacity onPress={() => onNavigateTab('alerts')} style={{ flexShrink: 0 }}>
-                <Text style={styles.seeAllText}>Xem tất cả ({data?.activeAlerts?.length || 0}) ›</Text>
-              </TouchableOpacity>
-            </View>
-
-            {(!data?.activeAlerts || data.activeAlerts.length === 0) ? (
-              <View style={styles.emptyAlertsBox}>
-                <View style={styles.shieldIconWrap}>
-                  <Feather name="shield" size={26} color={colors.successText} />
+            {/* G. AI Summary Card */}
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryHeaderRow}>
+                <View style={styles.summaryIconWrap}>
+                  <Feather name="cpu" size={18} color={colors.primary} />
                 </View>
-                <Text style={styles.emptyAlertsText}>Không có cảnh báo khẩn cấp nào</Text>
-                <Text style={styles.emptyAlertsSub}>Người cao tuổi đang sinh hoạt trong điều kiện ổn định.</Text>
-              </View>
-            ) : (
-              data.activeAlerts.slice(0, 2).map((alert) => (
-                <View key={alert.id} style={styles.alertItem}>
-                  <Feather name="alert-circle" size={20} color={colors.dangerText} style={styles.alertItemIcon} />
-                  <View style={styles.alertItemCol}>
-                    <Text style={styles.alertItemTitle}>{alert.title}</Text>
-                    <Text style={styles.alertItemDesc}>{alert.description}</Text>
-                  </View>
+                <View style={styles.summaryHeaderTextCol}>
+                  <Text style={[styles.summaryTitle, { fontSize: fs(15.5) }]}>
+                    Tóm tắt sức khỏe từ Mimamori AI
+                  </Text>
                 </View>
-              ))
-            )}
-          </View>
-
-          {/* AI Care Agent Daily Summary */}
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryHeaderRow}>
-              <View style={styles.summaryIconWrap}>
-                <Feather name="cpu" size={20} color={colors.primary} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.summaryTitle}>Báo cáo thông minh từ Care Agent</Text>
-                <Text style={styles.summarySub}>Tổng hợp tự động hoạt động và sức khỏe</Text>
-              </View>
-            </View>
-            <View style={styles.summaryContent}>
-              <Text style={styles.summaryText}>
-                <Text style={{ fontWeight: '700' }}>Điểm danh: </Text>
-                {data?.recentSummary?.checkinSummary || (data?.todayCheckIn ? `Hôm nay tâm trạng ${data.todayCheckIn.mood}, thể trạng ${data.todayCheckIn.physicalHealth}, giấc ngủ ${data.todayCheckIn.sleepQuality}.` : 'Chưa hoàn thành điểm danh hôm nay.')}
-              </Text>
-              <Text style={[styles.summaryText, { marginTop: 8 }]}>
-                <Text style={{ fontWeight: '700' }}>Ghi chú AI: </Text>
-                {data?.recentSummary?.aiHealthNote || 'Gia đình hãy nhắc cụ uống đủ nước ấm và giữ ấm cơ thể trong ngày hôm nay.'}
-              </Text>
-            </View>
-          </View>
-        </>
-      )}
 
-      <View style={{ height: 40 }} />
+              {hasAiSummary ? (
+                <View style={styles.summaryContent}>
+                  {Boolean(checkinSummaryText) && (
+                    <Text style={[styles.summaryText, { fontSize: fs(13.5) }]}>
+                      <Text style={styles.summaryTextBold}>Điểm danh: </Text>
+                      {checkinSummaryText}
+                    </Text>
+                  )}
+
+                  {Boolean(checkInAiText) && checkInAiText !== aiHealthNoteText && (
+                    <Text
+                      style={[
+                        styles.summaryText,
+                        { fontSize: fs(13.5) },
+                        Boolean(checkinSummaryText) && styles.summaryTextSpaced,
+                      ]}
+                    >
+                      <Text style={styles.summaryTextBold}>Phân tích AI: </Text>
+                      {checkInAiText}
+                    </Text>
+                  )}
+
+                  {Boolean(aiHealthNoteText) && (
+                    <Text
+                      style={[
+                        styles.summaryText,
+                        { fontSize: fs(13.5) },
+                        Boolean(checkinSummaryText || checkInAiText) &&
+                          styles.summaryTextSpaced,
+                      ]}
+                    >
+                      <Text style={styles.summaryTextBold}>Ghi chú sức khỏe: </Text>
+                      {aiHealthNoteText}
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.summaryEmptyBox}>
+                  <Text style={[styles.summaryEmptyText, { fontSize: fs(13) }]}>
+                    Chưa có tóm tắt sức khỏe hôm nay.
+                  </Text>
+                </View>
+              )}
+            </View>
+          </>
+        )}
+      </View>
     </ScrollView>
   );
 };
@@ -407,167 +850,140 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   contentContainer: {
-    padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 110,
   },
-  topHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
+  selectorSection: {
+    marginBottom: 10,
   },
-  caregiverRole: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: 0.5,
-    flexShrink: 1,
+  body: {
+    paddingHorizontal: 18,
+    paddingTop: 4,
+    gap: 14,
   },
-  caregiverName: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    flexShrink: 1,
-  },
-  refreshPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 0,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...shadows.subtle,
-  },
-  refreshText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  selectorWrap: {
-    marginBottom: 14,
-  },
-  selectorLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.textSecondary,
-    marginBottom: 8,
-    letterSpacing: 0.4,
-  },
-  selectorRow: {
-    gap: 8,
-    paddingBottom: 4,
-  },
-  memberPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    maxWidth: 260,
-    backgroundColor: colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: colors.borderLight,
-  },
-  memberPillActive: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primary,
-  },
-  pillAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.surfaceWarm,
+  centerBox: {
+    paddingVertical: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    gap: 10,
   },
-  pillAvatarActive: {
-    backgroundColor: colors.surface,
-  },
-  pillName: {
-    fontSize: 13,
-    fontWeight: '700',
+  loadingText: {
     color: colors.textSecondary,
+    fontWeight: '500',
   },
-  pillNameActive: {
-    color: colors.primary,
-    fontWeight: '800',
-  },
-  pillRelation: {
-    fontSize: 11,
-    color: colors.textMuted,
-  },
-  pillRelationActive: {
-    color: colors.primaryDark,
-  },
-  elderlyCard: {
+  errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.danger,
+    borderWidth: 1,
+    borderColor: colors.dangerBorder,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  errorBannerText: {
+    color: colors.dangerText,
+    fontWeight: '600',
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+
+  // C. Elderly Status Card
+  elderlyCard: {
     backgroundColor: colors.surface,
-    padding: 16,
     borderRadius: 20,
-    marginBottom: 16,
+    padding: 16,
     borderWidth: 1,
     borderColor: colors.borderLight,
+    gap: 12,
     ...shadows.subtle,
+  },
+  elderlyTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   elderlyAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.surfaceWarm,
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
   elderlyInfoCol: {
     flex: 1,
     minWidth: 0,
-    marginRight: 8,
   },
   elderlyName: {
-    fontSize: 17,
     fontWeight: '800',
     color: colors.textPrimary,
+    flexShrink: 1,
   },
-  elderlyRelation: {
-    fontSize: 12,
+  elderlyMeta: {
     color: colors.textSecondary,
     marginTop: 2,
+    lineHeight: 18,
+    flexShrink: 1,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexShrink: 0,
-    maxWidth: '45%',
+    gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
+    borderWidth: 1,
+    flexShrink: 0,
   },
   statusBadgeText: {
-    fontSize: 11,
     fontWeight: '800',
     flexShrink: 1,
   },
-  centerBox: {
-    paddingVertical: 40,
+  reasonBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  reasonIcon: {
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  reasonText: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
+    fontWeight: '600',
+    lineHeight: 19,
+  },
+  elderlyFooter: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 14,
-    color: colors.textSecondary,
+  elderlyUpdatedText: {
+    color: colors.textMuted,
+    fontWeight: '500',
+    flexShrink: 1,
   },
+
+  // D. KPI Cards
   metricsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
+    alignItems: 'stretch',
   },
   metricCard: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: colors.surface,
     padding: 14,
     borderRadius: 18,
@@ -578,46 +994,84 @@ const styles = StyleSheet.create({
   metricHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
+    gap: 7,
+    marginBottom: 10,
+  },
+  metricIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   metricLabel: {
-    fontSize: 12,
     fontWeight: '700',
     color: colors.textSecondary,
     flexShrink: 1,
+    minWidth: 0,
   },
-  metricValue: {
-    fontSize: 22,
+  metricBigValue: {
     fontWeight: '900',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   progressBarBg: {
-    height: 6,
+    height: 7,
     backgroundColor: colors.surfaceWarm,
-    borderRadius: 3,
-    marginBottom: 6,
+    borderRadius: 4,
+    marginBottom: 8,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 4,
   },
-  metricSub: {
-    fontSize: 11,
+  metricFooterText: {
     color: colors.textSecondary,
+    fontWeight: '500',
+    lineHeight: 17,
+    flexShrink: 1,
+  },
+  checkInStatusDone: {
+    fontWeight: '800',
+    color: colors.successText,
+    marginBottom: 6,
+    flexShrink: 1,
+  },
+  checkInStatusPending: {
+    fontWeight: '800',
+    color: colors.warningText,
+    marginBottom: 6,
+    flexShrink: 1,
   },
   checkInDetailText: {
-    fontSize: 12,
     color: colors.textPrimary,
-    fontWeight: '600',
+    lineHeight: 18,
     marginTop: 2,
+    flexShrink: 1,
   },
+  checkInDetailLabel: {
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  checkInTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+  },
+  checkInTimeText: {
+    color: colors.textMuted,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+
+  // E & F. Shared Section Card
   sectionCard: {
     backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 16,
-    marginBottom: 16,
     borderWidth: 1,
     borderColor: colors.borderLight,
     ...shadows.subtle,
@@ -626,26 +1080,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
     marginBottom: 12,
   },
+  sectionTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    minWidth: 0,
+  },
   sectionTitle: {
-    fontSize: 15,
     fontWeight: '800',
     color: colors.textPrimary,
     flexShrink: 1,
   },
+  seeAllButton: {
+    flexShrink: 0,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
   seeAllText: {
-    fontSize: 13,
     fontWeight: '700',
     color: colors.primary,
   },
   emptyInlineBox: {
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 16,
+    gap: 6,
   },
   emptyInlineText: {
-    fontSize: 13,
     color: colors.textSecondary,
+    textAlign: 'center',
+  },
+
+  // E. Medication List
+  medList: {
+    gap: 2,
   },
   medRowItem: {
     flexDirection: 'row',
@@ -653,91 +1124,133 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
+    gap: 10,
+  },
+  medRowItemLast: {
+    borderBottomWidth: 0,
+    paddingBottom: 2,
   },
   medStatusDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    flexShrink: 0,
   },
   medInfoCol: {
     flex: 1,
     minWidth: 0,
-    marginRight: 8,
   },
   medNameText: {
-    fontSize: 14,
     fontWeight: '700',
     color: colors.textPrimary,
+    flexShrink: 1,
   },
   medDoseText: {
-    fontSize: 12,
     color: colors.textSecondary,
     marginTop: 2,
+    flexShrink: 1,
   },
   medBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
     flexShrink: 0,
   },
   medBadgeText: {
-    fontSize: 11,
     fontWeight: '700',
   },
+
+  // F. Alerts Quick Card
   emptyAlertsBox: {
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
+    gap: 6,
   },
   shieldIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: colors.success,
+    borderWidth: 1,
+    borderColor: colors.successBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 2,
   },
-  emptyAlertsText: {
-    fontSize: 14,
+  emptyAlertsTitle: {
     fontWeight: '700',
     color: colors.successText,
-  },
-  emptyAlertsSub: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 2,
     textAlign: 'center',
   },
+  emptyAlertsSub: {
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
+  },
+  alertList: {
+    gap: 10,
+  },
   alertItem: {
-    flexDirection: 'row',
-    backgroundColor: colors.danger,
     padding: 12,
     borderRadius: 14,
-    marginBottom: 8,
     borderWidth: 1,
-    borderColor: colors.dangerBorder,
+    gap: 4,
   },
-  alertItemIcon: {
-    marginRight: 10,
-    marginTop: 2,
+  alertTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 2,
   },
-  alertItemCol: {
-    flex: 1,
+  severityBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  severityBadgeText: {
+    fontWeight: '800',
+  },
+  alertTimeText: {
+    color: colors.textSecondary,
+    fontWeight: '600',
+    flexShrink: 0,
   },
   alertItemTitle: {
-    fontSize: 14,
     fontWeight: '700',
-    color: colors.dangerText,
+    flexShrink: 1,
   },
   alertItemDesc: {
-    fontSize: 12,
     color: colors.textPrimary,
-    marginTop: 2,
-    lineHeight: 16,
+    lineHeight: 18,
+    flexShrink: 1,
   },
+  alertsActionBtn: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.surfaceWarm,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  alertsActionText: {
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
+  // G. AI Summary Card
   summaryCard: {
     backgroundColor: colors.surface,
     borderRadius: 20,
@@ -749,6 +1262,7 @@ const styles = StyleSheet.create({
   summaryHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
     marginBottom: 12,
   },
   summaryIconWrap: {
@@ -758,16 +1272,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    flexShrink: 0,
+  },
+  summaryHeaderTextCol: {
+    flex: 1,
+    minWidth: 0,
   },
   summaryTitle: {
-    fontSize: 15,
     fontWeight: '800',
     color: colors.textPrimary,
-  },
-  summarySub: {
-    fontSize: 11.5,
-    color: colors.textSecondary,
+    flexShrink: 1,
   },
   summaryContent: {
     backgroundColor: colors.surfaceWarm,
@@ -775,8 +1289,25 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   summaryText: {
-    fontSize: 13,
     color: colors.textPrimary,
     lineHeight: 20,
+    flexShrink: 1,
+  },
+  summaryTextBold: {
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  summaryTextSpaced: {
+    marginTop: 8,
+  },
+  summaryEmptyBox: {
+    backgroundColor: colors.surfaceWarm,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+  },
+  summaryEmptyText: {
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
 });

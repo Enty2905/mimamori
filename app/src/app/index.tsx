@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,9 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, shadows } from '../core/theme/colors';
 import { useAuthStore } from '../core/auth/useAuthStore';
 import { useAccessibilityStore } from '../core/accessibility/useAccessibilityStore';
+import { useCaregiverStore } from '../core/caregiver/useCaregiverStore';
+import { apiClient } from '../core/api/client';
+import { CareAlertDto, isAlertResolved } from '../core/utils/caregiverHelpers';
 import { AuthScreen } from '../features/auth/AuthScreen';
 
 // Elderly Screens
@@ -25,18 +28,45 @@ import { ElderlyProfileScreen } from '../features/elderly/ElderlyProfileScreen';
 // Caregiver Screens
 import { CaregiverDashboardScreen } from '../features/caregiver/CaregiverDashboardScreen';
 import { CaregiverAlertsScreen } from '../features/caregiver/CaregiverAlertsScreen';
+import { CaregiverMedicationScreen } from '../features/caregiver/CaregiverMedicationScreen';
 import { CaregiverFamilyScreen } from '../features/caregiver/CaregiverFamilyScreen';
 
 export default function IndexRoute() {
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated, isLoading, checkAuth } = useAuthStore();
   const { fs } = useAccessibilityStore();
+  const selectedElderlyId = useCaregiverStore((s) => s.selectedElderlyId);
   const [elderlyTab, setElderlyTab] = useState<'home' | 'medication' | 'companion' | 'checkin' | 'profile'>('home');
   const [caregiverTab, setCaregiverTab] = useState<'dashboard' | 'alerts' | 'medication' | 'family'>('dashboard');
+  const [unresolvedAlertCount, setUnresolvedAlertCount] = useState(0);
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  const fetchUnresolvedAlertCount = useCallback(async () => {
+    if (!isAuthenticated || user?.role !== 'CAREGIVER') {
+      setUnresolvedAlertCount(0);
+      return;
+    }
+    try {
+      const res = await apiClient<CareAlertDto[]>('/api/alerts');
+      if (res.success && Array.isArray(res.data)) {
+        const scoped =
+          selectedElderlyId !== null
+            ? res.data.filter((alert) => alert.elderlyId === selectedElderlyId)
+            : res.data;
+        const count = scoped.filter((alert) => !isAlertResolved(alert)).length;
+        setUnresolvedAlertCount(count);
+      }
+    } catch {
+      // Keep current badge count if background refresh fails
+    }
+  }, [isAuthenticated, user?.role, selectedElderlyId]);
+
+  useEffect(() => {
+    fetchUnresolvedAlertCount();
+  }, [fetchUnresolvedAlertCount, caregiverTab]);
 
   if (isLoading) {
     return (
@@ -85,9 +115,13 @@ export default function IndexRoute() {
           </>
         ) : (
           <>
-            {caregiverTab === 'dashboard' && <CaregiverDashboardScreen onNavigateTab={(tab) => setCaregiverTab(tab as any)} />}
-            {caregiverTab === 'alerts' && <CaregiverAlertsScreen />}
-            {caregiverTab === 'medication' && <ElderlyMedicationScreen />}
+            {caregiverTab === 'dashboard' && (
+              <CaregiverDashboardScreen onNavigateTab={(tab) => setCaregiverTab(tab as any)} />
+            )}
+            {caregiverTab === 'alerts' && (
+              <CaregiverAlertsScreen onAlertsChanged={setUnresolvedAlertCount} />
+            )}
+            {caregiverTab === 'medication' && <CaregiverMedicationScreen />}
             {caregiverTab === 'family' && <CaregiverFamilyScreen />}
           </>
         )}
@@ -246,11 +280,18 @@ export default function IndexRoute() {
               accessibilityRole="tab"
               accessibilityState={{ selected: caregiverTab === 'dashboard' }}
             >
-              <Feather
-                name="activity"
-                size={21}
-                color={caregiverTab === 'dashboard' ? colors.primary : colors.textSecondary}
-              />
+              <View
+                style={[
+                  styles.caregiverIconWrap,
+                  caregiverTab === 'dashboard' && styles.caregiverIconWrapActive,
+                ]}
+              >
+                <Feather
+                  name="activity"
+                  size={21}
+                  color={caregiverTab === 'dashboard' ? '#456B58' : colors.textSecondary}
+                />
+              </View>
               <Text
                 style={[
                   styles.navLabel,
@@ -273,11 +314,25 @@ export default function IndexRoute() {
               accessibilityRole="tab"
               accessibilityState={{ selected: caregiverTab === 'alerts' }}
             >
-              <Feather
-                name="alert-triangle"
-                size={21}
-                color={caregiverTab === 'alerts' ? colors.primary : colors.textSecondary}
-              />
+              <View
+                style={[
+                  styles.caregiverIconWrap,
+                  caregiverTab === 'alerts' && styles.caregiverIconWrapActive,
+                ]}
+              >
+                <Feather
+                  name="alert-triangle"
+                  size={21}
+                  color={caregiverTab === 'alerts' ? '#456B58' : colors.textSecondary}
+                />
+                {unresolvedAlertCount > 0 && (
+                  <View style={styles.alertBadge}>
+                    <Text style={styles.alertBadgeText}>
+                      {unresolvedAlertCount > 99 ? '99+' : unresolvedAlertCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Text
                 style={[
                   styles.navLabel,
@@ -300,11 +355,18 @@ export default function IndexRoute() {
               accessibilityRole="tab"
               accessibilityState={{ selected: caregiverTab === 'medication' }}
             >
-              <MaterialCommunityIcons
-                name="pill"
-                size={22}
-                color={caregiverTab === 'medication' ? colors.primary : colors.textSecondary}
-              />
+              <View
+                style={[
+                  styles.caregiverIconWrap,
+                  caregiverTab === 'medication' && styles.caregiverIconWrapActive,
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="pill"
+                  size={21}
+                  color={caregiverTab === 'medication' ? '#456B58' : colors.textSecondary}
+                />
+              </View>
               <Text
                 style={[
                   styles.navLabel,
@@ -327,11 +389,18 @@ export default function IndexRoute() {
               accessibilityRole="tab"
               accessibilityState={{ selected: caregiverTab === 'family' }}
             >
-              <Feather
-                name="users"
-                size={21}
-                color={caregiverTab === 'family' ? colors.primary : colors.textSecondary}
-              />
+              <View
+                style={[
+                  styles.caregiverIconWrap,
+                  caregiverTab === 'family' && styles.caregiverIconWrapActive,
+                ]}
+              >
+                <Feather
+                  name="users"
+                  size={21}
+                  color={caregiverTab === 'family' ? '#456B58' : colors.textSecondary}
+                />
+              </View>
               <Text
                 style={[
                   styles.navLabel,
@@ -446,5 +515,36 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: colors.primary,
     marginTop: 3,
+  },
+  caregiverIconWrap: {
+    position: 'relative',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  caregiverIconWrapActive: {
+    backgroundColor: colors.primaryLight,
+  },
+  alertBadge: {
+    position: 'absolute',
+    top: -3,
+    right: 0,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 8.5,
+    backgroundColor: '#B83232',
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.surface,
+  },
+  alertBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    lineHeight: 12,
   },
 });
