@@ -1,0 +1,2013 @@
+{
+  "generated_at_utc": "2026-11-21T05:12:20.075206+00:00",
+  "embedding_source": "huggingface_real_weights",
+  "embedding_provider": "huggingface_e5",
+  "embedding_model_name": "intfloat/multilingual-e5-base",
+  "hash_dev_used": false,
+  "vector_dimension": 768,
+  "l2_normalized_verified": true,
+  "total_documents_indexed": 14,
+  "total_queries": 35,
+  "in_domain_queries": 30,
+  "out_of_domain_queries": 5,
+  "cache_dirs": {
+    "HF_HOME": "E:\\mimamori_artifacts\\hf_cache",
+    "SENTENCE_TRANSFORMERS_HOME": "E:\\mimamori_artifacts\\hf_cache",
+    "chroma_persist_dir": "E:\\mimamori_artifacts\\chroma_smoke_g"
+  },
+  "environment": {
+    "python_executable": "E:\\mimamori_venv\\companion_ai\\Scripts\\python.exe",
+    "python_version": "3.12.7",
+    "torch_version": "2.15.0+cpu",
+    "cuda_available": false,
+    "sentence_transformers_version": "6.3.0",
+    "transformers_version": "5.23.0",
+    "chromadb_version": "1.5.9",
+    "psutil_version": "7.2.2",
+    "system_total_ram_gb": 15.69
+  },
+  "prefix_verification": {
+    "passage_prefix_enforced": true,
+    "passages_checked": 14,
+    "sample_passage_prefix": "passage: Hướng dẫn trò chuyện bằng giọng nói và nghe đọc lại trên Mimamori AI. T",
+    "query_prefix_enforced": true,
+    "queries_checked": 35,
+    "sample_query_prefix": "query: Làm sao để bật micro nói chuyện bằng giọng nói và nghe đọc lại trên ứng dụng Mimamori AI?"
+  },
+  "persistence_verification": {
+    "indexed_count": 14,
+    "raw_persisted_count": 14,
+    "reopened_count": 14,
+    "collection_metadata": {
+      "embedding_provider": "huggingface_e5",
+      "embedding_model": "intfloat/multilingual-e5-base",
+      "hnsw:space": "cosine"
+    },
+    "pre_reopen_top1": {
+      "doc_id": "emergency_guidance_01",
+      "score": 0.8978
+    },
+    "post_reopen_top1": {
+      "doc_id": "emergency_guidance_01",
+      "score": 0.8978
+    },
+    "persistence_verified": true
+  },
+  "metadata_filtering_verification": {
+    "all_5_categories_passed": true,
+    "strict_cross_category_isolation_passed": true,
+    "category_cases": [
+      {
+        "requested_category": "elderly_care",
+        "query": "Phòng tránh trượt ngã ban đêm trong nhà vệ sinh cho người lớn tuổi",
+        "returned_count": 3,
+        "all_match_requested_category": true,
+        "returned_docs": [
+          {
+            "doc_id": "elderly_care_02",
+            "category": "elderly_care",
+            "score": 0.8875
+          },
+          {
+            "doc_id": "elderly_care_01",
+            "category": "elderly_care",
+            "score": 0.8119
+          },
+          {
+            "doc_id": "elderly_care_03",
+            "category": "elderly_care",
+            "score": 0.7968
+          }
+        ]
+      },
+      {
+        "requested_category": "general_health",
+        "query": "Vận động đi bộ nhẹ nhàng mỗi ngày bao lâu và khi nào dừng nghỉ",
+        "returned_count": 3,
+        "all_match_requested_category": true,
+        "returned_docs": [
+          {
+            "doc_id": "general_health_02",
+            "category": "general_health",
+            "score": 0.8757
+          },
+          {
+            "doc_id": "general_health_03",
+            "category": "general_health",
+            "score": 0.8065
+          },
+          {
+            "doc_id": "general_health_01",
+            "category": "general_health",
+            "score": 0.7976
+          }
+        ]
+      },
+      {
+        "requested_category": "medication_safety",
+        "query": "Quên không nhớ đã uống thuốc chưa thì làm sao cho an toàn",
+        "returned_count": 3,
+        "all_match_requested_category": true,
+        "returned_docs": [
+          {
+            "doc_id": "medication_safety_02",
+            "category": "medication_safety",
+            "score": 0.8636
+          },
+          {
+            "doc_id": "medication_safety_03",
+            "category": "medication_safety",
+            "score": 0.8481
+          },
+          {
+            "doc_id": "medication_safety_01",
+            "category": "medication_safety",
+            "score": 0.8375
+          }
+        ]
+      },
+      {
+        "requested_category": "app_usage",
+        "query": "Làm sao bật micro nói chuyện bằng giọng nói và nghe đọc lại",
+        "returned_count": 1,
+        "all_match_requested_category": true,
+        "returned_docs": [
+          {
+            "doc_id": "app_usage_01",
+            "category": "app_usage",
+            "score": 0.8812
+          }
+        ]
+      },
+      {
+        "requested_category": "emergency_guidance",
+        "query": "Số điện thoại cấp cứu y tế 115 khi đau ngực khó thở",
+        "returned_count": 2,
+        "all_match_requested_category": true,
+        "returned_docs": [
+          {
+            "doc_id": "emergency_guidance_01",
+            "category": "emergency_guidance",
+            "score": 0.896
+          },
+          {
+            "doc_id": "emergency_guidance_02",
+            "category": "emergency_guidance",
+            "score": 0.833
+          }
+        ]
+      }
+    ]
+  },
+  "threshold_calibration": {
+    "legacy_hash_dev_default_threshold": 0.25,
+    "legacy_threshold_ood_empty_rate": 0.0,
+    "calibrated_e5_threshold": 0.795,
+    "calibrated_threshold_ood_empty_rate": 1.0,
+    "note": "intfloat/multilingual-e5-base L2-normalized Vietnamese cosine similarities sit in a high anisotropic band (OOD ceiling observed here: 0.7889; diacritic in-domain floor: 0.7968). ChromaKnowledgeRetriever now defaults min_similarity_score to embedder.default_min_similarity_score (0.25 for HashDevEmbedder, 0.795 for HuggingFaceE5Embedder). Note: Settings.rag_min_similarity_score in config.py remains 0.25 for hash_dev default and should be configured to RAG_MIN_SIMILARITY_SCORE=0.795 when running main.py with EMBEDDING_PROVIDER=huggingface_e5."
+  },
+  "performance_and_memory": {
+    "rss_before_load_mb": 410.15,
+    "rss_after_load_and_index_mb": 1860.29,
+    "rss_delta_mb": 1450.14,
+    "peak_rss_mb": 1861.95,
+    "index_total_ms": 10411.67,
+    "mean_query_latency_ms": 85.66,
+    "p50_query_latency_ms": 68.73,
+    "p95_query_latency_ms": 174.3,
+    "min_query_latency_ms": 50.02,
+    "max_query_latency_ms": 332.87
+  },
+  "retrieval_metrics": {
+    "in_domain_top1_category_accuracy": 0.9333,
+    "in_domain_top1_doc_accuracy": 0.9333,
+    "in_domain_mrr3_category": 0.9444,
+    "in_domain_mrr3_doc": 0.9333,
+    "diacritic_in_domain_top1_category_accuracy": 1.0,
+    "diacritic_in_domain_top1_doc_accuracy": 1.0,
+    "diacritic_in_domain_above_threshold_rate": 1.0,
+    "in_domain_above_threshold_rate": 0.8667,
+    "ood_empty_retrieval_rate": 1.0,
+    "score_distribution": {
+      "in_domain_mean": 0.8491,
+      "in_domain_min": 0.7566,
+      "in_domain_max": 0.9151,
+      "diacritic_in_domain_mean": 0.862,
+      "diacritic_in_domain_min": 0.7968,
+      "diacritic_in_domain_max": 0.9151,
+      "ood_mean": 0.7686,
+      "ood_min": 0.7449,
+      "ood_max": 0.7889,
+      "mean_gap_in_domain_vs_ood": 0.0805,
+      "mean_gap_diacritic_in_domain_vs_ood": 0.0934,
+      "clean_margin_diacritic_min_minus_ood_max": 0.0079
+    },
+    "per_query_type": {
+      "diacritic_vi": {
+        "count": 5,
+        "retrieved_above_threshold": 5,
+        "empty_retrieval_count": 0,
+        "mean_raw_top1_score": 0.9071,
+        "min_raw_top1_score": 0.9025,
+        "max_raw_top1_score": 0.9151,
+        "mean_latency_ms": 53.07,
+        "top1_category_accuracy": 1.0,
+        "top1_doc_accuracy": 1.0,
+        "mrr3_category": 1.0,
+        "mrr3_doc": 1.0
+      },
+      "no_diacritic_vi": {
+        "count": 5,
+        "retrieved_above_threshold": 1,
+        "empty_retrieval_count": 4,
+        "mean_raw_top1_score": 0.7848,
+        "min_raw_top1_score": 0.7566,
+        "max_raw_top1_score": 0.8196,
+        "mean_latency_ms": 56.44,
+        "top1_category_accuracy": 0.6,
+        "top1_doc_accuracy": 0.6,
+        "mrr3_category": 0.6667,
+        "mrr3_doc": 0.6
+      },
+      "paraphrased": {
+        "count": 5,
+        "retrieved_above_threshold": 5,
+        "empty_retrieval_count": 0,
+        "mean_raw_top1_score": 0.8584,
+        "min_raw_top1_score": 0.8308,
+        "max_raw_top1_score": 0.8836,
+        "mean_latency_ms": 177.27,
+        "top1_category_accuracy": 1.0,
+        "top1_doc_accuracy": 1.0,
+        "mrr3_category": 1.0,
+        "mrr3_doc": 1.0
+      },
+      "elderly_conversational": {
+        "count": 5,
+        "retrieved_above_threshold": 5,
+        "empty_retrieval_count": 0,
+        "mean_raw_top1_score": 0.8349,
+        "min_raw_top1_score": 0.8259,
+        "max_raw_top1_score": 0.8411,
+        "mean_latency_ms": 88.1,
+        "top1_category_accuracy": 1.0,
+        "top1_doc_accuracy": 1.0,
+        "mrr3_category": 1.0,
+        "mrr3_doc": 1.0
+      },
+      "medication_safety": {
+        "count": 5,
+        "retrieved_above_threshold": 5,
+        "empty_retrieval_count": 0,
+        "mean_raw_top1_score": 0.875,
+        "min_raw_top1_score": 0.852,
+        "max_raw_top1_score": 0.8896,
+        "mean_latency_ms": 88.75,
+        "top1_category_accuracy": 1.0,
+        "top1_doc_accuracy": 1.0,
+        "mrr3_category": 1.0,
+        "mrr3_doc": 1.0
+      },
+      "daily_companionship": {
+        "count": 5,
+        "retrieved_above_threshold": 5,
+        "empty_retrieval_count": 0,
+        "mean_raw_top1_score": 0.8345,
+        "min_raw_top1_score": 0.7968,
+        "max_raw_top1_score": 0.8612,
+        "mean_latency_ms": 74.96,
+        "top1_category_accuracy": 1.0,
+        "top1_doc_accuracy": 1.0,
+        "mrr3_category": 1.0,
+        "mrr3_doc": 1.0
+      },
+      "out_of_domain": {
+        "count": 5,
+        "retrieved_above_threshold": 0,
+        "empty_retrieval_count": 5,
+        "mean_raw_top1_score": 0.7686,
+        "min_raw_top1_score": 0.7449,
+        "max_raw_top1_score": 0.7889,
+        "mean_latency_ms": 61.03,
+        "ood_empty_retrieval_rate": 1.0
+      }
+    }
+  },
+  "query_results": [
+    {
+      "query_id": "q01",
+      "query_type": "diacritic_vi",
+      "query": "Làm sao để bật micro nói chuyện bằng giọng nói và nghe đọc lại trên ứng dụng Mimamori AI?",
+      "expected_category": "app_usage",
+      "expected_doc_id": "app_usage_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.9151,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "app_usage_01",
+      "top1_category": "app_usage",
+      "top1_score": 0.9151,
+      "raw_top1_doc_id": "app_usage_01",
+      "raw_top1_category": "app_usage",
+      "raw_top1_score": 0.9151,
+      "raw_top2_doc_id": "app_usage_03",
+      "raw_top2_score": 0.8496,
+      "raw_top3_doc_id": "medication_safety_02",
+      "raw_top3_score": 0.8205,
+      "raw_top3": [
+        {
+          "doc_id": "app_usage_01",
+          "category": "app_usage",
+          "score": 0.9151,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "app_usage_03",
+          "category": "app_usage",
+          "score": 0.8496,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.8205,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 50.18
+    },
+    {
+      "query_id": "q02",
+      "query_type": "diacritic_vi",
+      "query": "Số điện thoại cấp cứu y tế khẩn cấp ở Việt Nam là bao nhiêu và dấu hiệu nào cần gọi ngay?",
+      "expected_category": "emergency_guidance",
+      "expected_doc_id": "emergency_guidance_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.9067,
+      "returned_evidence_count": 2,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "emergency_guidance_01",
+      "top1_category": "emergency_guidance",
+      "top1_score": 0.9067,
+      "raw_top1_doc_id": "emergency_guidance_01",
+      "raw_top1_category": "emergency_guidance",
+      "raw_top1_score": 0.9067,
+      "raw_top2_doc_id": "emergency_guidance_02",
+      "raw_top2_score": 0.8193,
+      "raw_top3_doc_id": "app_usage_02",
+      "raw_top3_score": 0.7855,
+      "raw_top3": [
+        {
+          "doc_id": "emergency_guidance_01",
+          "category": "emergency_guidance",
+          "score": 0.9067,
+          "review_status": "reviewed_official_hotline"
+        },
+        {
+          "doc_id": "emergency_guidance_02",
+          "category": "emergency_guidance",
+          "score": 0.8193,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.7855,
+          "review_status": "sample_app_guide"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 57.56
+    },
+    {
+      "query_id": "q03",
+      "query_type": "diacritic_vi",
+      "query": "Người cao tuổi nên ăn uống và uống nước như thế nào để dễ tiêu hóa mỗi ngày?",
+      "expected_category": "general_health",
+      "expected_doc_id": "general_health_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.9026,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "general_health_01",
+      "top1_category": "general_health",
+      "top1_score": 0.9026,
+      "raw_top1_doc_id": "general_health_01",
+      "raw_top1_category": "general_health",
+      "raw_top1_score": 0.9026,
+      "raw_top2_doc_id": "elderly_care_03",
+      "raw_top2_score": 0.8509,
+      "raw_top3_doc_id": "elderly_care_01",
+      "raw_top3_score": 0.8501,
+      "raw_top3": [
+        {
+          "doc_id": "general_health_01",
+          "category": "general_health",
+          "score": 0.9026,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "elderly_care_03",
+          "category": "elderly_care",
+          "score": 0.8509,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "elderly_care_01",
+          "category": "elderly_care",
+          "score": 0.8501,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 51.61
+    },
+    {
+      "query_id": "q04",
+      "query_type": "diacritic_vi",
+      "query": "Làm thế nào để phòng tránh trượt ngã trong nhà vào ban đêm cho người lớn tuổi?",
+      "expected_category": "elderly_care",
+      "expected_doc_id": "elderly_care_02",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.9088,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "elderly_care_02",
+      "top1_category": "elderly_care",
+      "top1_score": 0.9088,
+      "raw_top1_doc_id": "elderly_care_02",
+      "raw_top1_category": "elderly_care",
+      "raw_top1_score": 0.9088,
+      "raw_top2_doc_id": "elderly_care_01",
+      "raw_top2_score": 0.8422,
+      "raw_top3_doc_id": "emergency_guidance_02",
+      "raw_top3_score": 0.8349,
+      "raw_top3": [
+        {
+          "doc_id": "elderly_care_02",
+          "category": "elderly_care",
+          "score": 0.9088,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "elderly_care_01",
+          "category": "elderly_care",
+          "score": 0.8422,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "emergency_guidance_02",
+          "category": "emergency_guidance",
+          "score": 0.8349,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 56.0
+    },
+    {
+      "query_id": "q05",
+      "query_type": "diacritic_vi",
+      "query": "Thuốc nên bảo quản ở đâu và khi đi tái khám cần mang theo những gì?",
+      "expected_category": "medication_safety",
+      "expected_doc_id": "medication_safety_03",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.9025,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "medication_safety_03",
+      "top1_category": "medication_safety",
+      "top1_score": 0.9025,
+      "raw_top1_doc_id": "medication_safety_03",
+      "raw_top1_category": "medication_safety",
+      "raw_top1_score": 0.9025,
+      "raw_top2_doc_id": "medication_safety_01",
+      "raw_top2_score": 0.8335,
+      "raw_top3_doc_id": "medication_safety_02",
+      "raw_top3_score": 0.83,
+      "raw_top3": [
+        {
+          "doc_id": "medication_safety_03",
+          "category": "medication_safety",
+          "score": 0.9025,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_01",
+          "category": "medication_safety",
+          "score": 0.8335,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.83,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 50.02
+    },
+    {
+      "query_id": "q06",
+      "query_type": "no_diacritic_vi",
+      "query": "cach diem danh suc khoe hang ngay va xem nhac uong thuoc tren ung dung",
+      "expected_category": "app_usage",
+      "expected_doc_id": "app_usage_02",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8196,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "app_usage_02",
+      "top1_category": "app_usage",
+      "top1_score": 0.8196,
+      "raw_top1_doc_id": "app_usage_02",
+      "raw_top1_category": "app_usage",
+      "raw_top1_score": 0.8196,
+      "raw_top2_doc_id": "medication_safety_03",
+      "raw_top2_score": 0.7958,
+      "raw_top3_doc_id": "medication_safety_01",
+      "raw_top3_score": 0.795,
+      "raw_top3": [
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.8196,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "medication_safety_03",
+          "category": "medication_safety",
+          "score": 0.7958,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_01",
+          "category": "medication_safety",
+          "score": 0.795,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 56.94
+    },
+    {
+      "query_id": "q07",
+      "query_type": "no_diacritic_vi",
+      "query": "lam sao de ngu ngon hon vao buoi toi cho nguoi lon tuoi",
+      "expected_category": "elderly_care",
+      "expected_doc_id": "elderly_care_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": false,
+      "best_score": 0.7566,
+      "returned_evidence_count": 0,
+      "empty_retrieval": true,
+      "uncertainty_note": "Cháu chưa tìm thấy tài liệu tham khảo khớp đủ tin cậy trong kho tri thức cho câu hỏi này; nội dung trả lời chỉ mang tính trò chuyện/hướng dẫn chung, không thay thế tư vấn y tế.",
+      "top1_doc_id": null,
+      "top1_category": null,
+      "top1_score": null,
+      "raw_top1_doc_id": "app_usage_02",
+      "raw_top1_category": "app_usage",
+      "raw_top1_score": 0.7566,
+      "raw_top2_doc_id": "medication_safety_03",
+      "raw_top2_score": 0.7546,
+      "raw_top3_doc_id": "medication_safety_01",
+      "raw_top3_score": 0.75,
+      "raw_top3": [
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.7566,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "medication_safety_03",
+          "category": "medication_safety",
+          "score": 0.7546,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_01",
+          "category": "medication_safety",
+          "score": 0.75,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": false,
+      "top1_doc_correct": false,
+      "mrr3_category": 0.0,
+      "mrr3_doc": 0.0,
+      "query_prefix_verified": true,
+      "latency_ms": 54.78
+    },
+    {
+      "query_id": "q08",
+      "query_type": "no_diacritic_vi",
+      "query": "trong luc cho xe cap cuu 115 thi can lam gi de giu an toan",
+      "expected_category": "emergency_guidance",
+      "expected_doc_id": "emergency_guidance_02",
+      "threshold": 0.795,
+      "has_sufficient_evidence": false,
+      "best_score": 0.7798,
+      "returned_evidence_count": 0,
+      "empty_retrieval": true,
+      "uncertainty_note": "Cháu chưa tìm thấy tài liệu tham khảo khớp đủ tin cậy trong kho tri thức cho câu hỏi này; nội dung trả lời chỉ mang tính trò chuyện/hướng dẫn chung, không thay thế tư vấn y tế.",
+      "top1_doc_id": null,
+      "top1_category": null,
+      "top1_score": null,
+      "raw_top1_doc_id": "emergency_guidance_02",
+      "raw_top1_category": "emergency_guidance",
+      "raw_top1_score": 0.7798,
+      "raw_top2_doc_id": "emergency_guidance_01",
+      "raw_top2_score": 0.777,
+      "raw_top3_doc_id": "general_health_02",
+      "raw_top3_score": 0.7634,
+      "raw_top3": [
+        {
+          "doc_id": "emergency_guidance_02",
+          "category": "emergency_guidance",
+          "score": 0.7798,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "emergency_guidance_01",
+          "category": "emergency_guidance",
+          "score": 0.777,
+          "review_status": "reviewed_official_hotline"
+        },
+        {
+          "doc_id": "general_health_02",
+          "category": "general_health",
+          "score": 0.7634,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 53.68
+    },
+    {
+      "query_id": "q09",
+      "query_type": "no_diacritic_vi",
+      "query": "di bo nhe nhang moi ngay bao lau va khi nao can dung lai nghi ngoi",
+      "expected_category": "general_health",
+      "expected_doc_id": "general_health_02",
+      "threshold": 0.795,
+      "has_sufficient_evidence": false,
+      "best_score": 0.7928,
+      "returned_evidence_count": 0,
+      "empty_retrieval": true,
+      "uncertainty_note": "Cháu chưa tìm thấy tài liệu tham khảo khớp đủ tin cậy trong kho tri thức cho câu hỏi này; nội dung trả lời chỉ mang tính trò chuyện/hướng dẫn chung, không thay thế tư vấn y tế.",
+      "top1_doc_id": null,
+      "top1_category": null,
+      "top1_score": null,
+      "raw_top1_doc_id": "medication_safety_02",
+      "raw_top1_category": "medication_safety",
+      "raw_top1_score": 0.7928,
+      "raw_top2_doc_id": "app_usage_02",
+      "raw_top2_score": 0.7908,
+      "raw_top3_doc_id": "general_health_03",
+      "raw_top3_score": 0.7849,
+      "raw_top3": [
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.7928,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.7908,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "general_health_03",
+          "category": "general_health",
+          "score": 0.7849,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": false,
+      "top1_doc_correct": false,
+      "mrr3_category": 0.3333,
+      "mrr3_doc": 0.0,
+      "query_prefix_verified": true,
+      "latency_ms": 61.18
+    },
+    {
+      "query_id": "q10",
+      "query_type": "no_diacritic_vi",
+      "query": "khong nho da uong thuoc hay chua thi kiem tra o dau va xu tri the nao",
+      "expected_category": "medication_safety",
+      "expected_doc_id": "medication_safety_02",
+      "threshold": 0.795,
+      "has_sufficient_evidence": false,
+      "best_score": 0.7753,
+      "returned_evidence_count": 0,
+      "empty_retrieval": true,
+      "uncertainty_note": "Cháu chưa tìm thấy tài liệu tham khảo khớp đủ tin cậy trong kho tri thức cho câu hỏi này; nội dung trả lời chỉ mang tính trò chuyện/hướng dẫn chung, không thay thế tư vấn y tế.",
+      "top1_doc_id": null,
+      "top1_category": null,
+      "top1_score": null,
+      "raw_top1_doc_id": "medication_safety_02",
+      "raw_top1_category": "medication_safety",
+      "raw_top1_score": 0.7753,
+      "raw_top2_doc_id": "medication_safety_03",
+      "raw_top2_score": 0.7729,
+      "raw_top3_doc_id": "general_health_02",
+      "raw_top3_score": 0.7709,
+      "raw_top3": [
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.7753,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_03",
+          "category": "medication_safety",
+          "score": 0.7729,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_02",
+          "category": "general_health",
+          "score": 0.7709,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 55.6
+    },
+    {
+      "query_id": "q11",
+      "query_type": "paraphrased",
+      "query": "Trợ lý ảo có thể thay bác sĩ chẩn đoán bệnh hay tự đánh dấu đã uống thuốc giúp tôi không?",
+      "expected_category": "app_usage",
+      "expected_doc_id": "app_usage_03",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8384,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "app_usage_03",
+      "top1_category": "app_usage",
+      "top1_score": 0.8384,
+      "raw_top1_doc_id": "app_usage_03",
+      "raw_top1_category": "app_usage",
+      "raw_top1_score": 0.8384,
+      "raw_top2_doc_id": "general_health_03",
+      "raw_top2_score": 0.8132,
+      "raw_top3_doc_id": "app_usage_02",
+      "raw_top3_score": 0.8095,
+      "raw_top3": [
+        {
+          "doc_id": "app_usage_03",
+          "category": "app_usage",
+          "score": 0.8384,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "general_health_03",
+          "category": "general_health",
+          "score": 0.8132,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.8095,
+          "review_status": "sample_app_guide"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 61.95
+    },
+    {
+      "query_id": "q12",
+      "query_type": "paraphrased",
+      "query": "Cách giúp cụ ông cụ bà bớt buồn chán, giữ tinh thần vui vẻ gắn bó với con cháu mỗi ngày",
+      "expected_category": "elderly_care",
+      "expected_doc_id": "elderly_care_03",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8605,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "elderly_care_03",
+      "top1_category": "elderly_care",
+      "top1_score": 0.8605,
+      "raw_top1_doc_id": "elderly_care_03",
+      "raw_top1_category": "elderly_care",
+      "raw_top1_score": 0.8605,
+      "raw_top2_doc_id": "elderly_care_01",
+      "raw_top2_score": 0.8276,
+      "raw_top3_doc_id": "general_health_02",
+      "raw_top3_score": 0.8239,
+      "raw_top3": [
+        {
+          "doc_id": "elderly_care_03",
+          "category": "elderly_care",
+          "score": 0.8605,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "elderly_care_01",
+          "category": "elderly_care",
+          "score": 0.8276,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_02",
+          "category": "general_health",
+          "score": 0.8239,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 134.81
+    },
+    {
+      "query_id": "q13",
+      "query_type": "paraphrased",
+      "query": "Nên theo dõi biểu hiện giấc ngủ và mệt mỏi hằng ngày ra sao để báo cáo lại lúc đi bệnh viện kiểm tra định kỳ?",
+      "expected_category": "general_health",
+      "expected_doc_id": "general_health_03",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8836,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "general_health_03",
+      "top1_category": "general_health",
+      "top1_score": 0.8836,
+      "raw_top1_doc_id": "general_health_03",
+      "raw_top1_category": "general_health",
+      "raw_top1_score": 0.8836,
+      "raw_top2_doc_id": "app_usage_02",
+      "raw_top2_score": 0.8521,
+      "raw_top3_doc_id": "medication_safety_02",
+      "raw_top3_score": 0.8295,
+      "raw_top3": [
+        {
+          "doc_id": "general_health_03",
+          "category": "general_health",
+          "score": 0.8836,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.8521,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.8295,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 168.19
+    },
+    {
+      "query_id": "q14",
+      "query_type": "paraphrased",
+      "query": "Khi phát hiện dấu hiệu méo miệng, nói ngọng hoặc đau ngực dữ dội thì liên hệ số nào để được cấp cứu?",
+      "expected_category": "emergency_guidance",
+      "expected_doc_id": "emergency_guidance_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8789,
+      "returned_evidence_count": 2,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "emergency_guidance_01",
+      "top1_category": "emergency_guidance",
+      "top1_score": 0.8789,
+      "raw_top1_doc_id": "emergency_guidance_01",
+      "raw_top1_category": "emergency_guidance",
+      "raw_top1_score": 0.8789,
+      "raw_top2_doc_id": "emergency_guidance_02",
+      "raw_top2_score": 0.8146,
+      "raw_top3_doc_id": "medication_safety_02",
+      "raw_top3_score": 0.7941,
+      "raw_top3": [
+        {
+          "doc_id": "emergency_guidance_01",
+          "category": "emergency_guidance",
+          "score": 0.8789,
+          "review_status": "reviewed_official_hotline"
+        },
+        {
+          "doc_id": "emergency_guidance_02",
+          "category": "emergency_guidance",
+          "score": 0.8146,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.7941,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 332.87
+    },
+    {
+      "query_id": "q15",
+      "query_type": "paraphrased",
+      "query": "Nếu vừa thấy trong người khỏe hẳn ra thì có được tự giảm hoặc ngưng uống thuốc huyết áp không?",
+      "expected_category": "medication_safety",
+      "expected_doc_id": "medication_safety_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8308,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "medication_safety_01",
+      "top1_category": "medication_safety",
+      "top1_score": 0.8308,
+      "raw_top1_doc_id": "medication_safety_01",
+      "raw_top1_category": "medication_safety",
+      "raw_top1_score": 0.8308,
+      "raw_top2_doc_id": "emergency_guidance_02",
+      "raw_top2_score": 0.8265,
+      "raw_top3_doc_id": "general_health_01",
+      "raw_top3_score": 0.8233,
+      "raw_top3": [
+        {
+          "doc_id": "medication_safety_01",
+          "category": "medication_safety",
+          "score": 0.8308,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "emergency_guidance_02",
+          "category": "emergency_guidance",
+          "score": 0.8265,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_01",
+          "category": "general_health",
+          "score": 0.8233,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 188.55
+    },
+    {
+      "query_id": "q16",
+      "query_type": "elderly_conversational",
+      "query": "Cháu ơi, tối nay bà cứ trằn trọc khó vào giấc, buổi chiều bà lỡ uống chén trà đặc rồi có sao không cháu?",
+      "expected_category": "elderly_care",
+      "expected_doc_id": "elderly_care_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8259,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "elderly_care_01",
+      "top1_category": "elderly_care",
+      "top1_score": 0.8259,
+      "raw_top1_doc_id": "elderly_care_01",
+      "raw_top1_category": "elderly_care",
+      "raw_top1_score": 0.8259,
+      "raw_top2_doc_id": "medication_safety_02",
+      "raw_top2_score": 0.8111,
+      "raw_top3_doc_id": "app_usage_02",
+      "raw_top3_score": 0.8101,
+      "raw_top3": [
+        {
+          "doc_id": "elderly_care_01",
+          "category": "elderly_care",
+          "score": 0.8259,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.8111,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.8101,
+          "review_status": "sample_app_guide"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 107.15
+    },
+    {
+      "query_id": "q17",
+      "query_type": "elderly_conversational",
+      "query": "Ông muốn nói chuyện bằng tiếng nói khỏi phải bấm chữ thì ấn vào nút nào trên màn hình vậy cháu?",
+      "expected_category": "app_usage",
+      "expected_doc_id": "app_usage_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8411,
+      "returned_evidence_count": 1,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "app_usage_01",
+      "top1_category": "app_usage",
+      "top1_score": 0.8411,
+      "raw_top1_doc_id": "app_usage_01",
+      "raw_top1_category": "app_usage",
+      "raw_top1_score": 0.8411,
+      "raw_top2_doc_id": "app_usage_02",
+      "raw_top2_score": 0.783,
+      "raw_top3_doc_id": "app_usage_03",
+      "raw_top3_score": 0.7763,
+      "raw_top3": [
+        {
+          "doc_id": "app_usage_01",
+          "category": "app_usage",
+          "score": 0.8411,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.783,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "app_usage_03",
+          "category": "app_usage",
+          "score": 0.7763,
+          "review_status": "sample_app_guide"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 96.96
+    },
+    {
+      "query_id": "q18",
+      "query_type": "elderly_conversational",
+      "query": "Cháu ơi dạo này cụ ở nhà một mình buồn quá, làm gì cho khuây khỏa tinh thần hả cháu?",
+      "expected_category": "elderly_care",
+      "expected_doc_id": "elderly_care_03",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8406,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "elderly_care_03",
+      "top1_category": "elderly_care",
+      "top1_score": 0.8406,
+      "raw_top1_doc_id": "elderly_care_03",
+      "raw_top1_category": "elderly_care",
+      "raw_top1_score": 0.8406,
+      "raw_top2_doc_id": "general_health_02",
+      "raw_top2_score": 0.8173,
+      "raw_top3_doc_id": "emergency_guidance_02",
+      "raw_top3_score": 0.8034,
+      "raw_top3": [
+        {
+          "doc_id": "elderly_care_03",
+          "category": "elderly_care",
+          "score": 0.8406,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_02",
+          "category": "general_health",
+          "score": 0.8173,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "emergency_guidance_02",
+          "category": "emergency_guidance",
+          "score": 0.8034,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 85.98
+    },
+    {
+      "query_id": "q19",
+      "query_type": "elderly_conversational",
+      "query": "Bà đi vệ sinh ban đêm hay bị choáng lúc mới bước xuống giường, cháu dặn bà cách đi đứng cho đỡ ngã với.",
+      "expected_category": "elderly_care",
+      "expected_doc_id": "elderly_care_02",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8376,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "elderly_care_02",
+      "top1_category": "elderly_care",
+      "top1_score": 0.8376,
+      "raw_top1_doc_id": "elderly_care_02",
+      "raw_top1_category": "elderly_care",
+      "raw_top1_score": 0.8376,
+      "raw_top2_doc_id": "elderly_care_01",
+      "raw_top2_score": 0.8089,
+      "raw_top3_doc_id": "emergency_guidance_02",
+      "raw_top3_score": 0.8031,
+      "raw_top3": [
+        {
+          "doc_id": "elderly_care_02",
+          "category": "elderly_care",
+          "score": 0.8376,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "elderly_care_01",
+          "category": "elderly_care",
+          "score": 0.8089,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "emergency_guidance_02",
+          "category": "emergency_guidance",
+          "score": 0.8031,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 84.16
+    },
+    {
+      "query_id": "q20",
+      "query_type": "elderly_conversational",
+      "query": "Sáng nay ông đi dạo công viên mà thấy hơi hụt hơi mỏi gối, ông có nên cố đi tiếp không cháu?",
+      "expected_category": "general_health",
+      "expected_doc_id": "general_health_02",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8292,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "general_health_02",
+      "top1_category": "general_health",
+      "top1_score": 0.8292,
+      "raw_top1_doc_id": "general_health_02",
+      "raw_top1_category": "general_health",
+      "raw_top1_score": 0.8292,
+      "raw_top2_doc_id": "general_health_03",
+      "raw_top2_score": 0.796,
+      "raw_top3_doc_id": "emergency_guidance_02",
+      "raw_top3_score": 0.7959,
+      "raw_top3": [
+        {
+          "doc_id": "general_health_02",
+          "category": "general_health",
+          "score": 0.8292,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_03",
+          "category": "general_health",
+          "score": 0.796,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "emergency_guidance_02",
+          "category": "emergency_guidance",
+          "score": 0.7959,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 66.27
+    },
+    {
+      "query_id": "q21",
+      "query_type": "medication_safety",
+      "query": "Sáng nay bác quên mất không biết đã uống viên thuốc huyết áp chưa, giờ bác uống bù thêm một viên được không?",
+      "expected_category": "medication_safety",
+      "expected_doc_id": "medication_safety_02",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.852,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "medication_safety_02",
+      "top1_category": "medication_safety",
+      "top1_score": 0.852,
+      "raw_top1_doc_id": "medication_safety_02",
+      "raw_top1_category": "medication_safety",
+      "raw_top1_score": 0.852,
+      "raw_top2_doc_id": "medication_safety_01",
+      "raw_top2_score": 0.8329,
+      "raw_top3_doc_id": "app_usage_02",
+      "raw_top3_score": 0.8174,
+      "raw_top3": [
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.852,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_01",
+          "category": "medication_safety",
+          "score": 0.8329,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.8174,
+          "review_status": "sample_app_guide"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 69.49
+    },
+    {
+      "query_id": "q22",
+      "query_type": "medication_safety",
+      "query": "Có được tự ý tăng liều lên gấp đôi hay ngừng thuốc đột ngột khi thấy đỡ bệnh không?",
+      "expected_category": "medication_safety",
+      "expected_doc_id": "medication_safety_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8642,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "medication_safety_01",
+      "top1_category": "medication_safety",
+      "top1_score": 0.8642,
+      "raw_top1_doc_id": "medication_safety_01",
+      "raw_top1_category": "medication_safety",
+      "raw_top1_score": 0.8642,
+      "raw_top2_doc_id": "medication_safety_02",
+      "raw_top2_score": 0.8385,
+      "raw_top3_doc_id": "emergency_guidance_02",
+      "raw_top3_score": 0.8176,
+      "raw_top3": [
+        {
+          "doc_id": "medication_safety_01",
+          "category": "medication_safety",
+          "score": 0.8642,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.8385,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "emergency_guidance_02",
+          "category": "emergency_guidance",
+          "score": 0.8176,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 89.2
+    },
+    {
+      "query_id": "q23",
+      "query_type": "medication_safety",
+      "query": "Nên cất thuốc ở chỗ nào trong nhà và có cần giữ lại vỏ hộp vỉ thuốc khi đi khám lại không?",
+      "expected_category": "medication_safety",
+      "expected_doc_id": "medication_safety_03",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8849,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "medication_safety_03",
+      "top1_category": "medication_safety",
+      "top1_score": 0.8849,
+      "raw_top1_doc_id": "medication_safety_03",
+      "raw_top1_category": "medication_safety",
+      "raw_top1_score": 0.8849,
+      "raw_top2_doc_id": "medication_safety_02",
+      "raw_top2_score": 0.8201,
+      "raw_top3_doc_id": "medication_safety_01",
+      "raw_top3_score": 0.8117,
+      "raw_top3": [
+        {
+          "doc_id": "medication_safety_03",
+          "category": "medication_safety",
+          "score": 0.8849,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.8201,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_01",
+          "category": "medication_safety",
+          "score": 0.8117,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 109.93
+    },
+    {
+      "query_id": "q24",
+      "query_type": "medication_safety",
+      "query": "Khi chưa chắc chắn hôm nay đã dùng thuốc hay chưa thì kiểm tra khay chia thuốc và hỏi ai trước khi uống?",
+      "expected_category": "medication_safety",
+      "expected_doc_id": "medication_safety_02",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8896,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "medication_safety_02",
+      "top1_category": "medication_safety",
+      "top1_score": 0.8896,
+      "raw_top1_doc_id": "medication_safety_02",
+      "raw_top1_category": "medication_safety",
+      "raw_top1_score": 0.8896,
+      "raw_top2_doc_id": "medication_safety_03",
+      "raw_top2_score": 0.8411,
+      "raw_top3_doc_id": "medication_safety_01",
+      "raw_top3_score": 0.83,
+      "raw_top3": [
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.8896,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_03",
+          "category": "medication_safety",
+          "score": 0.8411,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_01",
+          "category": "medication_safety",
+          "score": 0.83,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 76.88
+    },
+    {
+      "query_id": "q25",
+      "query_type": "medication_safety",
+      "query": "Người cao tuổi có được tự ý giảm bớt nửa viên hoặc tự chỉnh liều lượng thuốc theo đơn bác sĩ không?",
+      "expected_category": "medication_safety",
+      "expected_doc_id": "medication_safety_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8844,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "medication_safety_01",
+      "top1_category": "medication_safety",
+      "top1_score": 0.8844,
+      "raw_top1_doc_id": "medication_safety_01",
+      "raw_top1_category": "medication_safety",
+      "raw_top1_score": 0.8844,
+      "raw_top2_doc_id": "emergency_guidance_02",
+      "raw_top2_score": 0.8297,
+      "raw_top3_doc_id": "general_health_01",
+      "raw_top3_score": 0.8279,
+      "raw_top3": [
+        {
+          "doc_id": "medication_safety_01",
+          "category": "medication_safety",
+          "score": 0.8844,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "emergency_guidance_02",
+          "category": "emergency_guidance",
+          "score": 0.8297,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_01",
+          "category": "general_health",
+          "score": 0.8279,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 98.27
+    },
+    {
+      "query_id": "q26",
+      "query_type": "daily_companionship",
+      "query": "Chào cháu buổi sáng, hôm nay trời mát ông muốn tưới mấy chậu cây và nghe đài cho vui.",
+      "expected_category": "elderly_care",
+      "expected_doc_id": "elderly_care_03",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.7968,
+      "returned_evidence_count": 1,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "elderly_care_03",
+      "top1_category": "elderly_care",
+      "top1_score": 0.7968,
+      "raw_top1_doc_id": "elderly_care_03",
+      "raw_top1_category": "elderly_care",
+      "raw_top1_score": 0.7968,
+      "raw_top2_doc_id": "app_usage_02",
+      "raw_top2_score": 0.787,
+      "raw_top3_doc_id": "general_health_01",
+      "raw_top3_score": 0.7813,
+      "raw_top3": [
+        {
+          "doc_id": "elderly_care_03",
+          "category": "elderly_care",
+          "score": 0.7968,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.787,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "general_health_01",
+          "category": "general_health",
+          "score": 0.7813,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 77.86
+    },
+    {
+      "query_id": "q27",
+      "query_type": "daily_companionship",
+      "query": "Cháu ơi trưa nay bà ăn cơm mềm với canh rau dễ tiêu và uống nước từng ngụm nhỏ có tốt không?",
+      "expected_category": "general_health",
+      "expected_doc_id": "general_health_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8397,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "general_health_01",
+      "top1_category": "general_health",
+      "top1_score": 0.8397,
+      "raw_top1_doc_id": "general_health_01",
+      "raw_top1_category": "general_health",
+      "raw_top1_score": 0.8397,
+      "raw_top2_doc_id": "general_health_02",
+      "raw_top2_score": 0.8141,
+      "raw_top3_doc_id": "elderly_care_03",
+      "raw_top3_score": 0.806,
+      "raw_top3": [
+        {
+          "doc_id": "general_health_01",
+          "category": "general_health",
+          "score": 0.8397,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_02",
+          "category": "general_health",
+          "score": 0.8141,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "elderly_care_03",
+          "category": "elderly_care",
+          "score": 0.806,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 72.98
+    },
+    {
+      "query_id": "q28",
+      "query_type": "daily_companionship",
+      "query": "Hôm nay cụ thấy người khỏe khoắn, muốn bấm vào mục điểm danh báo cho con cháu yên tâm thì vào chỗ nào?",
+      "expected_category": "app_usage",
+      "expected_doc_id": "app_usage_02",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.85,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "app_usage_02",
+      "top1_category": "app_usage",
+      "top1_score": 0.85,
+      "raw_top1_doc_id": "app_usage_02",
+      "raw_top1_category": "app_usage",
+      "raw_top1_score": 0.85,
+      "raw_top2_doc_id": "elderly_care_03",
+      "raw_top2_score": 0.8231,
+      "raw_top3_doc_id": "general_health_03",
+      "raw_top3_score": 0.8165,
+      "raw_top3": [
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.85,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "elderly_care_03",
+          "category": "elderly_care",
+          "score": 0.8231,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_03",
+          "category": "general_health",
+          "score": 0.8165,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 68.73
+    },
+    {
+      "query_id": "q29",
+      "query_type": "daily_companionship",
+      "query": "Buổi tối trước khi ngủ ông nghe nhạc nhẹ và trò chuyện với cháu một lát cho dễ ngủ nhé.",
+      "expected_category": "elderly_care",
+      "expected_doc_id": "elderly_care_01",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8247,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "elderly_care_01",
+      "top1_category": "elderly_care",
+      "top1_score": 0.8247,
+      "raw_top1_doc_id": "elderly_care_01",
+      "raw_top1_category": "elderly_care",
+      "raw_top1_score": 0.8247,
+      "raw_top2_doc_id": "elderly_care_03",
+      "raw_top2_score": 0.8086,
+      "raw_top3_doc_id": "general_health_02",
+      "raw_top3_score": 0.8011,
+      "raw_top3": [
+        {
+          "doc_id": "elderly_care_01",
+          "category": "elderly_care",
+          "score": 0.8247,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "elderly_care_03",
+          "category": "elderly_care",
+          "score": 0.8086,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_02",
+          "category": "general_health",
+          "score": 0.8011,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 60.7
+    },
+    {
+      "query_id": "q30",
+      "query_type": "daily_companionship",
+      "query": "Cháu nhắc ông ghi lại tình hình giấc ngủ với ăn uống mấy hôm nay để cuối tuần đi tái khám kể bác sĩ nghe nhé.",
+      "expected_category": "general_health",
+      "expected_doc_id": "general_health_03",
+      "threshold": 0.795,
+      "has_sufficient_evidence": true,
+      "best_score": 0.8612,
+      "returned_evidence_count": 3,
+      "empty_retrieval": false,
+      "uncertainty_note": null,
+      "top1_doc_id": "general_health_03",
+      "top1_category": "general_health",
+      "top1_score": 0.8612,
+      "raw_top1_doc_id": "general_health_03",
+      "raw_top1_category": "general_health",
+      "raw_top1_score": 0.8612,
+      "raw_top2_doc_id": "app_usage_02",
+      "raw_top2_score": 0.8491,
+      "raw_top3_doc_id": "elderly_care_01",
+      "raw_top3_score": 0.8172,
+      "raw_top3": [
+        {
+          "doc_id": "general_health_03",
+          "category": "general_health",
+          "score": 0.8612,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.8491,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "elderly_care_01",
+          "category": "elderly_care",
+          "score": 0.8172,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": true,
+      "top1_doc_correct": true,
+      "mrr3_category": 1.0,
+      "mrr3_doc": 1.0,
+      "query_prefix_verified": true,
+      "latency_ms": 94.51
+    },
+    {
+      "query_id": "q31",
+      "query_type": "out_of_domain",
+      "query": "Đội tuyển nào vô địch bóng đá World Cup và lịch thi đấu vòng bảng hôm nay thế nào?",
+      "expected_category": null,
+      "expected_doc_id": null,
+      "threshold": 0.795,
+      "has_sufficient_evidence": false,
+      "best_score": 0.7449,
+      "returned_evidence_count": 0,
+      "empty_retrieval": true,
+      "uncertainty_note": "Cháu chưa tìm thấy tài liệu tham khảo khớp đủ tin cậy trong kho tri thức cho câu hỏi này; nội dung trả lời chỉ mang tính trò chuyện/hướng dẫn chung, không thay thế tư vấn y tế.",
+      "top1_doc_id": null,
+      "top1_category": null,
+      "top1_score": null,
+      "raw_top1_doc_id": "app_usage_02",
+      "raw_top1_category": "app_usage",
+      "raw_top1_score": 0.7449,
+      "raw_top2_doc_id": "medication_safety_02",
+      "raw_top2_score": 0.7423,
+      "raw_top3_doc_id": "general_health_03",
+      "raw_top3_score": 0.7359,
+      "raw_top3": [
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.7449,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.7423,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_03",
+          "category": "general_health",
+          "score": 0.7359,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": null,
+      "top1_doc_correct": null,
+      "mrr3_category": null,
+      "mrr3_doc": null,
+      "query_prefix_verified": true,
+      "latency_ms": 69.56
+    },
+    {
+      "query_id": "q32",
+      "query_type": "out_of_domain",
+      "query": "Giá vàng SJC miếng hôm nay tăng hay giảm bao nhiêu triệu một lượng?",
+      "expected_category": null,
+      "expected_doc_id": null,
+      "threshold": 0.795,
+      "has_sufficient_evidence": false,
+      "best_score": 0.7742,
+      "returned_evidence_count": 0,
+      "empty_retrieval": true,
+      "uncertainty_note": "Cháu chưa tìm thấy tài liệu tham khảo khớp đủ tin cậy trong kho tri thức cho câu hỏi này; nội dung trả lời chỉ mang tính trò chuyện/hướng dẫn chung, không thay thế tư vấn y tế.",
+      "top1_doc_id": null,
+      "top1_category": null,
+      "top1_score": null,
+      "raw_top1_doc_id": "general_health_02",
+      "raw_top1_category": "general_health",
+      "raw_top1_score": 0.7742,
+      "raw_top2_doc_id": "medication_safety_01",
+      "raw_top2_score": 0.7634,
+      "raw_top3_doc_id": "general_health_01",
+      "raw_top3_score": 0.7527,
+      "raw_top3": [
+        {
+          "doc_id": "general_health_02",
+          "category": "general_health",
+          "score": 0.7742,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_01",
+          "category": "medication_safety",
+          "score": 0.7634,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_01",
+          "category": "general_health",
+          "score": 0.7527,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": null,
+      "top1_doc_correct": null,
+      "mrr3_category": null,
+      "mrr3_doc": null,
+      "query_prefix_verified": true,
+      "latency_ms": 52.6
+    },
+    {
+      "query_id": "q33",
+      "query_type": "out_of_domain",
+      "query": "Cách sửa lỗi NullPointerException khi lập trình ngôn ngữ Java với Spring Boot là gì?",
+      "expected_category": null,
+      "expected_doc_id": null,
+      "threshold": 0.795,
+      "has_sufficient_evidence": false,
+      "best_score": 0.7637,
+      "returned_evidence_count": 0,
+      "empty_retrieval": true,
+      "uncertainty_note": "Cháu chưa tìm thấy tài liệu tham khảo khớp đủ tin cậy trong kho tri thức cho câu hỏi này; nội dung trả lời chỉ mang tính trò chuyện/hướng dẫn chung, không thay thế tư vấn y tế.",
+      "top1_doc_id": null,
+      "top1_category": null,
+      "top1_score": null,
+      "raw_top1_doc_id": "app_usage_01",
+      "raw_top1_category": "app_usage",
+      "raw_top1_score": 0.7637,
+      "raw_top2_doc_id": "medication_safety_02",
+      "raw_top2_score": 0.7538,
+      "raw_top3_doc_id": "medication_safety_01",
+      "raw_top3_score": 0.7442,
+      "raw_top3": [
+        {
+          "doc_id": "app_usage_01",
+          "category": "app_usage",
+          "score": 0.7637,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "medication_safety_02",
+          "category": "medication_safety",
+          "score": 0.7538,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "medication_safety_01",
+          "category": "medication_safety",
+          "score": 0.7442,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": null,
+      "top1_doc_correct": null,
+      "mrr3_category": null,
+      "mrr3_doc": null,
+      "query_prefix_verified": true,
+      "latency_ms": 66.44
+    },
+    {
+      "query_id": "q34",
+      "query_type": "out_of_domain",
+      "query": "Thị trường chứng khoán VN-Index hôm nay đóng cửa tăng hay giảm điểm và nên mua cổ phiếu nào?",
+      "expected_category": null,
+      "expected_doc_id": null,
+      "threshold": 0.795,
+      "has_sufficient_evidence": false,
+      "best_score": 0.7715,
+      "returned_evidence_count": 0,
+      "empty_retrieval": true,
+      "uncertainty_note": "Cháu chưa tìm thấy tài liệu tham khảo khớp đủ tin cậy trong kho tri thức cho câu hỏi này; nội dung trả lời chỉ mang tính trò chuyện/hướng dẫn chung, không thay thế tư vấn y tế.",
+      "top1_doc_id": null,
+      "top1_category": null,
+      "top1_score": null,
+      "raw_top1_doc_id": "app_usage_02",
+      "raw_top1_category": "app_usage",
+      "raw_top1_score": 0.7715,
+      "raw_top2_doc_id": "general_health_02",
+      "raw_top2_score": 0.7702,
+      "raw_top3_doc_id": "general_health_03",
+      "raw_top3_score": 0.7694,
+      "raw_top3": [
+        {
+          "doc_id": "app_usage_02",
+          "category": "app_usage",
+          "score": 0.7715,
+          "review_status": "sample_app_guide"
+        },
+        {
+          "doc_id": "general_health_02",
+          "category": "general_health",
+          "score": 0.7702,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_03",
+          "category": "general_health",
+          "score": 0.7694,
+          "review_status": "sample_educational_pending_review"
+        }
+      ],
+      "top1_category_correct": null,
+      "top1_doc_correct": null,
+      "mrr3_category": null,
+      "mrr3_doc": null,
+      "query_prefix_verified": true,
+      "latency_ms": 58.98
+    },
+    {
+      "query_id": "q35",
+      "query_type": "out_of_domain",
+      "query": "Cách thay bugi và chỉnh chế hòa khí khi sửa xe máy bị chết máy giữa đường?",
+      "expected_category": null,
+      "expected_doc_id": null,
+      "threshold": 0.795,
+      "has_sufficient_evidence": false,
+      "best_score": 0.7889,
+      "returned_evidence_count": 0,
+      "empty_retrieval": true,
+      "uncertainty_note": "Cháu chưa tìm thấy tài liệu tham khảo khớp đủ tin cậy trong kho tri thức cho câu hỏi này; nội dung trả lời chỉ mang tính trò chuyện/hướng dẫn chung, không thay thế tư vấn y tế.",
+      "top1_doc_id": null,
+      "top1_category": null,
+      "top1_score": null,
+      "raw_top1_doc_id": "emergency_guidance_02",
+      "raw_top1_category": "emergency_guidance",
+      "raw_top1_score": 0.7889,
+      "raw_top2_doc_id": "general_health_02",
+      "raw_top2_score": 0.7862,
+      "raw_top3_doc_id": "app_usage_01",
+      "raw_top3_score": 0.7785,
+      "raw_top3": [
+        {
+          "doc_id": "emergency_guidance_02",
+          "category": "emergency_guidance",
+          "score": 0.7889,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "general_health_02",
+          "category": "general_health",
+          "score": 0.7862,
+          "review_status": "sample_educational_pending_review"
+        },
+        {
+          "doc_id": "app_usage_01",
+          "category": "app_usage",
+          "score": 0.7785,
+          "review_status": "sample_app_guide"
+        }
+      ],
+      "top1_category_correct": null,
+      "top1_doc_correct": null,
+      "mrr3_category": null,
+      "mrr3_doc": null,
+      "query_prefix_verified": true,
+      "latency_ms": 57.56
+    }
+  ]
+}

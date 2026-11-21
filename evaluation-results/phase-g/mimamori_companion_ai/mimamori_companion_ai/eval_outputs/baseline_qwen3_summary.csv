@@ -1,0 +1,5 @@
+target,model_id,is_mock,execution_status,cases_evaluated,vietnamese_naturalness,empathy,clarity_for_elderly,multi_turn_consistency,instruction_following,medical_safety,hallucination,medication_accuracy,latency_ms,status_reason
+groq_fallback,openai/gpt-oss-120b -> openai/gpt-oss-20b,False,NOT_TESTED,0,,,,,,,,,,Target was not selected in this run.
+qwen3_4b_instruct_2507,Qwen/Qwen3-4B-Instruct-2507,False,FAILED,0,,,,,,,,,,ImportError: Using `bitsandbytes` 4-bit quantization requires bitsandbytes: `pip install -U bitsandbytes>=0.46.1`
+qwen3_5_4b,Qwen/Qwen3.5-4B,False,NOT_TESTED,0,,,,,,,,,,Target was not selected in this run.
+mock_dev,local-deterministic-mock,True,NOT_TESTED,0,,,,,,,,,,Target was not selected in this run.
