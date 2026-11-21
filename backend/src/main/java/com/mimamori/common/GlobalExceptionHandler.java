@@ -6,6 +6,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,6 +27,12 @@ public class GlobalExceptionHandler {
         }
         ApiResponse<Map<String, String>> response = new ApiResponse<>(false, "Validation failed", errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(413)
+                .body(ApiResponse.error("Tệp âm thanh vượt quá dung lượng tối đa 10MB."));
     }
 
     @ExceptionHandler(Exception.class)

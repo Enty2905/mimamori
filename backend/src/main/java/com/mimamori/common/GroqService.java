@@ -4,15 +4,20 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -26,18 +31,44 @@ public class GroqService {
     private final String primaryModel;
     private final String fallbackModel;
 
+    @Autowired
     public GroqService(
             @Value("${mimamori.groq.base-url:https://api.groq.com/openai/v1}") String baseUrl,
             @Value("${mimamori.groq.api-key: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}") String apiKey,
             @Value("${mimamori.groq.model:openai/gpt-oss-120b}") String primaryModel,
             @Value("${mimamori.groq.fallback-model:openai/gpt-oss-20b}") String fallbackModel,
             ObjectMapper objectMapper) {
+        this(
+                buildDefaultRestClient(baseUrl, apiKey),
+                apiKey,
+                primaryModel,
+                fallbackModel,
+                objectMapper
+        );
+    }
+
+    GroqService(
+            RestClient restClient,
+            String apiKey,
+            String primaryModel,
+            String fallbackModel,
+            ObjectMapper objectMapper) {
+        this.restClient = restClient;
         this.apiKey = apiKey;
         this.primaryModel = primaryModel;
         this.fallbackModel = fallbackModel;
         this.objectMapper = objectMapper;
-        this.restClient = RestClient.builder()
+    }
+
+    private static RestClient buildDefaultRestClient(String baseUrl, String apiKey) {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(Duration.ofSeconds(20));
+        return RestClient.builder()
                 .baseUrl(baseUrl)
+                .requestFactory(requestFactory)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
@@ -58,8 +89,11 @@ public class GroqService {
                 "   - Nếu người dùng yêu cầu kể chuyện vui / thơ ca: hãy kể một câu chuyện vui hóm hỉnh, nhẹ nhàng, dí dỏm hoặc bài thơ ngắn ý nghĩa.\n" +
                 "   - Nếu người dùng hỏi thông tin (thời tiết, món ăn ngon, giấc ngủ...): trả lời rõ ràng, thiết thực, có ích cho người lớn tuổi.\n" +
                 "   - Nếu người dùng tâm sự về buồn chán, cô đơn, mệt mỏi hay đau nhức: lắng nghe thấu hiểu sâu sắc, vỗ về và khuyên cụ báo ngay cho con cháu / người thân hỗ trợ.\n" +
-                "3. Trả lời súc tích, tự nhiên, câu từ ấm áp, thuần Việt, tuyệt đối không lặp lại máy móc các câu nhắc nhở nếu không phù hợp câu hỏi.\n" +
-                "4. Độ dài lý tưởng: 2 đến 4 câu văn ngắn gọn, dễ đọc, mang lại niềm vui và sự an tâm.",
+                "3. AN TOÀN Y TẾ KHẨN CẤP (ƯU TIÊN CAO NHẤT): Nếu người dùng nhắc tới các dấu hiệu nguy hiểm như đau ngực, khó thở, ngất, chóng mặt dữ dội hoặc té ngã:\n" +
+                "   - Luôn ưu tiên khuyên cụ ngồi hoặc nằm yên ở nơi an toàn, gọi ngay cấp cứu 115 hoặc báo cho con cháu / người thân hỗ trợ ngay lập tức.\n" +
+                "   - TUYỆT ĐỐI KHÔNG tự ý chẩn đoán bệnh hay kê đơn thuốc.\n" +
+                "4. Trả lời súc tích, tự nhiên, câu từ ấm áp, thuần Việt, tuyệt đối không lặp lại máy móc các câu nhắc nhở nếu không phù hợp câu hỏi.\n" +
+                "5. Độ dài lý tưởng: 2 đến 4 câu văn ngắn gọn, dễ đọc, mang lại niềm vui và sự an tâm.",
                 name
         );
 
@@ -148,8 +182,14 @@ public class GroqService {
     }
 
     private String getHeuristicFallback(String userMessage) {
-        String lower = userMessage.toLowerCase();
-        if (lower.contains("chuyện vui") || lower.contains("kể chuyện") || lower.contains("hài")) {
+        String lower = userMessage != null ? userMessage.toLowerCase(Locale.ROOT) : "";
+        if (lower.contains("đau ngực") || lower.contains("tức ngực")
+                || lower.contains("khó thở")
+                || lower.contains("ngất")
+                || lower.contains("chóng mặt")
+                || lower.contains("té ngã") || lower.contains("bị ngã")) {
+            return "Dạ cháu rất lo cho sức khỏe của cụ lúc này! Cụ hãy ngồi hoặc nằm nghỉ yên tại chỗ an toàn, gọi ngay cấp cứu 115 hoặc nhờ người thân, con cháu hỗ trợ ngay lập tức nhé ạ. Cháu không thể tự chẩn đoán bệnh nên cụ cần được bác sĩ kiểm tra ngay ạ!";
+        } else if (lower.contains("chuyện vui") || lower.contains("kể chuyện") || lower.contains("hài")) {
             return "Dạ cháu kể cụ nghe mẩu chuyện vui nhé: Có một cụ ông đi đo mắt, bác sĩ ân cần hỏi: 'Cụ nhìn bảng chữ này có rõ không?'. Cụ mỉm cười hiền từ: 'Chữ thì hơi mờ, nhưng bác sĩ đứng bên cạnh thì cụ thấy rất tươi tỉnh!'. Chúc cụ luôn vui tươi, yêu đời mỗi ngày ạ!";
         } else if (lower.contains("mệt") || lower.contains("đau") || lower.contains("buồn") || lower.contains("sốt")) {
             return "Cháu nghe thấy cụ đang không được khỏe. Cụ nhớ ngồi nghỉ ngơi, uống một cốc nước ấm nhé. Cụ có cần cháu nhắn cho con cháu sang bên cụ ngay không ạ?";
