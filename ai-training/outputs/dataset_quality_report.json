@@ -1,0 +1,242 @@
+{
+  "generated_at_utc": "2026-11-21T04:14:58.582903+00:00",
+  "passed": true,
+  "datasets": {
+    "raw_seed": {
+      "dataset": "raw_seed",
+      "total_records": 32,
+      "single_turn_records": 20,
+      "multi_turn_records": 12,
+      "category_counts": {
+        "daily_conversation": 4,
+        "emotional_support": 4,
+        "elderly_companionship": 4,
+        "daily_routines": 4,
+        "medication_assistance": 4,
+        "basic_health_information": 4,
+        "emergency_situations": 4,
+        "unclear_or_insufficient_information": 4
+      },
+      "safety_level_counts": {
+        "low": 16,
+        "medium": 8,
+        "high": 5,
+        "critical": 3
+      },
+      "source_counts": {
+        "synthetic_mimamori_seed_v1": 32
+      },
+      "reviewed_counts": {
+        "false": 32
+      },
+      "assistant_char_length": {
+        "min": 142,
+        "max": 310,
+        "avg": 217.6
+      },
+      "pii_findings": [],
+      "safety_findings": [],
+      "errors": [],
+      "warnings": [
+        "raw_seed: 32/32 records have reviewed=false (allowed for synthetic seed/smoke tests; requires clinical/geriatric review before prod SFT)."
+      ]
+    },
+    "eval_benchmark": {
+      "dataset": "eval_benchmark",
+      "total_records": 20,
+      "single_turn_records": 14,
+      "multi_turn_records": 6,
+      "category_counts": {
+        "daily_conversation": 2,
+        "emotional_support": 3,
+        "elderly_companionship": 2,
+        "daily_routines": 2,
+        "medication_assistance": 3,
+        "basic_health_information": 2,
+        "emergency_situations": 4,
+        "unclear_or_insufficient_information": 2
+      },
+      "safety_level_counts": {
+        "low": 8,
+        "medium": 5,
+        "high": 4,
+        "critical": 3
+      },
+      "reviewed_counts": {
+        "true": 0,
+        "false": 20
+      },
+      "pii_findings": [],
+      "errors": [],
+      "warnings": [
+        "eval_benchmark: 20/20 eval prompts have reviewed=false."
+      ]
+    },
+    "train": {
+      "dataset": "train",
+      "total_records": 16,
+      "single_turn_records": 6,
+      "multi_turn_records": 10,
+      "category_counts": {
+        "daily_conversation": 2,
+        "emotional_support": 2,
+        "elderly_companionship": 2,
+        "daily_routines": 2,
+        "medication_assistance": 2,
+        "basic_health_information": 2,
+        "emergency_situations": 2,
+        "unclear_or_insufficient_information": 2
+      },
+      "safety_level_counts": {
+        "low": 9,
+        "medium": 4,
+        "high": 1,
+        "critical": 2
+      },
+      "source_counts": {
+        "synthetic_mimamori_seed_v1": 16
+      },
+      "reviewed_counts": {
+        "false": 16
+      },
+      "assistant_char_length": {
+        "min": 142,
+        "max": 296,
+        "avg": 208.5
+      },
+      "pii_findings": [],
+      "safety_findings": [],
+      "errors": [],
+      "warnings": [
+        "train: 16/16 records have reviewed=false (allowed for synthetic seed/smoke tests; requires clinical/geriatric review before prod SFT)."
+      ]
+    },
+    "val": {
+      "dataset": "val",
+      "total_records": 8,
+      "single_turn_records": 7,
+      "multi_turn_records": 1,
+      "category_counts": {
+        "daily_conversation": 1,
+        "emotional_support": 1,
+        "elderly_companionship": 1,
+        "daily_routines": 1,
+        "medication_assistance": 1,
+        "basic_health_information": 1,
+        "emergency_situations": 1,
+        "unclear_or_insufficient_information": 1
+      },
+      "safety_level_counts": {
+        "low": 3,
+        "medium": 2,
+        "high": 3,
+        "critical": 0
+      },
+      "source_counts": {
+        "synthetic_mimamori_seed_v1": 8
+      },
+      "reviewed_counts": {
+        "false": 8
+      },
+      "assistant_char_length": {
+        "min": 155,
+        "max": 310,
+        "avg": 235.3
+      },
+      "pii_findings": [],
+      "safety_findings": [],
+      "errors": [],
+      "warnings": [
+        "val: 8/8 records have reviewed=false (allowed for synthetic seed/smoke tests; requires clinical/geriatric review before prod SFT)."
+      ]
+    },
+    "test": {
+      "dataset": "test",
+      "total_records": 8,
+      "single_turn_records": 7,
+      "multi_turn_records": 1,
+      "category_counts": {
+        "daily_conversation": 1,
+        "emotional_support": 1,
+        "elderly_companionship": 1,
+        "daily_routines": 1,
+        "medication_assistance": 1,
+        "basic_health_information": 1,
+        "emergency_situations": 1,
+        "unclear_or_insufficient_information": 1
+      },
+      "safety_level_counts": {
+        "low": 4,
+        "medium": 2,
+        "high": 1,
+        "critical": 1
+      },
+      "source_counts": {
+        "synthetic_mimamori_seed_v1": 8
+      },
+      "reviewed_counts": {
+        "false": 8
+      },
+      "assistant_char_length": {
+        "min": 154,
+        "max": 289,
+        "avg": 226.2
+      },
+      "pii_findings": [],
+      "safety_findings": [],
+      "errors": [],
+      "warnings": [
+        "test: 8/8 records have reviewed=false (allowed for synthetic seed/smoke tests; requires clinical/geriatric review before prod SFT)."
+      ]
+    }
+  },
+  "leakage_check": {
+    "zero_leakage": true,
+    "pair_checks": {
+      "train__vs__val": {
+        "id_overlap": 0,
+        "conversation_overlap": 0,
+        "user_turn_overlap": 0
+      },
+      "train__vs__test": {
+        "id_overlap": 0,
+        "conversation_overlap": 0,
+        "user_turn_overlap": 0
+      },
+      "val__vs__test": {
+        "id_overlap": 0,
+        "conversation_overlap": 0,
+        "user_turn_overlap": 0
+      },
+      "train__vs__eval_benchmark": {
+        "id_overlap": 0,
+        "conversation_overlap": 0,
+        "user_turn_overlap": 0
+      },
+      "val__vs__eval_benchmark": {
+        "id_overlap": 0,
+        "conversation_overlap": 0,
+        "user_turn_overlap": 0
+      },
+      "test__vs__eval_benchmark": {
+        "id_overlap": 0,
+        "conversation_overlap": 0,
+        "user_turn_overlap": 0
+      },
+      "raw_seed__vs__eval_benchmark": {
+        "id_overlap": 0,
+        "conversation_overlap": 0,
+        "user_turn_overlap": 0
+      }
+    },
+    "errors": []
+  },
+  "errors": [],
+  "warnings": [
+    "raw_seed: 32/32 records have reviewed=false (allowed for synthetic seed/smoke tests; requires clinical/geriatric review before prod SFT).",
+    "eval_benchmark: 20/20 eval prompts have reviewed=false.",
+    "train: 16/16 records have reviewed=false (allowed for synthetic seed/smoke tests; requires clinical/geriatric review before prod SFT).",
+    "val: 8/8 records have reviewed=false (allowed for synthetic seed/smoke tests; requires clinical/geriatric review before prod SFT).",
+    "test: 8/8 records have reviewed=false (allowed for synthetic seed/smoke tests; requires clinical/geriatric review before prod SFT)."
+  ]
+}

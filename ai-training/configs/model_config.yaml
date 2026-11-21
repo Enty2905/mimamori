@@ -1,0 +1,130 @@
+# Mimamori Companion AI - Model Configuration
+# Verified against Hugging Face metadata & Colab Free T4 (15GB VRAM, Turing sm_75).
+# Never hardcode API keys or secrets in this file; always use environment variables.
+
+project:
+  name: mimamori-companion-ai
+  language: vi
+  domain: vietnamese_elderly_companion
+
+primary_model:
+  id: Qwen/Qwen3-4B-Instruct-2507
+  alias: qwen3_4b_instruct_2507
+  model_type: qwen3
+  arch: Qwen3ForCausalLM
+  auto_class: AutoModelForCausalLM
+  tokenizer_class: AutoTokenizer
+  min_transformers_version: "4.51.0"
+  recommended_transformers_version: "4.57.6"
+  enable_thinking: false
+  thinking_mode_notes: >
+    Non-thinking only model; does not emit <think> tags and does not require
+    soft switching. Direct Vietnamese reply output for elderly TTS/UI.
+  native_context_length: 262144
+  eos_tokens:
+    - "<|im_end|>"
+    - "<|endoftext|>"
+  lora_target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  qlora_t4_compatible: true
+  quantization:
+    load_in_4bit: true
+    bnb_4bit_quant_type: nf4
+    bnb_4bit_compute_dtype: float16
+    bnb_4bit_use_double_quant: true
+  estimated_t4_vram_gb: "6.5-9.5"
+
+comparison_model:
+  id: Qwen/Qwen3.5-4B
+  alias: qwen3_5_4b
+  model_type: qwen3_5
+  arch: Qwen3_5ForConditionalGeneration
+  text_only_compat_arch: Qwen3_5ForCausalLM
+  auto_class: AutoProcessor
+  min_transformers_version: "5.2.0"
+  enable_thinking: false
+  thinking_mode_notes: >
+    Thinking is ON by default via chat_template.jinja (<think>\n injection).
+    Soft /think and /nothink switches are not supported; pass
+    enable_thinking=False explicitly during evaluation and SFT.
+  native_context_length: 262144
+  lora_target_modules_attention_mlp:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  lora_target_modules_linear_attn:
+    - in_proj_qkv
+    - in_proj_z
+    - in_proj_a
+    - in_proj_b
+    - out_proj
+  excluded_modules:
+    - conv1d
+    - "model.visual.*"
+  qlora_4bit_recommended: false
+  instability_risk_notes: >
+    Hybrid 3:1 GatedDeltaNet linear_attn (24 layers) + full_attention (8 layers)
+    + vision (24 blocks). Avoid 4-bit QLoRA due to quantization divergence on
+    linear_attn GatedDeltaNet + conv1d split-projection issues. Pure fp16 LoRA
+    also risks NaN losses (mamba_ssm_dtype=float32) and runs slower without
+    causal-conv1d / flash-linear-attention kernels (~10-12.5 GB text-only VRAM,
+    tight on 15GB Colab T4).
+
+fallback_llm:
+  provider: groq
+  alias: groq_fallback
+  api_base_url: https://api.groq.com/openai/v1
+  api_key_env: GROQ_API_KEY
+  primary_model: openai/gpt-oss-120b
+  fallback_model: openai/gpt-oss-20b
+  timeout_seconds: 20
+  max_tokens: 256
+  temperature: 0.6
+  notes: >
+    Mirrors backend GroqService fallback chain. Credentials must be loaded
+    solely from the GROQ_API_KEY environment variable (or Colab Secrets).
+
+embedding_model:
+  id: intfloat/multilingual-e5-base
+  architecture: XLMRobertaModel
+  dimensions: 768
+  max_tokens: 512
+  query_prefix: "query: "
+  passage_prefix: "passage: "
+  estimated_cpu_ram_gb: "1.8-3.0"
+  lightweight_fallback: intfloat/multilingual-e5-small
+  notes: >
+    Aligned with ai-service ChromaDB RAG retriever for a 16GB Windows CPU-only
+    laptop. Always prepend 'passage: ' for document indexing and 'query: ' for search.
+
+generation_defaults:
+  eval_deterministic:
+    max_new_tokens: 256
+    do_sample: false
+    temperature: 0.0
+    top_p: 1.0
+  companion_chat:
+    max_new_tokens: 256
+    do_sample: true
+    temperature: 0.6
+    top_p: 0.9
+
+companion_system_prompt: >
+  Bạn là Mimamori AI - người bạn đồng hành ấm áp, lễ phép và thấu hiểu dành cho
+  người cao tuổi Việt Nam. Luôn xưng 'cháu' và gọi người dùng là 'cụ', 'bác' hoặc
+  'ông/bà' một cách kính trọng. Trả lời ngắn gọn (2 đến 4 câu rõ ràng, dễ nghe),
+  đúng trọng tâm, thuần Việt. Tuyệt đối không tự ý chẩn đoán bệnh, không kê đơn
+  hay thay đổi liều thuốc, và không bịa đặt thông tin chưa rõ. Nếu có dấu hiệu
+  nguy hiểm như đau ngực, khó thở, ngất, chóng mặt dữ dội, té ngã hoặc dấu hiệu
+  đột quỵ, ưu tiên khuyên cụ ngồi/nằm yên ở nơi an toàn, gọi ngay cấp cứu 115
+  và báo cho con cháu hoặc người thân hỗ trợ ngay lập tức.
