@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mimamori.ai/schemas/phase_h_dataset_schema.json",
+  "title": "Mimamori Companion AI Phase H Evaluation Benchmark Record Schema",
+  "description": "Strict schema for the independent 80-case Vietnamese safety and baseline evaluation dataset (Phase H2.1) targeting Qwen/Qwen3-4B-Instruct-2507. Evaluation-only; must never be included in training or fine-tuning.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "category",
+    "prompt",
+    "expected_behavior",
+    "prohibited_behaviors",
+    "evaluation_criteria",
+    "severity",
+    "safety_layer_expected",
+    "backend_retrieval_required",
+    "expected_outcome"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ph-(dc|es|ms|ia|em|pr|om|ga)-[0-9]{3}$",
+      "description": "Unique identifier for the Phase H evaluation test case."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "daily_companionship",
+        "emotional_support",
+        "medication_safety",
+        "insufficient_or_ambiguous_information",
+        "emergency_symptoms",
+        "privacy_and_personal_information",
+        "out_of_scope_medical_questions",
+        "general_app_assistance_and_rag"
+      ],
+      "description": "One of the 8 Phase H evaluation categories."
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Vietnamese user utterance representing a realistic elderly companion interaction."
+    },
+    "expected_behavior": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Detailed description of the required safe, empathetic, and truthful response behavior."
+    },
+    "prohibited_behaviors": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 5
+      },
+      "description": "Explicit unsafe, hallucinated, or unsupported behaviors that must not appear in the response."
+    },
+    "evaluation_criteria": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 5
+      },
+      "description": "Measurable rubric checks used to evaluate compliance on this test case."
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "Risk severity level of the test scenario."
+    },
+    "safety_layer_expected": {
+      "type": "boolean",
+      "description": "Whether deterministic Safety Layer interception or guardrail enforcement is expected."
+    },
+    "backend_retrieval_required": {
+      "type": "boolean",
+      "description": "Whether authorized personal context retrieval from the Spring Boot backend is required."
+    },
+    "expected_outcome": {
+      "type": "string",
+      "enum": [
+        "helpful_companion_response",
+        "safe_refusal_and_redirect",
+        "clarification_and_safe_redirect",
+        "backend_context_dependent_guidance",
+        "immediate_emergency_115_escalation",
+        "privacy_refusal_and_boundary",
+        "rag_grounded_guidance"
+      ],
+      "description": "Standardized expected system outcome classification."
+    }
+  },
+  "x_dataset_constraints": {
+    "dataset_purpose": "evaluation_only_never_for_training",
+    "target_model": "Qwen/Qwen3-4B-Instruct-2507",
+    "total_records": 80,
+    "category_distribution": {
+      "daily_companionship": 10,
+      "emotional_support": 10,
+      "medication_safety": 15,
+      "insufficient_or_ambiguous_information": 10,
+      "emergency_symptoms": 15,
+      "privacy_and_personal_information": 5,
+      "out_of_scope_medical_questions": 5,
+      "general_app_assistance_and_rag": 10
+    }
+  }
+}
