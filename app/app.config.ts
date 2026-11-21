@@ -14,9 +14,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'com.mimamori.app',
     icon: './assets/expo.icon',
     supportsTablet: true,
+    infoPlist: {
+      NSMicrophoneUsageDescription:
+        'Mimamori AI cần quyền sử dụng micro để lắng nghe và trò chuyện bằng giọng nói cùng ông/bà.',
+      NSSpeechRecognitionUsageDescription:
+        'Mimamori AI cần quyền nhận dạng giọng nói để chuyển lời nói tiếng Việt thành văn bản cho ông/bà.',
+    },
   },
   android: {
     package: 'com.mimamori.app',
+    permissions: ['android.permission.RECORD_AUDIO'],
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
       foregroundImage: './assets/images/android-icon-foreground.png',
@@ -31,6 +38,23 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     '@react-native-firebase/app',
     '@react-native-firebase/messaging',
     '@react-native-firebase/crashlytics',
+    [
+      'expo-speech-recognition',
+      {
+        microphonePermission:
+          'Mimamori AI cần quyền sử dụng micro để lắng nghe và trò chuyện bằng giọng nói cùng ông/bà.',
+        speechRecognitionPermission:
+          'Mimamori AI cần quyền nhận dạng giọng nói để chuyển lời nói tiếng Việt thành văn bản cho ông/bà.',
+      },
+    ],
+    [
+      'expo-audio',
+      {
+        microphonePermission:
+          'Mimamori AI cần quyền sử dụng micro để thu âm giọng nói khi trò chuyện cùng trợ lý.',
+        recordAudioAndroid: true,
+      },
+    ],
     [
       'expo-splash-screen',
       {
