@@ -1,0 +1,32 @@
+[
+  {
+    "doc_id": "app_usage_01",
+    "title": "Hướng dẫn trò chuyện bằng giọng nói và nghe đọc lại trên Mimamori AI",
+    "category": "app_usage",
+    "source": "Mimamori Product Documentation - Voice Companion Guide",
+    "updated_date": "2026-11-01",
+    "version": "1.0.0",
+    "review_status": "sample_app_guide",
+    "content": "Trên màn hình Trò chuyện cùng Mimamori AI, ông/bà có thể nhấn nút micro lớn ở phía dưới để nói tiếng Việt tự nhiên. Sau khi nói xong, chữ hiện trong ô nhập để ông/bà kiểm tra lại trước khi bấm Gửi, hoặc bật chế độ Trò chuyện giọng nói liên tục để nghe đọc tự động. Bên dưới mỗi câu trả lời đều có nút Nghe, Tạm dừng và Đọc lại cùng phần cài đặt tốc độ đọc."
+  },
+  {
+    "doc_id": "app_usage_02",
+    "title": "Hướng dẫn điểm danh sức khỏe hằng ngày và xem nhắc uống thuốc",
+    "category": "app_usage",
+    "source": "Mimamori Product Documentation - Check-in & Medication Guide",
+    "updated_date": "2026-11-01",
+    "version": "1.0.0",
+    "review_status": "sample_app_guide",
+    "content": "Mỗi ngày, ông/bà có thể chọn mục Điểm danh sức khỏe để báo tâm trạng, giấc ngủ, ăn uống và thể trạng để con cháu yên tâm. Ở mục Thuốc, ứng dụng hiển thị lịch nhắc giờ uống và trạng thái đã uống hoặc đang chờ; khi quá giờ nhắc, hệ thống sẽ báo cho người thân hỗ trợ kịp thời."
+  },
+  {
+    "doc_id": "app_usage_03",
+    "title": "Phạm vi hỗ trợ của trợ lý đồng hành Mimamori AI",
+    "category": "app_usage",
+    "source": "Mimamori Product Documentation - Safety & Scope Notice",
+    "updated_date": "2026-11-01",
+    "version": "1.0.0",
+    "review_status": "sample_app_guide",
+    "content": "Mimamori AI là người bạn đồng hành trò chuyện, nhắc nhở sinh hoạt và hỗ trợ thông tin chăm sóc cơ bản cho người cao tuổi. Trợ lý AI không thay thế bác sĩ, không chẩn đoán bệnh, không kê đơn thuốc và không tự ý đánh dấu đã uống thuốc thay cho người dùng."
+  }
+]

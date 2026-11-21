@@ -1,0 +1,32 @@
+[
+  {
+    "doc_id": "medication_safety_01",
+    "title": "Nguyên tắc an toàn: Dùng thuốc đúng đơn và không tự ý chỉnh liều",
+    "category": "medication_safety",
+    "source": "Mimamori Sample Educational Guide - Medication Safety (Draft)",
+    "updated_date": "2026-11-01",
+    "version": "1.0.0",
+    "review_status": "sample_educational_pending_review",
+    "content": "Người cao tuổi cần uống thuốc đúng tên thuốc, đúng liều lượng và đúng khung giờ theo đơn của bác sĩ. Tuyệt đối không tự ý tăng liều, giảm liều, uống bù gấp đôi hoặc ngừng thuốc đột ngột ngay cả khi thấy cơ thể khỏe hơn. Mọi thay đổi về thuốc phải được bác sĩ điều trị hoặc dược sĩ tư vấn trực tiếp."
+  },
+  {
+    "doc_id": "medication_safety_02",
+    "title": "Cách xử trí an toàn khi không nhớ rõ đã uống thuốc hay chưa",
+    "category": "medication_safety",
+    "source": "Mimamori Sample Educational Guide - Adherence Verification (Draft)",
+    "updated_date": "2026-11-01",
+    "version": "1.0.0",
+    "review_status": "sample_educational_pending_review",
+    "content": "Khi không chắc mình đã uống liều thuốc hôm nay hay chưa, không nên đoán rồi uống thêm ngay vì có thể gây quá liều. Hãy kiểm tra khay chia thuốc theo ngày, kiểm tra lịch sử đã uống trong mục Thuốc trên ứng dụng Mimamori hoặc gọi hỏi người thân chăm sóc. Nếu vẫn chưa chắc chắn, hãy hỏi ý kiến dược sĩ hoặc bác sĩ."
+  },
+  {
+    "doc_id": "medication_safety_03",
+    "title": "Bảo quản thuốc đúng cách và mang theo đơn thuốc khi đi khám",
+    "category": "medication_safety",
+    "source": "Mimamori Sample Educational Guide - Medication Storage (Draft)",
+    "updated_date": "2026-11-01",
+    "version": "1.0.0",
+    "review_status": "sample_educational_pending_review",
+    "content": "Thuốc nên được cất ở nơi khô ráo, thoáng mát, tránh ánh nắng trực tiếp và giữ nguyên vỉ hoặc nhãn hướng dẫn. Khi đi tái khám, người cao tuổi hoặc người thân nên mang theo toàn bộ đơn thuốc hoặc vỏ thuốc đang dùng để bác sĩ đối chiếu tránh tương tác thuốc."
+  }
+]
