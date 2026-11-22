@@ -33,7 +33,13 @@ import { WaterFillCircle } from '../../components/WaterFillCircle';
 
 const PRESET_HOURS = ['07:00', '11:30', '18:00', '20:00'];
 
-export const ElderlyMedicationScreen: React.FC = () => {
+export interface ElderlyMedicationScreenProps {
+  onAskMedicineAI?: () => void;
+}
+
+export const ElderlyMedicationScreen: React.FC<ElderlyMedicationScreenProps> = ({
+  onAskMedicineAI,
+}) => {
   const { fs } = useAccessibilityStore();
 
   const logs = useCareRoutineStore((s) => s.todayMeds);
@@ -404,6 +410,29 @@ export const ElderlyMedicationScreen: React.FC = () => {
                   </View>
                 );
               })()}
+
+              {onAskMedicineAI && (
+                <TouchableOpacity
+                  style={styles.askMedicineAiCard}
+                  onPress={onAskMedicineAI}
+                  activeOpacity={0.82}
+                  accessibilityRole="button"
+                  accessibilityLabel="Chụp ảnh thuốc hỏi trợ lý AI"
+                >
+                  <View style={styles.askMedicineAiIconWrap}>
+                    <Feather name="camera" size={20} color={colors.accentDark} />
+                  </View>
+                  <View style={styles.askMedicineAiTextCol}>
+                    <Text style={[styles.askMedicineAiTitle, { fontSize: fs(14.5) }]}>
+                      Chụp ảnh thuốc hỏi trợ lý AI
+                    </Text>
+                    <Text style={[styles.askMedicineAiSub, { fontSize: fs(12.5) }]}>
+                      Đọc tên thuốc tiếng Anh, công dụng & cách dùng
+                    </Text>
+                  </View>
+                  <Feather name="chevron-right" size={18} color={colors.accentDark} />
+                </TouchableOpacity>
+              )}
 
               {/* Section Title */}
               <View style={styles.medSectionHeaderRow}>
@@ -1224,5 +1253,41 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
+  },
+  askMedicineAiCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.accentLight,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 14,
+    ...shadows.subtle,
+  },
+  askMedicineAiIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  askMedicineAiTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  askMedicineAiTitle: {
+    color: colors.textPrimary,
+    fontWeight: '800',
+  },
+  askMedicineAiSub: {
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
 });

@@ -8,12 +8,18 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  Image,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { colors, shadows } from '../core/theme/colors';
 import { useAccessibilityStore } from '../core/accessibility/useAccessibilityStore';
 import type { SttEngine, VoiceRecognitionState } from '../core/voice/useVoiceRecognition';
 import { VoiceWaveform } from './VoiceWaveform';
+
+export interface SelectedImagePreview {
+  uri: string;
+  mimeType: string;
+}
 
 interface VoiceControlPanelProps {
   voiceState: VoiceRecognitionState;
@@ -34,6 +40,10 @@ interface VoiceControlPanelProps {
   onRetryListening: () => void;
   onDismissError: () => void;
   onEndContinuousMode: () => void;
+  selectedImage?: SelectedImagePreview | null;
+  onOpenImagePicker?: () => void;
+  onClearSelectedImage?: () => void;
+  pickingImage?: boolean;
 }
 
 export const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
@@ -55,10 +65,14 @@ export const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
   onRetryListening,
   onDismissError,
   onEndContinuousMode,
+  selectedImage = null,
+  onOpenImagePicker,
+  onClearSelectedImage,
+  pickingImage = false,
 }) => {
   const { fs } = useAccessibilityStore();
 
-  const canSend = inputText.trim().length > 0 && !sending;
+  const canSend = (inputText.trim().length > 0 || Boolean(selectedImage)) && !sending;
   const isRecognized = voiceState === 'recognized';
 
   const handleOpenDeviceSettings = () => {
@@ -246,7 +260,37 @@ export const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
       {/* State 1 (Idle) & Coexisting Keyboard Input Row (shown unless actively listening/recognizing) */}
       {voiceState !== 'listening' && voiceState !== 'recognizing' && (
         <View style={styles.idleSection}>
-          {!isRecognized && !continuousMode && (
+          {selectedImage && (
+            <View style={styles.selectedImageCard}>
+              <Image
+                source={{ uri: selectedImage.uri }}
+                style={styles.selectedImageThumb}
+                resizeMode="cover"
+              />
+              <View style={styles.selectedImageInfo}>
+                <Text style={[styles.selectedImageTitle, { fontSize: fs(14) }]}>
+                  Ảnh thuốc đã chọn
+                </Text>
+                <Text style={[styles.selectedImageHint, { fontSize: fs(12.5) }]}>
+                  Bấm Gửi ngay hoặc nhập/nói thêm câu hỏi cho cháu nhé
+                </Text>
+              </View>
+              {onClearSelectedImage && (
+                <TouchableOpacity
+                  style={styles.removeImageBtn}
+                  onPress={onClearSelectedImage}
+                  disabled={sending}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel="Bỏ ảnh thuốc đã chọn"
+                >
+                  <Feather name="x" size={18} color={colors.dangerText} />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {!selectedImage && !isRecognized && !continuousMode && (
             <TouchableOpacity
               style={styles.micHintRow}
               onPress={onStartListening}
@@ -254,8 +298,8 @@ export const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
               disabled={sending}
             >
               <Feather name="mic" size={13} color={colors.primary} />
-              <Text style={[styles.micHintLabel, { fontSize: fs(13) }]}>
-                Nhấn để nói chuyện
+              <Text style={[styles.micHintLabel, { fontSize: fs(12.5) }]}>
+                Nhấn để nói
               </Text>
             </TouchableOpacity>
           )}
@@ -275,18 +319,59 @@ export const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
             >
               <Feather
                 name="mic"
-                size={26}
+                size={24}
                 color={continuousMode ? '#FFFFFF' : colors.primary}
               />
             </TouchableOpacity>
 
+            {onOpenImagePicker && (
+              <TouchableOpacity
+                style={[
+                  styles.cameraBtn,
+                  Boolean(selectedImage) && styles.cameraBtnSelected,
+                  (sending || pickingImage) && styles.largeMicBtnDisabled,
+                ]}
+                onPress={onOpenImagePicker}
+                disabled={sending || pickingImage}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Chụp ảnh hoặc chọn ảnh thuốc từ thư viện"
+              >
+                {pickingImage ? (
+                  <ActivityIndicator size="small" color={colors.accentDark} />
+                ) : (
+                  <>
+                    <Feather
+                      name="camera"
+                      size={21}
+                      color={selectedImage ? colors.primaryDark : colors.accentDark}
+                    />
+                    <Text
+                      style={[
+                        styles.cameraBtnLabel,
+                        { fontSize: fs(10.5) },
+                        Boolean(selectedImage) && styles.cameraBtnLabelSelected,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      Ảnh
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
             <TextInput
               style={[
                 styles.textInput,
-                isRecognized && styles.textInputHighlighted,
+                (isRecognized || Boolean(selectedImage)) && styles.textInputHighlighted,
                 { fontSize: fs(15) },
               ]}
-              placeholder="Nhập điều cụ muốn tâm sự..."
+              placeholder={
+                selectedImage
+                  ? 'Hỏi thêm về thuốc (hoặc bấm Gửi)...'
+                  : 'Nhập điều cụ muốn tâm sự...'
+              }
               placeholderTextColor={colors.textMuted}
               value={inputText}
               onChangeText={onChangeInputText}
@@ -297,14 +382,14 @@ export const VoiceControlPanel: React.FC<VoiceControlPanelProps> = ({
             <TouchableOpacity
               style={[
                 styles.sendBtn,
-                isRecognized && canSend && styles.sendBtnHighlighted,
+                (isRecognized || Boolean(selectedImage)) && canSend && styles.sendBtnHighlighted,
                 !canSend && styles.sendBtnDisabled,
               ]}
               onPress={onSend}
               disabled={!canSend}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="Gửi tin nhắn"
+              accessibilityLabel={selectedImage ? 'Gửi ảnh thuốc và câu hỏi' : 'Gửi tin nhắn'}
             >
               {sending ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -600,13 +685,55 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   idleSection: {
-    gap: 6,
+    gap: 8,
+  },
+  selectedImageCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.primaryLight,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.successBorder,
+    padding: 8,
+  },
+  selectedImageThumb: {
+    width: 62,
+    height: 62,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceWarm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  selectedImageInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  selectedImageTitle: {
+    color: colors.primaryDark,
+    fontWeight: '800',
+  },
+  selectedImageHint: {
+    color: colors.textSecondary,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
+  removeImageBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.dangerBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   micHintRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingLeft: 4,
+    paddingLeft: 2,
   },
   micHintLabel: {
     color: colors.primary,
@@ -618,15 +745,38 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   largeMicBtn: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: colors.primaryLight,
     borderWidth: 2,
     borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.subtle,
+  },
+  cameraBtn: {
+    width: 54,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: colors.accentLight,
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    ...shadows.subtle,
+  },
+  cameraBtnSelected: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  cameraBtnLabel: {
+    color: colors.accentDark,
+    fontWeight: '800',
+  },
+  cameraBtnLabelSelected: {
+    color: colors.primaryDark,
   },
   largeMicBtnActive: {
     backgroundColor: colors.primary,

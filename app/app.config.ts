@@ -19,11 +19,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         'Mimamori AI cần quyền sử dụng micro để lắng nghe và trò chuyện bằng giọng nói cùng ông/bà.',
       NSSpeechRecognitionUsageDescription:
         'Mimamori AI cần quyền nhận dạng giọng nói để chuyển lời nói tiếng Việt thành văn bản cho ông/bà.',
+      NSCameraUsageDescription:
+        'Mimamori AI cần quyền sử dụng máy ảnh để chụp ảnh hộp thuốc hoặc đơn thuốc giúp ông/bà hỏi trợ lý AI.',
+      NSPhotoLibraryUsageDescription:
+        'Mimamori AI cần quyền truy cập thư viện ảnh để ông/bà chọn ảnh hộp thuốc hoặc đơn thuốc gửi trợ lý AI.',
     },
   },
   android: {
     package: 'com.mimamori.app',
-    permissions: ['android.permission.RECORD_AUDIO'],
+    permissions: ['android.permission.RECORD_AUDIO', 'android.permission.CAMERA'],
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
       foregroundImage: './assets/images/android-icon-foreground.png',
@@ -53,6 +57,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         microphonePermission:
           'Mimamori AI cần quyền sử dụng micro để thu âm giọng nói khi trò chuyện cùng trợ lý.',
         recordAudioAndroid: true,
+      },
+    ],
+    [
+      'expo-image-picker',
+      {
+        photosPermission:
+          'Mimamori AI cần quyền truy cập thư viện ảnh để ông/bà chọn ảnh hộp thuốc hoặc đơn thuốc gửi trợ lý AI.',
+        cameraPermission:
+          'Mimamori AI cần quyền sử dụng máy ảnh để chụp ảnh hộp thuốc hoặc đơn thuốc giúp ông/bà hỏi trợ lý AI.',
       },
     ],
     [

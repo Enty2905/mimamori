@@ -12,8 +12,11 @@ import {
   Modal,
   Switch,
   Linking,
+  Image,
+  Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, shadows } from '../../core/theme/colors';
 import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
 import { apiClient } from '../../core/api/client';
@@ -27,16 +30,59 @@ import {
 
 interface Message {
   id: number;
-  sender: 'USER' | 'ASSISTANT' | 'SYSTEM';
+  sender: 'USER' | 'ASSISTANT' | 'AI' | 'SYSTEM';
   content: string;
   createdAt: string;
+  messageType?: string;
+  imageBase64?: string | null;
+  imageMimeType?: string | null;
+  imageUri?: string;
   detectedEmotion?: string;
   isEmergency?: boolean;
+}
+
+interface SelectedMedicineImage {
+  uri: string;
+  base64: string;
+  mimeType: string;
 }
 
 interface Conversation {
   id: number;
   title: string;
+}
+
+export interface ElderlyCompanionScreenProps {
+  autoOpenPhotoPicker?: boolean;
+  onHandledAutoOpenPhotoPicker?: () => void;
+}
+
+const DEFAULT_MEDICINE_QUESTION =
+  'Đây là thuốc gì? Công dụng và cách dùng như thế nào?';
+
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+const ALLOWED_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+]);
+
+function resolveMessageImageUri(msg: Message): string | null {
+  if (msg.imageUri) {
+    return msg.imageUri;
+  }
+  if (msg.imageBase64) {
+    if (msg.imageBase64.startsWith('data:')) {
+      return msg.imageBase64;
+    }
+    const mime = msg.imageMimeType || 'image/jpeg';
+    return `data:${mime};base64,${msg.imageBase64}`;
+  }
+  return null;
 }
 
 const QUICK_PROMPTS = [
@@ -86,13 +132,21 @@ function isEmergencyText(text: string): boolean {
   return EMERGENCY_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-export const ElderlyCompanionScreen: React.FC = () => {
+export const ElderlyCompanionScreen: React.FC<ElderlyCompanionScreenProps> = ({
+  autoOpenPhotoPicker = false,
+  onHandledAutoOpenPhotoPicker,
+}) => {
   const { fs } = useAccessibilityStore();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
+  const [selectedImage, setSelectedImage] = useState<SelectedMedicineImage | null>(null);
+  const [photoPickerVisible, setPhotoPickerVisible] = useState(false);
+  const [pickingImage, setPickingImage] = useState(false);
+  const [previewImageUri, setPreviewImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sendingHasImage, setSendingHasImage] = useState(false);
 
   const [autoTts, setAutoTts] = useState(true);
   const [continuousMode, setContinuousMode] = useState(false);
@@ -103,6 +157,7 @@ export const ElderlyCompanionScreen: React.FC = () => {
   const mountedRef = useRef(true);
   const sendingRef = useRef(false);
   const conversationRef = useRef<Conversation | null>(null);
+  const selectedImageRef = useRef<SelectedMedicineImage | null>(null);
   const autoTtsRef = useRef(autoTts);
   const continuousModeRef = useRef(continuousMode);
   const isSpeakingRef = useRef(false);
@@ -113,6 +168,17 @@ export const ElderlyCompanionScreen: React.FC = () => {
   useEffect(() => {
     conversationRef.current = conversation;
   }, [conversation]);
+
+  useEffect(() => {
+    selectedImageRef.current = selectedImage;
+  }, [selectedImage]);
+
+  useEffect(() => {
+    if (autoOpenPhotoPicker) {
+      setPhotoPickerVisible(true);
+      onHandledAutoOpenPhotoPicker?.();
+    }
+  }, [autoOpenPhotoPicker, onHandledAutoOpenPhotoPicker]);
 
   useEffect(() => {
     autoTtsRef.current = autoTts;
@@ -167,22 +233,29 @@ export const ElderlyCompanionScreen: React.FC = () => {
   }, [clearNextTurnTimer]);
 
   const sendMessage = useCallback(
-    async (rawText: string) => {
-      const text = rawText.trim();
-      if (!text || sendingRef.current) return;
+    async (rawText: string, imageToSend?: SelectedMedicineImage | null) => {
+      const hasImage = Boolean(imageToSend);
+      const text = rawText.trim() || (hasImage ? DEFAULT_MEDICINE_QUESTION : '');
+      if ((!text && !hasImage) || sendingRef.current) return;
 
       sendingRef.current = true;
       setSending(true);
+      setSendingHasImage(hasImage);
 
       const tempUserMsg: Message = {
         id: Date.now(),
         sender: 'USER',
         content: text,
         createdAt: new Date().toISOString(),
+        messageType: hasImage ? 'MEDICINE_IMAGE' : 'TEXT',
+        imageUri: imageToSend?.uri,
       };
 
       setMessages((prev) => [...prev, tempUserMsg]);
       setInputText('');
+      if (hasImage) {
+        setSelectedImage(null);
+      }
 
       let assistantMsg: Message | null = null;
 
@@ -203,10 +276,21 @@ export const ElderlyCompanionScreen: React.FC = () => {
           throw new Error('Không thể kết nối cuộc trò chuyện');
         }
 
-        const res = await apiClient<Message>(`/api/conversations/${activeConv.id}/messages`, {
-          method: 'POST',
-          body: JSON.stringify({ content: text, message: text }),
-        });
+        const res =
+          hasImage && imageToSend
+            ? await apiClient<Message>(`/api/conversations/${activeConv.id}/medicine-image`, {
+                method: 'POST',
+                timeoutMs: 65000,
+                body: JSON.stringify({
+                  imageBase64: imageToSend.base64,
+                  mimeType: imageToSend.mimeType,
+                  content: text,
+                }),
+              })
+            : await apiClient<Message>(`/api/conversations/${activeConv.id}/messages`, {
+                method: 'POST',
+                body: JSON.stringify({ content: text, message: text }),
+              });
 
         if (res.success && res.data) {
           assistantMsg = res.data;
@@ -215,36 +299,50 @@ export const ElderlyCompanionScreen: React.FC = () => {
         }
       } catch (err: unknown) {
         console.warn('AI Chat Error:', err);
-        const emergency = isEmergencyText(text);
-        let fallbackText =
-          'Dạ cháu hiểu và luôn ở bên cạnh tâm sự cùng cụ ạ! Cụ có muốn cháu kể một câu chuyện vui hay chia sẻ thêm điều gì không ạ?';
-        const lower = text.toLowerCase();
+        if (hasImage) {
+          const visionErrText =
+            err instanceof Error && err.message.trim()
+              ? err.message.trim()
+              : 'Xin lỗi cụ, hiện cháu chưa đọc được ảnh thuốc lúc này. Cụ vui lòng chụp lại rõ chữ hơn hoặc thử lại sau ít phút nhé ạ.';
+          assistantMsg = {
+            id: Date.now() + 1,
+            sender: 'ASSISTANT',
+            content: visionErrText,
+            createdAt: new Date().toISOString(),
+          };
+        } else {
+          const emergency = isEmergencyText(text);
+          let fallbackText =
+            'Dạ cháu hiểu và luôn ở bên cạnh tâm sự cùng cụ ạ! Cụ có muốn cháu kể một câu chuyện vui hay chia sẻ thêm điều gì không ạ?';
+          const lower = text.toLowerCase();
 
-        if (emergency) {
-          fallbackText =
-            '⚠️ CẢNH BÁO KHẨN CẤP: Ông/bà đang có dấu hiệu đáng lo ngại (đau ngực, khó thở hoặc choáng ngất). Ông/bà hãy ngồi nghỉ ngay, đừng gắng sức, báo ngay cho người thân hoặc gọi cấp cứu 115 ngay lập tức nhé ạ!';
-        } else if (lower.includes('chuyện vui') || lower.includes('kể chuyện') || lower.includes('hài')) {
-          fallbackText =
-            'Dạ cháu kể cụ nghe mẩu chuyện vui nhé: Có một cụ ông đi khám mắt, bác sĩ hỏi: "Cụ nhìn chữ này có rõ không?". Cụ mỉm cười: "Chữ thì hơi mờ, nhưng bác sĩ đứng bên cạnh thì cụ thấy rất tươi tỉnh!". Chúc cụ luôn vui tươi, yêu đời ạ!';
-        } else if (lower.includes('thời tiết')) {
-          fallbackText =
-            'Dạ tiết trời hôm nay khá dễ chịu, cụ nhớ chú ý giữ ấm cơ thể khi sáng sớm hoặc chiều tối ra vườn dạo bước nhé ạ!';
-        } else if (lower.includes('thuốc') || lower.includes('uống')) {
-          fallbackText =
-            'Dạ cụ nhớ uống thuốc đúng giờ và theo đúng chỉ dẫn của bác sĩ nhé! Cụ đã uống thuốc cữ này chưa ạ?';
+          if (emergency) {
+            fallbackText =
+              '⚠️ CẢNH BÁO KHẨN CẤP: Ông/bà đang có dấu hiệu đáng lo ngại (đau ngực, khó thở hoặc choáng ngất). Ông/bà hãy ngồi nghỉ ngay, đừng gắng sức, báo ngay cho người thân hoặc gọi cấp cứu 115 ngay lập tức nhé ạ!';
+          } else if (lower.includes('chuyện vui') || lower.includes('kể chuyện') || lower.includes('hài')) {
+            fallbackText =
+              'Dạ cháu kể cụ nghe mẩu chuyện vui nhé: Có một cụ ông đi khám mắt, bác sĩ hỏi: "Cụ nhìn chữ này có rõ không?". Cụ mỉm cười: "Chữ thì hơi mờ, nhưng bác sĩ đứng bên cạnh thì cụ thấy rất tươi tỉnh!". Chúc cụ luôn vui tươi, yêu đời ạ!';
+          } else if (lower.includes('thời tiết')) {
+            fallbackText =
+              'Dạ tiết trời hôm nay khá dễ chịu, cụ nhớ chú ý giữ ấm cơ thể khi sáng sớm hoặc chiều tối ra vườn dạo bước nhé ạ!';
+          } else if (lower.includes('thuốc') || lower.includes('uống')) {
+            fallbackText =
+              'Dạ cụ nhớ uống thuốc đúng giờ và theo đúng chỉ dẫn của bác sĩ nhé! Cụ đã uống thuốc cữ này chưa ạ?';
+          }
+
+          assistantMsg = {
+            id: Date.now() + 1,
+            sender: 'ASSISTANT',
+            content: fallbackText,
+            createdAt: new Date().toISOString(),
+            isEmergency: emergency,
+          };
         }
-
-        assistantMsg = {
-          id: Date.now() + 1,
-          sender: 'ASSISTANT',
-          content: fallbackText,
-          createdAt: new Date().toISOString(),
-          isEmergency: emergency,
-        };
       } finally {
         sendingRef.current = false;
         if (mountedRef.current) {
           setSending(false);
+          setSendingHasImage(false);
         }
       }
 
@@ -278,7 +376,7 @@ export const ElderlyCompanionScreen: React.FC = () => {
       if (!cleaned || !mountedRef.current) return;
 
       if (continuousModeRef.current) {
-        void sendMessage(cleaned);
+        void sendMessage(cleaned, selectedImageRef.current);
       } else {
         setInputText(cleaned);
       }
@@ -393,10 +491,146 @@ export const ElderlyCompanionScreen: React.FC = () => {
 
   const handleSendInput = useCallback(() => {
     const trimmed = inputText.trim();
-    if (!trimmed || sendingRef.current) return;
+    const imageToSend = selectedImage;
+    if ((!trimmed && !imageToSend) || sendingRef.current) return;
     resetVoiceState();
-    void sendMessage(trimmed);
-  }, [inputText, resetVoiceState, sendMessage]);
+    void sendMessage(trimmed, imageToSend);
+  }, [inputText, resetVoiceState, selectedImage, sendMessage]);
+
+  const showPermissionAlert = useCallback((title: string, message: string) => {
+    Alert.alert(
+      title,
+      message,
+      Platform.OS === 'web'
+        ? [{ text: 'Đóng', style: 'cancel' }]
+        : [
+            { text: 'Đóng', style: 'cancel' },
+            {
+              text: 'Mở Cài đặt',
+              onPress: () => {
+                void Linking.openSettings().catch(() => {});
+              },
+            },
+          ]
+    );
+  }, []);
+
+  const handlePickedResult = useCallback((result: ImagePicker.ImagePickerResult) => {
+    if (result.canceled || !result.assets || result.assets.length === 0) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    if (!asset.base64) {
+      Alert.alert(
+        'Không thể đọc ảnh',
+        'Cháu chưa đọc được dữ liệu từ ảnh này. Ông/bà vui lòng chọn hoặc chụp lại ảnh khác nhé.'
+      );
+      return;
+    }
+
+    const approxBytes = Math.floor((asset.base64.length * 3) / 4);
+    if (approxBytes > MAX_IMAGE_BYTES) {
+      Alert.alert(
+        'Ảnh hơi lớn',
+        'Dung lượng ảnh vượt quá 10MB. Ông/bà vui lòng chọn ảnh khác hoặc chụp lại gần hơn nhé.'
+      );
+      return;
+    }
+
+    const rawMime = asset.mimeType?.toLowerCase() || 'image/jpeg';
+    const mimeType = ALLOWED_IMAGE_MIME_TYPES.has(rawMime) ? rawMime : 'image/jpeg';
+
+    setSelectedImage({
+      uri: asset.uri,
+      base64: asset.base64,
+      mimeType,
+    });
+    setShowSuggestions(false);
+  }, []);
+
+  const handlePickFromCamera = useCallback(async () => {
+    setPhotoPickerVisible(false);
+    if (Platform.OS === 'ios') {
+      await new Promise((resolve) => setTimeout(resolve, 180));
+    }
+
+    try {
+      setPickingImage(true);
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        showPermissionAlert(
+          'Cần quyền máy ảnh',
+          'Mimamori AI cần quyền sử dụng máy ảnh để chụp ảnh hộp thuốc, vỉ thuốc hoặc đơn thuốc giúp cụ. Cụ hãy mở Cài đặt để bật quyền Máy ảnh nhé.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        base64: true,
+        quality: 0.6,
+        allowsEditing: false,
+      });
+
+      if (mountedRef.current) {
+        handlePickedResult(result);
+      }
+    } catch {
+      Alert.alert(
+        'Không mở được máy ảnh',
+        'Thiết bị hiện chưa mở được máy ảnh. Ông/bà có thể thử chọn ảnh từ thư viện nhé.'
+      );
+    } finally {
+      if (mountedRef.current) {
+        setPickingImage(false);
+      }
+    }
+  }, [handlePickedResult, showPermissionAlert]);
+
+  const handlePickFromLibrary = useCallback(async () => {
+    setPhotoPickerVisible(false);
+    if (Platform.OS === 'ios') {
+      await new Promise((resolve) => setTimeout(resolve, 180));
+    }
+
+    try {
+      setPickingImage(true);
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        showPermissionAlert(
+          'Cần quyền thư viện ảnh',
+          'Mimamori AI cần quyền truy cập thư viện ảnh để cụ chọn ảnh hộp thuốc hoặc đơn thuốc. Cụ hãy mở Cài đặt để bật quyền Ảnh nhé.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        base64: true,
+        quality: 0.6,
+        allowsEditing: false,
+      });
+
+      if (mountedRef.current) {
+        handlePickedResult(result);
+      }
+    } catch {
+      Alert.alert(
+        'Không mở được thư viện ảnh',
+        'Cháu chưa mở được thư viện ảnh lúc này. Ông/bà vui lòng thử lại nhé.'
+      );
+    } finally {
+      if (mountedRef.current) {
+        setPickingImage(false);
+      }
+    }
+  }, [handlePickedResult, showPermissionAlert]);
+
+  const handleOpenPhotoPicker = useCallback(() => {
+    if (sendingRef.current || pickingImage) return;
+    setPhotoPickerVisible(true);
+  }, [pickingImage]);
 
   const handleQuickPrompt = useCallback(
     (prompt: string) => {
@@ -603,8 +837,8 @@ export const ElderlyCompanionScreen: React.FC = () => {
               <AIAvatar size={64} status={avatarStatus} />
               <Text style={[styles.emptyWelcomeTitle, { fontSize: fs(19) }]}>Kính chào cụ!</Text>
               <Text style={[styles.emptyWelcomeSub, { fontSize: fs(14.5) }]}>
-                Cháu là trợ lý Mimamori AI. Cụ có thể nhấn nút micro để nói chuyện hoặc nhắn tin về
-                sức khỏe, kể chuyện vui với cháu nhé!
+                Cháu là trợ lý Mimamori AI. Cụ có thể nhấn nút micro để nói chuyện, chụp ảnh hộp
+                thuốc để cháu đọc giúp, hoặc nhắn tin tâm sự cùng cháu nhé!
               </Text>
             </View>
           }
@@ -618,7 +852,7 @@ export const ElderlyCompanionScreen: React.FC = () => {
                   <View style={[styles.bubble, styles.aiBubble, styles.thinkingBubble]}>
                     <ActivityIndicator size="small" color={colors.primary} />
                     <Text style={[styles.thinkingText, { fontSize: fs(15) }]}>
-                      Mimamori đang suy nghĩ...
+                      {sendingHasImage ? 'Mimamori đang đọc ảnh thuốc...' : 'Mimamori đang suy nghĩ...'}
                     </Text>
                   </View>
                 </View>
@@ -631,6 +865,7 @@ export const ElderlyCompanionScreen: React.FC = () => {
             const timeStr = formatMessageTime(item.createdAt);
             const isThisSpeaking = speakingMessageId === msgId && isSpeaking;
             const isThisPaused = speakingMessageId === msgId && isPaused;
+            const messageImageUri = resolveMessageImageUri(item);
 
             return (
               <View style={[styles.messageRow, isUser ? styles.userRow : styles.aiRow]}>
@@ -648,6 +883,45 @@ export const ElderlyCompanionScreen: React.FC = () => {
                       item.isEmergency && styles.emergencyBubble,
                     ]}
                   >
+                    {messageImageUri ? (
+                      <TouchableOpacity
+                        style={styles.messageImageWrap}
+                        onPress={() => setPreviewImageUri(messageImageUri)}
+                        activeOpacity={0.85}
+                        accessibilityRole="button"
+                        accessibilityLabel="Xem phóng to ảnh thuốc đã gửi"
+                      >
+                        <Image
+                          source={{ uri: messageImageUri }}
+                          style={styles.messageImageThumb}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.messageImageBadge}>
+                          <Feather name="maximize-2" size={11} color="#FFFFFF" />
+                          <Text style={[styles.messageImageBadgeText, { fontSize: fs(11) }]}>
+                            Xem ảnh
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ) : item.messageType === 'MEDICINE_IMAGE' ? (
+                      <View style={styles.messageImageFallbackTag}>
+                        <Feather
+                          name="image"
+                          size={13}
+                          color={isUser ? '#FFFFFF' : colors.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.messageImageFallbackText,
+                            { fontSize: fs(12) },
+                            isUser && { color: '#FFFFFF' },
+                          ]}
+                        >
+                          Ảnh thuốc đã gửi
+                        </Text>
+                      </View>
+                    ) : null}
+
                     <Text
                       style={[
                         styles.messageText,
@@ -801,7 +1075,7 @@ export const ElderlyCompanionScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Voice Control & Input Panel (5 Voice States + Coexisting Text Input) */}
+      {/* Voice Control & Input Panel (5 Voice States + Coexisting Text Input + Medicine Photo) */}
       <VoiceControlPanel
         voiceState={voiceState}
         interimText={interimText}
@@ -821,7 +1095,123 @@ export const ElderlyCompanionScreen: React.FC = () => {
         onRetryListening={() => void beginListening()}
         onDismissError={resetVoiceState}
         onEndContinuousMode={() => void handleEndContinuousMode()}
+        selectedImage={selectedImage ? { uri: selectedImage.uri, mimeType: selectedImage.mimeType } : null}
+        onOpenImagePicker={handleOpenPhotoPicker}
+        onClearSelectedImage={() => setSelectedImage(null)}
+        pickingImage={pickingImage}
       />
+
+      {/* Medicine Photo Source Action Sheet Modal */}
+      <Modal
+        visible={photoPickerVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPhotoPickerVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { fontSize: fs(18) }]}>
+                Hỏi về thuốc qua hình ảnh
+              </Text>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setPhotoPickerVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Đóng chọn ảnh thuốc"
+              >
+                <Feather name="x" size={20} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.photoSheetDesc, { fontSize: fs(14) }]}>
+              Cụ chụp hộp thuốc, vỉ thuốc hoặc đơn thuốc (kể cả chữ tiếng Anh) để cháu đọc tên và
+              giải thích công dụng, cách dùng cho cụ nhé.
+            </Text>
+
+            <View style={styles.photoOptionList}>
+              <TouchableOpacity
+                style={[styles.photoOptionBtn, styles.photoOptionPrimary]}
+                onPress={() => void handlePickFromCamera()}
+                activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityLabel="Chụp ảnh trực tiếp"
+              >
+                <View style={[styles.photoOptionIconWrap, styles.photoOptionIconPrimary]}>
+                  <Feather name="camera" size={26} color="#FFFFFF" />
+                </View>
+                <View style={styles.photoOptionTextCol}>
+                  <Text style={[styles.photoOptionTitle, { fontSize: fs(16.5) }]}>
+                    Chụp ảnh trực tiếp
+                  </Text>
+                  <Text style={[styles.photoOptionSub, { fontSize: fs(13) }]}>
+                    Mở máy ảnh để chụp ngay hộp thuốc hoặc vỉ thuốc
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={20} color={colors.primary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.photoOptionBtn}
+                onPress={() => void handlePickFromLibrary()}
+                activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityLabel="Chọn từ thư viện"
+              >
+                <View style={[styles.photoOptionIconWrap, styles.photoOptionIconSecondary]}>
+                  <Feather name="image" size={26} color={colors.accentDark} />
+                </View>
+                <View style={styles.photoOptionTextCol}>
+                  <Text style={[styles.photoOptionTitle, { fontSize: fs(16.5) }]}>
+                    Chọn từ thư viện
+                  </Text>
+                  <Text style={[styles.photoOptionSub, { fontSize: fs(13) }]}>
+                    Chọn ảnh thuốc có sẵn trong thư viện ảnh của máy
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.photoSheetCancelBtn}
+              onPress={() => setPhotoPickerVisible(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.photoSheetCancelText, { fontSize: fs(15) }]}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Full-Screen Medicine Photo Preview Modal */}
+      <Modal
+        visible={previewImageUri !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewImageUri(null)}
+      >
+        <View style={styles.imagePreviewBackdrop}>
+          <TouchableOpacity
+            style={styles.imagePreviewCloseBtn}
+            onPress={() => setPreviewImageUri(null)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Đóng xem ảnh"
+          >
+            <Feather name="x" size={22} color="#FFFFFF" />
+            <Text style={[styles.imagePreviewCloseText, { fontSize: fs(15) }]}>Đóng</Text>
+          </TouchableOpacity>
+
+          {previewImageUri && (
+            <Image
+              source={{ uri: previewImageUri }}
+              style={styles.imagePreviewFull}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
 
       {/* Voice Settings Modal */}
       <Modal
@@ -1470,5 +1860,139 @@ const styles = StyleSheet.create({
   modalDoneBtnText: {
     color: '#FFFFFF',
     fontWeight: '800',
+  },
+  messageImageWrap: {
+    marginBottom: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+  messageImageThumb: {
+    width: 210,
+    height: 156,
+    borderRadius: 12,
+  },
+  messageImageBadge: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(38, 51, 45, 0.72)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  messageImageBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  messageImageFallbackTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 6,
+    opacity: 0.9,
+  },
+  messageImageFallbackText: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  photoSheetDesc: {
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  photoOptionList: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  photoOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 74,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    ...shadows.subtle,
+  },
+  photoOptionPrimary: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  photoOptionIconWrap: {
+    width: 50,
+    height: 50,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoOptionIconPrimary: {
+    backgroundColor: colors.primary,
+  },
+  photoOptionIconSecondary: {
+    backgroundColor: colors.accentLight,
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  photoOptionTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  photoOptionTitle: {
+    color: colors.textPrimary,
+    fontWeight: '800',
+  },
+  photoOptionSub: {
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  photoSheetCancelBtn: {
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceWarm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoSheetCancelText: {
+    color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  imagePreviewBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(18, 24, 21, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  imagePreviewCloseBtn: {
+    position: 'absolute',
+    top: 48,
+    right: 20,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  imagePreviewCloseText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  imagePreviewFull: {
+    width: '100%',
+    height: '78%',
   },
 });
