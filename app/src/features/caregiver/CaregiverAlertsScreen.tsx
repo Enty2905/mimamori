@@ -14,9 +14,9 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
+import { colors as lightColors, shadows } from '../../core/theme/colors';
 import { apiClient } from '../../core/api/client';
-import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
+import { useCaregiverTheme } from '../../core/accessibility/useAccessibilityStore';
 import { useCaregiverStore } from '../../core/caregiver/useCaregiverStore';
 import { CaregiverHeader } from '../../components/caregiver/CaregiverHeader';
 import type { FamilyMemberDto } from '../../core/utils/caregiverHelpers';
@@ -60,7 +60,8 @@ const formatFullDateVi = (iso?: string | null): string => {
 export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
   onAlertsChanged,
 }) => {
-  const { fs } = useAccessibilityStore();
+  const { isDark, c: colors, fs } = useCaregiverTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const { selectedElderlyId, setSelectedElderlyId } = useCaregiverStore();
   const [members, setMembers] = useState<FamilyMemberDto[]>([]);
   const [rawAlerts, setRawAlerts] = useState<CareAlertDto[]>([]);
@@ -313,7 +314,7 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
                 {
                   backgroundColor: card.bg,
                   borderColor: isActive ? card.text : card.border,
-                  borderWidth: isActive ? 1.5 : 1,
+                  borderWidth: isActive ? (isDark ? 2 : 1.5) : (isDark ? 1.5 : 1),
                 },
               ]}
               onPress={() => toggleSeverityFilter(card.key)}
@@ -385,7 +386,9 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
 
   const renderAlertCard = (item: CareAlertDto) => {
     const resolved = isAlertResolved(item);
-    const sev = getSeverityMeta(item.severity);
+    const sev = getSeverityMeta(item.severity, colors);
+    const sevUpper = item.severity?.toUpperCase();
+    const isHighPriority = !resolved && (sevUpper === 'CRITICAL' || sevUpper === 'HIGH');
     const alertTitle = getAlertTitle(item.alertType, item.title);
     const elderlyLabel = item.elderlyName?.trim() || 'Người thân';
     const typeLabel = getAlertTypeLabel(item.alertType);
@@ -395,6 +398,7 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
         key={item.id}
         style={[
           styles.alertCard,
+          isHighPriority && isDark && { borderColor: sev.border, borderWidth: 1.5 },
           resolved && styles.alertCardResolved,
         ]}
       >
@@ -403,7 +407,11 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
           <View
             style={[
               styles.sevBadge,
-              { backgroundColor: sev.bg, borderColor: sev.border },
+              {
+                backgroundColor: sev.bg,
+                borderColor: sev.border,
+                borderWidth: isDark ? 1.5 : 1,
+              },
             ]}
           >
             <Text style={[styles.sevBadgeText, { color: sev.text, fontSize: fs(11.5) }]}>
@@ -411,7 +419,7 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
             </Text>
           </View>
           <View style={styles.timeWrap}>
-            <Feather name="clock" size={12} color={colors.textMuted} />
+            <Feather name="clock" size={12} color={colors.textSecondary} />
             <Text style={[styles.timeText, { fontSize: fs(12) }]}>
               {formatTimeHHMM(item.createdAt)}
             </Text>
@@ -611,7 +619,7 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
 
           {selectedAlert && (() => {
             const modalResolved = isAlertResolved(selectedAlert);
-            const modalSev = getSeverityMeta(selectedAlert.severity);
+            const modalSev = getSeverityMeta(selectedAlert.severity, colors);
             const modalTitle = getAlertTitle(selectedAlert.alertType, selectedAlert.title);
             const savedSessionNote = sessionNotesByAlertId[selectedAlert.id];
 
@@ -623,7 +631,11 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
                   <View
                     style={[
                       styles.sevBadge,
-                      { backgroundColor: modalSev.bg, borderColor: modalSev.border },
+                      {
+                        backgroundColor: modalSev.bg,
+                        borderColor: modalSev.border,
+                        borderWidth: isDark ? 1.5 : 1,
+                      },
                     ]}
                   >
                     <Text style={[styles.sevBadgeText, { color: modalSev.text, fontSize: fs(11.5) }]}>
@@ -813,7 +825,7 @@ export const CaregiverAlertsScreen: React.FC<CaregiverAlertsScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -971,7 +983,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   timeText: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   cardTitle: {
@@ -981,7 +993,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   cardDesc: {
-    color: colors.textSecondary,
+    color: colors.textPrimary,
     lineHeight: 20,
     flexShrink: 1,
   },
@@ -991,7 +1003,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   cardMetaText: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
     fontWeight: '600',
     lineHeight: 18,
     flexShrink: 1,
@@ -1114,7 +1126,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(38, 51, 45, 0.42)',
+    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.72)' : 'rgba(38, 51, 45, 0.42)',
   },
   modalSheet: {
     backgroundColor: colors.surface,

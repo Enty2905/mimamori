@@ -40,13 +40,12 @@ export const ElderlyProfileScreen: React.FC = () => {
 
   // Accessibility & Display toggles (Screen 9)
   const [highContrast, setHighContrast] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
 
   // Form: Thông tin cá nhân
   const [fullName, setFullName] = useState(user?.fullName || 'Nguyễn Văn Ba');
   const [phone, setPhone] = useState(user?.phone || '0912345678');
   const [emergencyPhone, setEmergencyPhone] = useState(user?.emergencyContact || '0987654321');
-  const [selectedAvatarId, setSelectedAvatarId] = useState<string>(user?.avatarUrl || 'watering');
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string>(user?.avatarUrl || 'grandfather');
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Form: Đổi mật khẩu
@@ -648,25 +647,13 @@ export const ElderlyProfileScreen: React.FC = () => {
 
         {/* Display Toggles */}
         <View style={styles.menuCard}>
-          <View style={styles.toggleRow}>
+          <View style={[styles.toggleRow, { borderBottomWidth: 0 }]}>
             <Text style={[styles.toggleTitle, { fontSize: fs(15) }]}>
               Tăng độ tương phản
             </Text>
             <Switch
               value={highContrast}
               onValueChange={setHighContrast}
-              trackColor={{ false: '#D1D5DB', true: '#456B58' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          <View style={[styles.toggleRow, { borderBottomWidth: 0 }]}>
-            <Text style={[styles.toggleTitle, { fontSize: fs(15) }]}>
-              Chế độ ban đêm
-            </Text>
-            <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
               trackColor={{ false: '#D1D5DB', true: '#456B58' }}
               thumbColor="#FFFFFF"
             />

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -16,10 +16,11 @@ import {
   Switch,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
-import { AVATAR_PRESETS, getAvatarSource } from '../../core/theme/avatar';
+import { colors as lightColors, shadows } from '../../core/theme/colors';
+import { CAREGIVER_AVATAR_PRESETS, getAvatarSource } from '../../core/theme/avatar';
 import {
   useAccessibilityStore,
+  useCaregiverTheme,
   FONT_SIZE_OPTIONS,
   FontSizeLevel,
 } from '../../core/accessibility/useAccessibilityStore';
@@ -61,7 +62,9 @@ const getErrorMessage = (err: unknown, fallback: string): string => {
 
 export const CaregiverFamilyScreen: React.FC = () => {
   const { user, logout, demoLogin, updateUser } = useAuthStore();
-  const { fontSizeLevel, setFontSizeLevel, fs } = useAccessibilityStore();
+  const { fontSizeLevel, setFontSizeLevel } = useAccessibilityStore();
+  const { isDark: darkMode, c: colors, fs, setCaregiverDarkMode } = useCaregiverTheme();
+  const styles = useMemo(() => createStyles(colors, darkMode), [colors, darkMode]);
 
   const [subView, setSubView] = useState<SubView>('main');
 
@@ -83,12 +86,11 @@ export const CaregiverFamilyScreen: React.FC = () => {
 
   // Display settings toggles
   const [highContrast, setHighContrast] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
 
   // Personal info form state
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [phone, setPhone] = useState(user?.phone || '');
-  const [selectedAvatarId, setSelectedAvatarId] = useState<string>(user?.avatarUrl || 'leaf');
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string>(user?.avatarUrl || 'caregiver_woman_1');
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Security & privacy form state
@@ -144,7 +146,7 @@ export const CaregiverFamilyScreen: React.FC = () => {
   const openPersonalInfo = () => {
     setFullName(user?.fullName || '');
     setPhone(user?.phone || '');
-    setSelectedAvatarId(user?.avatarUrl || 'leaf');
+    setSelectedAvatarId(user?.avatarUrl || 'caregiver_woman_1');
     setSubView('personalInfo');
   };
 
@@ -434,7 +436,7 @@ export const CaregiverFamilyScreen: React.FC = () => {
             </Text>
 
             <View style={styles.avatarPickerRow}>
-              {AVATAR_PRESETS.map((preset) => {
+              {CAREGIVER_AVATAR_PRESETS.map((preset) => {
                 const isSelected = selectedAvatarId === preset.id;
                 return (
                   <TouchableOpacity
@@ -645,8 +647,17 @@ export const CaregiverFamilyScreen: React.FC = () => {
               <Switch
                 value={highContrast}
                 onValueChange={setHighContrast}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.textInverse}
+                trackColor={{
+                  false: colors.border,
+                  true: darkMode ? colors.secondary : colors.primary,
+                }}
+                thumbColor={
+                  darkMode
+                    ? highContrast
+                      ? colors.primaryDark
+                      : colors.textSecondary
+                    : colors.textInverse
+                }
               />
             </View>
 
@@ -661,9 +672,14 @@ export const CaregiverFamilyScreen: React.FC = () => {
               </View>
               <Switch
                 value={darkMode}
-                onValueChange={setDarkMode}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={colors.textInverse}
+                onValueChange={(val) => {
+                  void setCaregiverDarkMode(val);
+                }}
+                trackColor={{
+                  false: colors.border,
+                  true: darkMode ? colors.secondary : colors.primary,
+                }}
+                thumbColor={darkMode ? colors.primaryDark : colors.textInverse}
               />
             </View>
           </View>
@@ -1014,7 +1030,7 @@ export const CaregiverFamilyScreen: React.FC = () => {
             accessibilityRole="button"
             accessibilityLabel="Thay đổi ảnh đại diện"
           >
-            <Image source={getAvatarSource(user?.avatarUrl)} style={styles.profileAvatar} />
+            <Image source={getAvatarSource(user?.avatarUrl, 'CAREGIVER')} style={styles.profileAvatar} />
           </TouchableOpacity>
 
           <Text style={[styles.userName, { fontSize: fs(18) }]}>
@@ -1178,7 +1194,7 @@ export const CaregiverFamilyScreen: React.FC = () => {
                   <View key={item.relationshipId} style={styles.memberCard}>
                     <View style={styles.memberTopRow}>
                       <Image
-                        source={getAvatarSource(item.member.avatarUrl)}
+                        source={getAvatarSource(item.member.avatarUrl, 'ELDERLY')}
                         style={styles.memberAvatar}
                       />
 
@@ -1473,7 +1489,7 @@ export const CaregiverFamilyScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors, darkMode: boolean) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1940,7 +1956,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   segmentBtnActive: {
-    backgroundColor: colors.surface,
+    backgroundColor: darkMode ? colors.surfaceMuted : colors.surface,
+    ...(darkMode ? { borderWidth: 1, borderColor: colors.border } : {}),
     ...shadows.subtle,
   },
   segmentText: {
@@ -2227,7 +2244,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(38, 51, 45, 0.58)',
+    backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.72)' : 'rgba(38, 51, 45, 0.58)',
     justifyContent: 'center',
     padding: 20,
   },

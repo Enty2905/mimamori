@@ -12,8 +12,8 @@ import {
   View,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
-import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
+import { colors as lightColors, shadows } from '../../core/theme/colors';
+import { useCaregiverTheme } from '../../core/accessibility/useAccessibilityStore';
 import { useCaregiverStore } from '../../core/caregiver/useCaregiverStore';
 import { apiClient } from '../../core/api/client';
 import {
@@ -67,15 +67,16 @@ const getLogTimestamp = (log: MedicationLogDto): number => {
   return parsed ? parsed.getTime() : 0;
 };
 
-const getAdherenceAccentColor = (percent: number, totalCount: number): string => {
-  if (totalCount === 0) return colors.textMuted;
-  if (percent >= 80) return colors.successText;
-  if (percent >= 50) return colors.warningText;
-  return colors.dangerText;
+const getAdherenceAccentColor = (percent: number, totalCount: number, palette = lightColors): string => {
+  if (totalCount === 0) return palette.textMuted;
+  if (percent >= 80) return palette.successText;
+  if (percent >= 50) return palette.warningText;
+  return palette.dangerText;
 };
 
 export const CaregiverMedicationScreen: React.FC = () => {
-  const { fs } = useAccessibilityStore();
+  const { isDark, c: colors, fs } = useCaregiverTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const {
     selectedElderlyId,
     selectedElderlyName,
@@ -290,7 +291,7 @@ export const CaregiverMedicationScreen: React.FC = () => {
     let missedOrOverdueCount = 0;
 
     sourceLogs.forEach((log) => {
-      const meta = getMedicationDisplayStatus(log, referenceNow);
+      const meta = getMedicationDisplayStatus(log, referenceNow, colors);
       if (meta.key === 'TAKEN') {
         takenCount += 1;
       } else if (meta.key === 'PENDING' || meta.key === 'UPCOMING') {
@@ -309,9 +310,9 @@ export const CaregiverMedicationScreen: React.FC = () => {
       pendingCount,
       missedOrOverdueCount,
       percent,
-      accentColor: getAdherenceAccentColor(percent, totalCount),
+      accentColor: getAdherenceAccentColor(percent, totalCount, colors),
     };
-  }, [scheduleLogsForSelectedDay, scheduleSubMode, sortedHistoryLogs]);
+  }, [scheduleLogsForSelectedDay, scheduleSubMode, sortedHistoryLogs, colors]);
 
   const conditionSummary = useMemo(() => {
     let monitoring = 0;
@@ -429,7 +430,7 @@ export const CaregiverMedicationScreen: React.FC = () => {
   );
 
   const renderTimelineItem = (log: MedicationLogDto, index: number, total: number) => {
-    const displayStatus = getMedicationDisplayStatus(log);
+    const displayStatus = getMedicationDisplayStatus(log, new Date(), colors);
     const isLast = index === total - 1;
     const dotColor =
       displayStatus.key === 'TAKEN'
@@ -509,7 +510,7 @@ export const CaregiverMedicationScreen: React.FC = () => {
   };
 
   const renderHistoryItem = (log: MedicationLogDto) => {
-    const displayStatus = getMedicationDisplayStatus(log);
+    const displayStatus = getMedicationDisplayStatus(log, new Date(), colors);
     const parsedDate = parseIsoDateTime(log.scheduledTime);
     const dateLabel = parsedDate ? formatDateDisplayVi(parsedDate) : '--/--';
     const timeLabel = formatTimeHHMM(log.scheduledTime);
@@ -656,8 +657,8 @@ export const CaregiverMedicationScreen: React.FC = () => {
   };
 
   const renderConditionCard = (cond: HealthConditionDto) => {
-    const statusMeta = getHealthConditionStatusMeta(cond.status);
-    const severityMeta = getHealthConditionSeverityMeta(cond.severity);
+    const statusMeta = getHealthConditionStatusMeta(cond.status, colors);
+    const severityMeta = getHealthConditionSeverityMeta(cond.severity, colors);
     const isDeleting = deletingCondId === cond.id;
 
     return (
@@ -978,7 +979,7 @@ export const CaregiverMedicationScreen: React.FC = () => {
                   routineOverview?.waterReminderTimes,
                   routineOverview?.waterEnabled ?? true
                 );
-                const sleepMeta = getSleepStatusMeta(routineOverview);
+                const sleepMeta = getSleepStatusMeta(routineOverview, colors);
                 const bedtimeStr = routineOverview?.bedtimeTime || '21:30';
                 const wakeupStr = routineOverview?.wakeupTime || '06:00';
 
@@ -1006,24 +1007,50 @@ export const CaregiverMedicationScreen: React.FC = () => {
                     <View style={styles.routineItemBox}>
                       <View style={styles.routineItemTopRow}>
                         <View style={styles.routineItemLabelRow}>
-                          <Feather name="droplet" size={14} color="#0284C7" />
+                          <Feather
+                            name="droplet"
+                            size={14}
+                            color={isDark ? colors.textSecondary : '#0284C7'}
+                          />
                           <Text style={[styles.routineItemLabel, { fontSize: fs(13.5) }]}>
                             Nước lọc ({water.cupMl}ml/ly)
                           </Text>
                         </View>
-                        <Text style={[styles.routineWaterValue, { fontSize: fs(13.5), color: '#0369A1' }]}>
+                        <Text
+                          style={[
+                            styles.routineWaterValue,
+                            { fontSize: fs(13.5), color: isDark ? colors.textPrimary : '#0369A1' },
+                          ]}
+                        >
                           {water.completedLitersLabel} / {water.targetLitersLabel} L ({water.completedCups}/{water.targetCups} ly)
                         </Text>
                       </View>
-                      <View style={[styles.routineProgressTrack, { backgroundColor: '#E0F2FE' }]}>
+                      <View
+                        style={[
+                          styles.routineProgressTrack,
+                          { backgroundColor: isDark ? colors.surfaceMuted : '#E0F2FE' },
+                        ]}
+                      >
                         <View
                           style={[
                             styles.routineProgressFill,
-                            { width: `${water.percent}%`, backgroundColor: '#0EA5E9' },
+                            {
+                              width: `${water.percent}%`,
+                              backgroundColor: isDark ? colors.primary : '#0EA5E9',
+                            },
                           ]}
                         />
                       </View>
-                      <Text style={[styles.routineSubMeta, { fontSize: fs(12), color: '#0369A1', fontWeight: '700' }]}>
+                      <Text
+                        style={[
+                          styles.routineSubMeta,
+                          {
+                            fontSize: fs(12),
+                            color: isDark ? colors.textSecondary : '#0369A1',
+                            fontWeight: '700',
+                          },
+                        ]}
+                      >
                         Đánh giá ngày: {water.evaluationText}
                       </Text>
                       <Text style={[styles.routineSubMeta, { fontSize: fs(12) }]}>
@@ -1485,7 +1512,7 @@ export const CaregiverMedicationScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors, isDark: boolean) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1558,7 +1585,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   switcherTabActive: {
-    backgroundColor: colors.surface,
+    backgroundColor: isDark ? colors.surfaceMuted : colors.surface,
+    ...(isDark ? { borderWidth: 1, borderColor: colors.border } : {}),
     ...shadows.subtle,
   },
   switcherText: {
@@ -2224,7 +2252,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(38, 51, 45, 0.42)',
+    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.72)' : 'rgba(38, 51, 45, 0.42)',
     justifyContent: 'center',
     paddingHorizontal: 20,
   },

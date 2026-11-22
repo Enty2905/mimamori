@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import { colors, shadows } from '../../core/theme/colors';
+import { colors as lightColors, shadows } from '../../core/theme/colors';
 import { getAvatarSource } from '../../core/theme/avatar';
-import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
+import { useCaregiverTheme } from '../../core/accessibility/useAccessibilityStore';
 import { FamilyMemberDto, getCareStatusMeta } from '../../core/utils/caregiverHelpers';
 
 export interface FamilyMemberSelectorProps {
@@ -27,7 +27,8 @@ export const FamilyMemberSelector: React.FC<FamilyMemberSelectorProps> = ({
   statusByMemberId,
   statusLabelByMemberId,
 }) => {
-  const { fs } = useAccessibilityStore();
+  const { c: colors, fs } = useCaregiverTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   if (!members || members.length === 0) {
     return null;
@@ -45,7 +46,7 @@ export const FamilyMemberSelector: React.FC<FamilyMemberSelectorProps> = ({
         const isSelected = selectedId === memberId;
         const rawStatus = statusByMemberId?.[memberId];
         const customLabel = statusLabelByMemberId?.[memberId];
-        const statusMeta = rawStatus ? getCareStatusMeta(rawStatus) : null;
+        const statusMeta = rawStatus ? getCareStatusMeta(rawStatus, colors) : null;
         const statusText = customLabel ?? statusMeta?.label;
 
         return (
@@ -107,7 +108,7 @@ export const FamilyMemberSelector: React.FC<FamilyMemberSelectorProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors) => StyleSheet.create({
   scrollView: {
     flexGrow: 0,
   },

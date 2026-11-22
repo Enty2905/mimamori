@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
-import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
+import { colors as lightColors, shadows } from '../../core/theme/colors';
+import { useCaregiverTheme } from '../../core/accessibility/useAccessibilityStore';
 
 export interface CaregiverHeaderProps {
   title: string;
@@ -28,7 +28,8 @@ export const CaregiverHeader: React.FC<CaregiverHeaderProps> = ({
   refreshing = false,
   rightSlot,
 }) => {
-  const { fs } = useAccessibilityStore();
+  const { isDark, c: colors, fs, setCaregiverDarkMode } = useCaregiverTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <View style={styles.container}>
@@ -70,32 +71,43 @@ export const CaregiverHeader: React.FC<CaregiverHeaderProps> = ({
         )}
       </View>
 
-      {(rightSlot || onRefresh) && (
-        <View style={styles.rightActions}>
-          {rightSlot}
-          {onRefresh && (
-            <TouchableOpacity
-              style={styles.refreshBtn}
-              onPress={onRefresh}
-              disabled={refreshing}
-              activeOpacity={0.75}
-              accessibilityRole="button"
-              accessibilityLabel="Làm mới dữ liệu"
-            >
-              {refreshing ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <Feather name="refresh-cw" size={18} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+      <View style={styles.rightActions}>
+        {rightSlot}
+        <TouchableOpacity
+          style={styles.refreshBtn}
+          onPress={() => void setCaregiverDarkMode(!isDark)}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel={isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang chế độ ban đêm'}
+        >
+          <Feather
+            name={isDark ? 'sun' : 'moon'}
+            size={18}
+            color={isDark ? colors.accentDark : colors.primary}
+          />
+        </TouchableOpacity>
+        {onRefresh && (
+          <TouchableOpacity
+            style={styles.refreshBtn}
+            onPress={onRefresh}
+            disabled={refreshing}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Làm mới dữ liệu"
+          >
+            {refreshing ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Feather name="refresh-cw" size={18} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'flex-start',

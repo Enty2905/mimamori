@@ -10,9 +10,9 @@ import {
   View,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
+import { colors as lightColors, shadows } from '../../core/theme/colors';
 import { getAvatarSource } from '../../core/theme/avatar';
-import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
+import { useCaregiverTheme } from '../../core/accessibility/useAccessibilityStore';
 import { useAuthStore } from '../../core/auth/useAuthStore';
 import { useCaregiverStore } from '../../core/caregiver/useCaregiverStore';
 import { apiClient } from '../../core/api/client';
@@ -71,7 +71,8 @@ function formatNowHHMM(): string {
 
 function deriveCareStatusReason(
   data: DashboardOverview | null,
-  unresolvedAlerts: CareAlertDto[]
+  unresolvedAlerts: CareAlertDto[],
+  palette: typeof lightColors = lightColors
 ): string | null {
   if (!data) return null;
 
@@ -95,7 +96,7 @@ function deriveCareStatusReason(
   let pendingCount = 0;
 
   for (const med of meds) {
-    const status = getMedicationDisplayStatus(med);
+    const status = getMedicationDisplayStatus(med, new Date(), palette);
     if (status.key === 'MISSED') missedCount += 1;
     else if (status.key === 'OVERDUE') overdueCount += 1;
     else if (status.key === 'PENDING') pendingCount += 1;
@@ -122,7 +123,8 @@ function deriveCareStatusReason(
 
 export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => {
   const { user } = useAuthStore();
-  const { fs } = useAccessibilityStore();
+  const { isDark, c: colors, fs } = useCaregiverTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const [familyMembers, setFamilyMembers] = useState<FamilyMemberDto[]>([]);
   const { selectedElderlyId, setSelectedElderlyId, setSelectedElderlyName } = useCaregiverStore();
@@ -310,7 +312,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
   const elderlyAvatar =
     data?.elderly?.avatarUrl ?? selectedMember?.member?.avatarUrl;
 
-  const careStatusMeta = getCareStatusMeta(data?.careStatus);
+  const careStatusMeta = getCareStatusMeta(data?.careStatus, colors);
 
   const unresolvedAlerts = useMemo(
     () => (data?.activeAlerts ?? []).filter((a) => !isAlertResolved(a)),
@@ -318,8 +320,8 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
   );
 
   const statusReason = useMemo(
-    () => deriveCareStatusReason(data, unresolvedAlerts),
-    [data, unresolvedAlerts]
+    () => deriveCareStatusReason(data, unresolvedAlerts, colors),
+    [data, unresolvedAlerts, colors]
   );
 
   // Medication KPI calculations
@@ -334,7 +336,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
     let missedOrOverdue = 0;
 
     for (const med of todayMeds) {
-      const display = getMedicationDisplayStatus(med);
+      const display = getMedicationDisplayStatus(med, new Date(), colors);
       if (display.key === 'TAKEN') taken += 1;
       else if (display.key === 'MISSED' || display.key === 'OVERDUE') missedOrOverdue += 1;
     }
@@ -353,7 +355,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
     }
 
     return { taken, percent, color };
-  }, [todayMeds, totalMeds, data?.medicationAdherence]);
+  }, [todayMeds, totalMeds, data?.medicationAdherence, colors]);
 
   // Check-in KPI details
   const todayCheckIn = data?.todayCheckIn ?? null;
@@ -374,7 +376,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
     todayRoutine?.waterReminderTimes,
     todayRoutine?.waterEnabled ?? true
   );
-  const sleepMeta = getSleepStatusMeta(todayRoutine);
+  const sleepMeta = getSleepStatusMeta(todayRoutine, colors);
   const bedtimeLabel = todayRoutine?.bedtimeTime || '21:30';
   const wakeupLabel = todayRoutine?.wakeupTime || '06:00';
 
@@ -680,29 +682,52 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
               <View style={styles.routineItemBlock}>
                 <View style={styles.routineRowHeader}>
                   <View style={styles.routineLabelWrap}>
-                    <Feather name="droplet" size={15} color="#0284C7" />
+                    <Feather
+                      name="droplet"
+                      size={15}
+                      color={isDark ? colors.textSecondary : '#0284C7'}
+                    />
                     <Text style={[styles.routineLabel, { fontSize: fs(14) }]}>
                       Nước lọc ({waterMetrics.cupMl}ml/ly)
                     </Text>
                   </View>
-                  <Text style={[styles.routineWaterValue, { fontSize: fs(13.5), color: '#0369A1' }]}>
+                  <Text
+                    style={[
+                      styles.routineWaterValue,
+                      { fontSize: fs(13.5), color: isDark ? colors.textPrimary : '#0369A1' },
+                    ]}
+                  >
                     {waterMetrics.completedLitersLabel} / {waterMetrics.targetLitersLabel} L ({waterMetrics.completedCups}/{waterMetrics.targetCups} ly)
                   </Text>
                 </View>
 
-                <View style={[styles.progressBarBg, { backgroundColor: '#E0F2FE' }]}>
+                <View
+                  style={[
+                    styles.progressBarBg,
+                    { backgroundColor: isDark ? colors.surfaceMuted : '#E0F2FE' },
+                  ]}
+                >
                   <View
                     style={[
                       styles.progressBarFill,
                       {
                         width: `${waterMetrics.percent}%`,
-                        backgroundColor: '#0EA5E9',
+                        backgroundColor: isDark ? colors.primary : '#0EA5E9',
                       },
                     ]}
                   />
                 </View>
 
-                <Text style={[styles.routineSubText, { fontSize: fs(12), color: '#0369A1', fontWeight: '700' }]}>
+                <Text
+                  style={[
+                    styles.routineSubText,
+                    {
+                      fontSize: fs(12),
+                      color: isDark ? colors.textSecondary : '#0369A1',
+                      fontWeight: '700',
+                    },
+                  ]}
+                >
                   Đánh giá ngày: {waterMetrics.evaluationText}
                 </Text>
                 <Text style={[styles.routineSubText, { fontSize: fs(12) }]}>
@@ -791,7 +816,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
               ) : (
                 <View style={styles.medList}>
                   {todayMeds.slice(0, 4).map((med, idx) => {
-                    const displayStatus = getMedicationDisplayStatus(med);
+                    const displayStatus = getMedicationDisplayStatus(med, new Date(), colors);
                     const timeStr = formatTimeHHMM(med.scheduledTime);
                     const isLast = idx === Math.min(todayMeds.length, 4) - 1;
 
@@ -887,7 +912,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
               ) : (
                 <View style={styles.alertList}>
                   {unresolvedAlerts.slice(0, 3).map((alert) => {
-                    const sevMeta = getSeverityMeta(alert.severity);
+                    const sevMeta = getSeverityMeta(alert.severity, colors);
                     const alertTitle = getAlertTitle(alert.alertType, alert.title);
                     const alertTime = formatTimeHHMM(alert.createdAt);
 
@@ -899,6 +924,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                           {
                             backgroundColor: sevMeta.bg,
                             borderColor: sevMeta.border,
+                            borderWidth: isDark ? 1.5 : 1,
                           },
                         ]}
                       >
@@ -907,8 +933,9 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                             style={[
                               styles.severityBadge,
                               {
-                                backgroundColor: colors.surface,
+                                backgroundColor: isDark ? sevMeta.bg : colors.surface,
                                 borderColor: sevMeta.border,
+                                borderWidth: isDark ? 1.5 : 1,
                               },
                             ]}
                           >
@@ -1053,7 +1080,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors, _isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

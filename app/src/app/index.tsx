@@ -13,7 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, shadows } from '../core/theme/colors';
 import { useAuthStore } from '../core/auth/useAuthStore';
-import { useAccessibilityStore } from '../core/accessibility/useAccessibilityStore';
+import { useAccessibilityStore, useCaregiverTheme } from '../core/accessibility/useAccessibilityStore';
 import { useCaregiverStore } from '../core/caregiver/useCaregiverStore';
 import { useCareRoutineStore } from '../core/routines/useCareRoutineStore';
 import { useElderlyReminderEngine } from '../core/routines/useElderlyReminderEngine';
@@ -39,8 +39,10 @@ export default function IndexRoute() {
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated, isLoading, checkAuth } = useAuthStore();
   const { fs } = useAccessibilityStore();
+  const { isDark: caregiverDark, c: caregiverColors } = useCaregiverTheme();
   const selectedElderlyId = useCaregiverStore((s) => s.selectedElderlyId);
   const [elderlyTab, setElderlyTab] = useState<'home' | 'medication' | 'companion' | 'checkin' | 'profile'>('home');
+  const [autoOpenCompanionPhotoPicker, setAutoOpenCompanionPhotoPicker] = useState(false);
   const [caregiverTab, setCaregiverTab] = useState<'dashboard' | 'alerts' | 'medication' | 'family'>('dashboard');
   const [unresolvedAlertCount, setUnresolvedAlertCount] = useState(0);
 
@@ -113,10 +115,15 @@ export default function IndexRoute() {
   }
 
   const isElderly = user.role === 'ELDERLY';
+  const useDarkChrome = !isElderly && caregiverDark;
+  const chromePalette = useDarkChrome ? caregiverColors : colors;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <StatusBar style="dark" />
+    <SafeAreaView
+      style={[styles.safeArea, useDarkChrome && { backgroundColor: chromePalette.background }]}
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar style={useDarkChrome ? 'light' : 'dark'} />
 
       {/* Persistent Reminder Bar when Elderly is on any tab other than Home */}
       {isElderly && elderlyTab !== 'home' && activeAlarmReminder && (
@@ -144,8 +151,20 @@ export default function IndexRoute() {
         {isElderly ? (
           <>
             {elderlyTab === 'home' && <ElderlyHomeScreen onNavigateTab={setElderlyTab} />}
-            {elderlyTab === 'medication' && <ElderlyMedicationScreen />}
-            {elderlyTab === 'companion' && <ElderlyCompanionScreen />}
+            {elderlyTab === 'medication' && (
+              <ElderlyMedicationScreen
+                onAskMedicineAI={() => {
+                  setAutoOpenCompanionPhotoPicker(true);
+                  setElderlyTab('companion');
+                }}
+              />
+            )}
+            {elderlyTab === 'companion' && (
+              <ElderlyCompanionScreen
+                autoOpenPhotoPicker={autoOpenCompanionPhotoPicker}
+                onHandledAutoOpenPhotoPicker={() => setAutoOpenCompanionPhotoPicker(false)}
+              />
+            )}
             {elderlyTab === 'checkin' && <ElderlyCheckInScreen onSuccess={() => setElderlyTab('home')} />}
             {elderlyTab === 'profile' && <ElderlyProfileScreen />}
           </>
@@ -164,7 +183,16 @@ export default function IndexRoute() {
       </View>
 
       {/* Eldora-Style Thin Vector Bottom Navigation */}
-      <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+      <View
+        style={[
+          styles.bottomNav,
+          { paddingBottom: Math.max(insets.bottom, 10) },
+          useDarkChrome && {
+            backgroundColor: chromePalette.surface,
+            borderTopColor: chromePalette.border,
+          },
+        ]}
+      >
         {isElderly ? (
           <>
             {/* Tab 1: Trang chủ */}
@@ -319,20 +347,23 @@ export default function IndexRoute() {
               <View
                 style={[
                   styles.caregiverIconWrap,
-                  caregiverTab === 'dashboard' && styles.caregiverIconWrapActive,
+                  caregiverTab === 'dashboard' && [
+                    styles.caregiverIconWrapActive,
+                    useDarkChrome && { backgroundColor: chromePalette.primaryLight },
+                  ],
                 ]}
               >
                 <Feather
                   name="activity"
                   size={21}
-                  color={caregiverTab === 'dashboard' ? '#456B58' : colors.textSecondary}
+                  color={caregiverTab === 'dashboard' ? chromePalette.primary : chromePalette.textSecondary}
                 />
               </View>
               <Text
                 style={[
                   styles.navLabel,
-                  { fontSize: Math.min(fs(11.5), 14) },
-                  caregiverTab === 'dashboard' && styles.navLabelActive,
+                  { fontSize: Math.min(fs(11.5), 14), color: chromePalette.textSecondary },
+                  caregiverTab === 'dashboard' && { color: chromePalette.primary, fontWeight: '700' },
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
@@ -343,6 +374,7 @@ export default function IndexRoute() {
               <View
                 style={[
                   styles.activeDot,
+                  { backgroundColor: chromePalette.primary },
                   caregiverTab !== 'dashboard' && styles.activeDotHidden,
                 ]}
               />
@@ -358,16 +390,27 @@ export default function IndexRoute() {
               <View
                 style={[
                   styles.caregiverIconWrap,
-                  caregiverTab === 'alerts' && styles.caregiverIconWrapActive,
+                  caregiverTab === 'alerts' && [
+                    styles.caregiverIconWrapActive,
+                    useDarkChrome && { backgroundColor: chromePalette.primaryLight },
+                  ],
                 ]}
               >
                 <Feather
                   name="alert-triangle"
                   size={21}
-                  color={caregiverTab === 'alerts' ? '#456B58' : colors.textSecondary}
+                  color={caregiverTab === 'alerts' ? chromePalette.primary : chromePalette.textSecondary}
                 />
                 {unresolvedAlertCount > 0 && (
-                  <View style={styles.alertBadge}>
+                  <View
+                    style={[
+                      styles.alertBadge,
+                      useDarkChrome && {
+                        backgroundColor: '#EF4444',
+                        borderColor: chromePalette.surface,
+                      },
+                    ]}
+                  >
                     <Text style={styles.alertBadgeText}>
                       {unresolvedAlertCount > 99 ? '99+' : unresolvedAlertCount}
                     </Text>
@@ -377,8 +420,8 @@ export default function IndexRoute() {
               <Text
                 style={[
                   styles.navLabel,
-                  { fontSize: Math.min(fs(11.5), 14) },
-                  caregiverTab === 'alerts' && styles.navLabelActive,
+                  { fontSize: Math.min(fs(11.5), 14), color: chromePalette.textSecondary },
+                  caregiverTab === 'alerts' && { color: chromePalette.primary, fontWeight: '700' },
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
@@ -389,6 +432,7 @@ export default function IndexRoute() {
               <View
                 style={[
                   styles.activeDot,
+                  { backgroundColor: chromePalette.primary },
                   caregiverTab !== 'alerts' && styles.activeDotHidden,
                 ]}
               />
@@ -404,20 +448,23 @@ export default function IndexRoute() {
               <View
                 style={[
                   styles.caregiverIconWrap,
-                  caregiverTab === 'medication' && styles.caregiverIconWrapActive,
+                  caregiverTab === 'medication' && [
+                    styles.caregiverIconWrapActive,
+                    useDarkChrome && { backgroundColor: chromePalette.primaryLight },
+                  ],
                 ]}
               >
                 <MaterialCommunityIcons
                   name="pill"
                   size={21}
-                  color={caregiverTab === 'medication' ? '#456B58' : colors.textSecondary}
+                  color={caregiverTab === 'medication' ? chromePalette.primary : chromePalette.textSecondary}
                 />
               </View>
               <Text
                 style={[
                   styles.navLabel,
-                  { fontSize: Math.min(fs(11.5), 14) },
-                  caregiverTab === 'medication' && styles.navLabelActive,
+                  { fontSize: Math.min(fs(11.5), 14), color: chromePalette.textSecondary },
+                  caregiverTab === 'medication' && { color: chromePalette.primary, fontWeight: '700' },
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
@@ -428,6 +475,7 @@ export default function IndexRoute() {
               <View
                 style={[
                   styles.activeDot,
+                  { backgroundColor: chromePalette.primary },
                   caregiverTab !== 'medication' && styles.activeDotHidden,
                 ]}
               />
@@ -443,20 +491,23 @@ export default function IndexRoute() {
               <View
                 style={[
                   styles.caregiverIconWrap,
-                  caregiverTab === 'family' && styles.caregiverIconWrapActive,
+                  caregiverTab === 'family' && [
+                    styles.caregiverIconWrapActive,
+                    useDarkChrome && { backgroundColor: chromePalette.primaryLight },
+                  ],
                 ]}
               >
                 <Feather
                   name="users"
                   size={21}
-                  color={caregiverTab === 'family' ? '#456B58' : colors.textSecondary}
+                  color={caregiverTab === 'family' ? chromePalette.primary : chromePalette.textSecondary}
                 />
               </View>
               <Text
                 style={[
                   styles.navLabel,
-                  { fontSize: Math.min(fs(11.5), 14) },
-                  caregiverTab === 'family' && styles.navLabelActive,
+                  { fontSize: Math.min(fs(11.5), 14), color: chromePalette.textSecondary },
+                  caregiverTab === 'family' && { color: chromePalette.primary, fontWeight: '700' },
                 ]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
@@ -467,6 +518,7 @@ export default function IndexRoute() {
               <View
                 style={[
                   styles.activeDot,
+                  { backgroundColor: chromePalette.primary },
                   caregiverTab !== 'family' && styles.activeDotHidden,
                 ]}
               />

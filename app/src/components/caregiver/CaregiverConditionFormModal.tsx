@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,8 +14,8 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
-import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
+import { colors as lightColors, shadows } from '../../core/theme/colors';
+import { useCaregiverTheme } from '../../core/accessibility/useAccessibilityStore';
 import { apiClient } from '../../core/api/client';
 import {
   HealthConditionDto,
@@ -95,7 +95,8 @@ export const CaregiverConditionFormModal: React.FC<CaregiverConditionFormModalPr
   onClose,
   onSaved,
 }) => {
-  const { fs } = useAccessibilityStore();
+  const { isDark, c: colors, fs } = useCaregiverTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const [conditionName, setConditionName] = useState('');
   const [status, setStatus] = useState<HealthConditionStatus>('MONITORING');
@@ -426,10 +427,10 @@ export const CaregiverConditionFormModal: React.FC<CaregiverConditionFormModalPr
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors, isDark: boolean) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(38, 51, 45, 0.45)',
+    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.72)' : 'rgba(38, 51, 45, 0.45)',
     justifyContent: 'center',
   },
   backdropPress: {

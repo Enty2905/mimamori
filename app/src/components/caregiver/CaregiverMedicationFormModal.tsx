@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,8 +14,8 @@ import {
   View,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
-import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
+import { colors as lightColors, shadows } from '../../core/theme/colors';
+import { useCaregiverTheme } from '../../core/accessibility/useAccessibilityStore';
 import { apiClient } from '../../core/api/client';
 import {
   MedicationDto,
@@ -67,7 +67,8 @@ export const CaregiverMedicationFormModal: React.FC<CaregiverMedicationFormModal
   onClose,
   onSaved,
 }) => {
-  const { fs } = useAccessibilityStore();
+  const { isDark, c: colors, fs } = useCaregiverTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const [name, setName] = useState('');
   const [dosage, setDosage] = useState('1 viên');
@@ -392,10 +393,10 @@ export const CaregiverMedicationFormModal: React.FC<CaregiverMedicationFormModal
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors, isDark: boolean) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(38, 51, 45, 0.45)',
+    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.72)' : 'rgba(38, 51, 45, 0.45)',
     justifyContent: 'center',
   },
   backdropPress: {

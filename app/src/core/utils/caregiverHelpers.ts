@@ -270,36 +270,39 @@ export function getAlertTypeLabel(alertType?: string): string {
   return 'Hệ thống';
 }
 
-export function getSeverityMeta(severity?: string): StatusBadgeMeta {
+export function getSeverityMeta(
+  severity?: string,
+  palette: typeof colors = colors
+): StatusBadgeMeta {
   switch (severity?.toUpperCase()) {
     case 'CRITICAL':
       return {
         label: 'Khẩn cấp',
-        bg: colors.danger,
-        text: colors.dangerText,
-        border: colors.dangerBorder,
+        bg: palette.danger,
+        text: palette.dangerText,
+        border: palette.dangerBorder,
       };
     case 'HIGH':
       return {
         label: 'Mức cao',
-        bg: colors.warning,
-        text: colors.warningText,
-        border: colors.warningBorder,
+        bg: palette.warning,
+        text: palette.warningText,
+        border: palette.warningBorder,
       };
     case 'MEDIUM':
       return {
         label: 'Trung bình',
-        bg: colors.primaryLight,
-        text: colors.primary,
-        border: colors.borderLight,
+        bg: palette.primaryLight,
+        text: palette.primary,
+        border: palette.borderLight,
       };
     case 'LOW':
     default:
       return {
         label: 'Thông tin',
-        bg: colors.surfaceWarm,
-        text: colors.textSecondary,
-        border: colors.border,
+        bg: palette.surfaceWarm,
+        text: palette.textSecondary,
+        border: palette.border,
       };
   }
 }
@@ -308,15 +311,16 @@ const UPCOMING_THRESHOLD_MS = 30 * 60 * 1000;
 
 export function getMedicationDisplayStatus(
   log: MedicationLogDto,
-  referenceNow: Date = new Date()
+  referenceNow: Date = new Date(),
+  palette: typeof colors = colors
 ): MedicationDisplayStatusMeta {
   if (log.status === 'TAKEN') {
     return {
       key: 'TAKEN',
       label: 'Đã uống',
-      bg: colors.success,
-      text: colors.successText,
-      border: colors.successBorder,
+      bg: palette.success,
+      text: palette.successText,
+      border: palette.successBorder,
       icon: 'check-circle',
     };
   }
@@ -325,9 +329,9 @@ export function getMedicationDisplayStatus(
     return {
       key: 'MISSED',
       label: 'Đã bỏ lỡ',
-      bg: colors.danger,
-      text: colors.dangerText,
-      border: colors.dangerBorder,
+      bg: palette.danger,
+      text: palette.dangerText,
+      border: palette.dangerBorder,
       icon: 'x-circle',
     };
   }
@@ -336,9 +340,9 @@ export function getMedicationDisplayStatus(
     return {
       key: 'SKIPPED',
       label: 'Bỏ qua',
-      bg: colors.surfaceWarm,
-      text: colors.textSecondary,
-      border: colors.border,
+      bg: palette.surfaceWarm,
+      text: palette.textSecondary,
+      border: palette.border,
       icon: 'slash',
     };
   }
@@ -350,9 +354,9 @@ export function getMedicationDisplayStatus(
       return {
         key: 'OVERDUE',
         label: 'Quá giờ',
-        bg: colors.danger,
-        text: colors.dangerText,
-        border: colors.dangerBorder,
+        bg: palette.danger,
+        text: palette.dangerText,
+        border: palette.dangerBorder,
         icon: 'alert-circle',
       };
     }
@@ -360,9 +364,9 @@ export function getMedicationDisplayStatus(
       return {
         key: 'UPCOMING',
         label: 'Chưa đến giờ',
-        bg: colors.surfaceWarm,
-        text: colors.textSecondary,
-        border: colors.border,
+        bg: palette.surfaceWarm,
+        text: palette.textSecondary,
+        border: palette.border,
         icon: 'clock',
       };
     }
@@ -371,9 +375,9 @@ export function getMedicationDisplayStatus(
   return {
     key: 'PENDING',
     label: 'Chờ uống',
-    bg: colors.warning,
-    text: colors.warningText,
-    border: colors.warningBorder,
+    bg: palette.warning,
+    text: palette.warningText,
+    border: palette.warningBorder,
     icon: 'bell',
   };
 }
@@ -412,105 +416,114 @@ export function formatConciseAlertDescription(
   return result.charAt(0).toLocaleUpperCase('vi-VN') + result.slice(1);
 }
 
-export function getCareStatusMeta(status?: string): CareStatusMeta {
+export function getCareStatusMeta(
+  status?: string,
+  palette: typeof colors = colors
+): CareStatusMeta {
   switch (status?.toUpperCase()) {
     case 'CRITICAL':
       return {
         label: 'Khẩn cấp',
-        bg: colors.danger,
-        text: colors.dangerText,
-        border: colors.dangerBorder,
+        bg: palette.danger,
+        text: palette.dangerText,
+        border: palette.dangerBorder,
         icon: 'alert-octagon',
       };
     case 'NEEDS_ATTENTION':
       return {
         label: 'Cần lưu ý',
-        bg: colors.warning,
-        text: colors.warningText,
-        border: colors.warningBorder,
+        bg: palette.warning,
+        text: palette.warningText,
+        border: palette.warningBorder,
         icon: 'alert-triangle',
       };
     case 'REMINDER_REQUIRED':
       return {
         label: 'Cần nhắc nhở',
-        bg: colors.warning,
-        text: colors.warningText,
-        border: colors.warningBorder,
+        bg: palette.warning,
+        text: palette.warningText,
+        border: palette.warningBorder,
         icon: 'bell',
       };
     case 'NORMAL':
     default:
       return {
         label: 'Bình thường',
-        bg: colors.success,
-        text: colors.successText,
-        border: colors.successBorder,
+        bg: palette.success,
+        text: palette.successText,
+        border: palette.successBorder,
         icon: 'check-circle',
       };
   }
 }
 
-export function getHealthConditionStatusMeta(status?: string): CareStatusMeta {
+export function getHealthConditionStatusMeta(
+  status?: string,
+  palette: typeof colors = colors
+): CareStatusMeta {
   switch (status?.toUpperCase()) {
     case 'STABLE':
       return {
         label: 'Ổn định',
-        bg: colors.success,
-        text: colors.successText,
-        border: colors.successBorder,
+        bg: palette.success,
+        text: palette.successText,
+        border: palette.successBorder,
         icon: 'check-circle',
       };
     case 'WORSENING':
       return {
         label: 'Chuyển biến nặng',
-        bg: colors.danger,
-        text: colors.dangerText,
-        border: colors.dangerBorder,
+        bg: palette.danger,
+        text: palette.dangerText,
+        border: palette.dangerBorder,
         icon: 'alert-octagon',
       };
     case 'RECOVERED':
       return {
         label: 'Đã khỏi',
-        bg: colors.surfaceWarm,
-        text: colors.textSecondary,
-        border: colors.border,
+        bg: palette.surfaceWarm,
+        text: palette.textSecondary,
+        border: palette.border,
         icon: 'award',
       };
     case 'MONITORING':
     default:
       return {
         label: 'Cần theo dõi',
-        bg: colors.warning,
-        text: colors.warningText,
-        border: colors.warningBorder,
+        bg: palette.warning,
+        text: palette.warningText,
+        border: palette.warningBorder,
         icon: 'activity',
       };
   }
 }
 
-export function getHealthConditionSeverityMeta(severity?: string): StatusBadgeMeta {
+export function getHealthConditionSeverityMeta(
+  severity?: string,
+  palette: typeof colors = colors
+): StatusBadgeMeta {
   switch (severity?.toUpperCase()) {
     case 'SEVERE':
       return {
         label: 'Mức độ nặng',
-        bg: colors.danger,
-        text: colors.dangerText,
-        border: colors.dangerBorder,
+        bg: palette.danger,
+        text: palette.dangerText,
+        border: palette.dangerBorder,
       };
     case 'MILD':
       return {
         label: 'Mức độ nhẹ',
-        bg: colors.success,
-        text: colors.successText,
-        border: colors.successBorder,
+        bg: palette.success,
+        text: palette.successText,
+        border: palette.successBorder,
       };
     case 'MODERATE':
     default:
       return {
         label: 'Mức độ vừa',
-        bg: colors.warning,
-        text: colors.warningText,
-        border: colors.warningBorder,
+        bg: palette.warning,
+        text: palette.warningText,
+        border: palette.warningBorder,
       };
   }
 }

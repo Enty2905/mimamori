@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,8 +15,8 @@ import {
   View,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
-import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
+import { colors as lightColors, shadows } from '../../core/theme/colors';
+import { useCaregiverTheme } from '../../core/accessibility/useAccessibilityStore';
 import { apiClient } from '../../core/api/client';
 import { formatTimeHHMM } from '../../core/utils/caregiverHelpers';
 
@@ -139,7 +139,7 @@ export function formatRoutineTimesSummary(
   return `${head} (+${normalized.length - maxItems})`;
 }
 
-export function getSleepStatusMeta(routine?: DailyRoutineOverviewDto | null) {
+export function getSleepStatusMeta(routine?: DailyRoutineOverviewDto | null, palette = lightColors) {
   if (routine?.sleepStatus === 'COMPLETED') {
     const timeLabel = routine.sleepCompletedAt ? formatTimeHHMM(routine.sleepCompletedAt) : null;
     const validTime = timeLabel && timeLabel !== '--:--' ? ` lúc ${timeLabel}` : '';
@@ -147,9 +147,9 @@ export function getSleepStatusMeta(routine?: DailyRoutineOverviewDto | null) {
       isCompleted: true,
       label: `Đã đi ngủ${validTime}`,
       badgeLabel: 'Đã đi ngủ',
-      bg: colors.success,
-      border: colors.successBorder,
-      text: colors.successText,
+      bg: palette.success,
+      border: palette.successBorder,
+      text: palette.successText,
       icon: 'check-circle' as const,
     };
   }
@@ -158,9 +158,9 @@ export function getSleepStatusMeta(routine?: DailyRoutineOverviewDto | null) {
     isCompleted: false,
     label: 'Chưa tới giờ / Chờ xác nhận',
     badgeLabel: 'Chưa tới giờ / Chờ xác nhận',
-    bg: colors.warning,
-    border: colors.warningBorder,
-    text: colors.warningText,
+    bg: palette.warning,
+    border: palette.warningBorder,
+    text: palette.warningText,
     icon: 'clock' as const,
   };
 }
@@ -173,7 +173,8 @@ export const CaregiverRoutineModal: React.FC<CaregiverRoutineModalProps> = ({
   onClose,
   onSaved,
 }) => {
-  const { fs } = useAccessibilityStore();
+  const { isDark, c: colors, fs } = useCaregiverTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   const [waterEnabled, setWaterEnabled] = useState(true);
   const [waterTargetMl, setWaterTargetMl] = useState(1400);
@@ -431,7 +432,12 @@ export const CaregiverRoutineModal: React.FC<CaregiverRoutineModalProps> = ({
                   </View>
 
                   <View style={styles.clinicalHydrationNote}>
-                    <Feather name="info" size={14} color="#0369A1" style={{ marginTop: 1 }} />
+                    <Feather
+                      name="info"
+                      size={14}
+                      color={isDark ? colors.textSecondary : '#0369A1'}
+                      style={{ marginTop: 1 }}
+                    />
                     <Text style={[styles.clinicalHydrationNoteText, { fontSize: fs(11.8) }]}>
                       Khuyến cáo 1.6–2.0L/ngày gồm cả cháo, súp, sữa. Riêng nước lọc nên đặt tối thiểu 1.3–1.6L/ngày và chia thành từng ly.
                     </Text>
@@ -454,7 +460,7 @@ export const CaregiverRoutineModal: React.FC<CaregiverRoutineModalProps> = ({
                             style={[
                               styles.chipText,
                               { fontSize: fs(12.5) },
-                              active && styles.chipTextActive,
+                              active && (isDark ? styles.chipTextActive : styles.waterChipTextActive),
                             ]}
                           >
                             {formatLiters(ml)} L ({ml}ml)
@@ -481,12 +487,27 @@ export const CaregiverRoutineModal: React.FC<CaregiverRoutineModalProps> = ({
                       <Feather
                         name="minus"
                         size={17}
-                        color={waterTargetMl <= WATER_ML_MIN ? colors.textMuted : '#0369A1'}
+                        color={
+                          waterTargetMl <= WATER_ML_MIN
+                            ? colors.textMuted
+                            : isDark
+                              ? colors.primaryDark
+                              : '#0369A1'
+                        }
                       />
                     </TouchableOpacity>
                     <View style={styles.stepperValueBox}>
-                      <MaterialCommunityIcons name="cup-water" size={18} color="#0284C7" />
-                      <Text style={[styles.stepperValueText, { fontSize: fs(14.5), color: '#0369A1' }]}>
+                      <MaterialCommunityIcons
+                        name="cup-water"
+                        size={18}
+                        color={isDark ? colors.primary : '#0284C7'}
+                      />
+                      <Text
+                        style={[
+                          styles.stepperValueText,
+                          { fontSize: fs(14.5), color: isDark ? colors.textPrimary : '#0369A1' },
+                        ]}
+                      >
                         {formatLiters(waterTargetMl)} L / ngày • {derivedTargetCups} ly ({waterCupMl}ml/ly)
                       </Text>
                     </View>
@@ -506,7 +527,13 @@ export const CaregiverRoutineModal: React.FC<CaregiverRoutineModalProps> = ({
                       <Feather
                         name="plus"
                         size={17}
-                        color={waterTargetMl >= WATER_ML_MAX ? colors.textMuted : '#0369A1'}
+                        color={
+                          waterTargetMl >= WATER_ML_MAX
+                            ? colors.textMuted
+                            : isDark
+                              ? colors.primaryDark
+                              : '#0369A1'
+                        }
                       />
                     </TouchableOpacity>
                   </View>
@@ -528,7 +555,7 @@ export const CaregiverRoutineModal: React.FC<CaregiverRoutineModalProps> = ({
                             style={[
                               styles.chipText,
                               { fontSize: fs(12) },
-                              active && styles.chipTextActive,
+                              active && (isDark ? styles.chipTextActive : styles.waterChipTextActive),
                             ]}
                           >
                             {cupSize} ml/ly
@@ -835,14 +862,14 @@ export const CaregiverRoutineModal: React.FC<CaregiverRoutineModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors, isDark: boolean) => StyleSheet.create({
   clinicalHydrationNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: isDark ? colors.surfaceWarm : '#E0F2FE',
     borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderColor: isDark ? colors.border : '#BAE6FD',
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -850,17 +877,21 @@ const styles = StyleSheet.create({
   },
   clinicalHydrationNoteText: {
     flex: 1,
-    color: '#075985',
+    color: isDark ? colors.textSecondary : '#075985',
     fontWeight: '600',
     lineHeight: 17,
   },
   waterChipActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0369A1',
+    backgroundColor: isDark ? colors.primaryLight : '#0284C7',
+    borderColor: isDark ? colors.primary : '#0369A1',
+  },
+  waterChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(38, 51, 45, 0.45)',
+    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.72)' : 'rgba(38, 51, 45, 0.45)',
     justifyContent: 'center',
   },
   backdropPress: {
@@ -1072,7 +1103,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: isDark ? 'rgba(11, 11, 13, 0.14)' : 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
