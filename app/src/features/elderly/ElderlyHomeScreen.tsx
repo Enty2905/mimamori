@@ -78,16 +78,36 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
   const [todayCheckIn, setTodayCheckIn] = useState<CheckInRecord | null>(null);
   const [checkInLoaded, setCheckInLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [emergencyContactName, setEmergencyContactName] = useState('Người giám sát');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState<string | null>(
+    user?.emergencyContact || null
+  );
 
   const fetchHomeData = async (silent = false) => {
     try {
-      const [, checkInRes] = await Promise.allSettled([
+      const [, checkInRes, familyRes] = await Promise.allSettled([
         fetchElderlyTodayData(silent),
         apiClient<CheckInRecord>('/api/checkins/today'),
+        apiClient<Array<{
+          status?: string;
+          relationshipType?: string;
+          member?: { fullName?: string; phone?: string | null };
+        }>>('/api/family/members'),
       ]);
 
       if (checkInRes.status === 'fulfilled' && checkInRes.value.success) {
         setTodayCheckIn(checkInRes.value.data || null);
+      }
+
+      if (familyRes.status === 'fulfilled' && familyRes.value.success && Array.isArray(familyRes.value.data)) {
+        const linked = familyRes.value.data.filter((item) => item?.status !== 'REJECTED');
+        const primaryWithPhone = linked.find((item) => Boolean(item?.member?.phone?.trim()));
+        const primaryCaregiver = primaryWithPhone || linked[0];
+        if (primaryCaregiver?.member?.fullName) {
+          setEmergencyContactName(primaryCaregiver.member.fullName);
+        }
+        const resolvedPhone = primaryCaregiver?.member?.phone?.trim() || user?.emergencyContact?.trim() || null;
+        setEmergencyContactPhone(resolvedPhone);
       }
     } catch {
       // Handled
@@ -285,7 +305,11 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
 
       {/* 2. Emergency SOS Access (Discrete, non-overlapping) */}
       <View style={styles.sosContainer}>
-        <SOSButton emergencyContactName="Con gái (Nguyễn Thị Hoa)" />
+        <SOSButton
+          emergencyContactName={emergencyContactName}
+          emergencyContactPhone={emergencyContactPhone}
+          onEmergencyPhoneUpdated={(newPhone) => setEmergencyContactPhone(newPhone)}
+        />
       </View>
 
       {/* 2b. Prominent Due Reminder Alert Card (Water / Medication / Sleep) */}

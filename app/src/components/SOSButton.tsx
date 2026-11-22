@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,42 +7,146 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  Linking,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { colors, shadows } from '../core/theme/colors';
 import { apiClient } from '../core/api/client';
+import { useAuthStore } from '../core/auth/useAuthStore';
 import { useAccessibilityStore } from '../core/accessibility/useAccessibilityStore';
 
 interface Props {
   emergencyContactName?: string;
+  emergencyContactPhone?: string | null;
+  onEmergencyPhoneUpdated?: (newPhone: string | null) => void;
 }
 
-export const SOSButton: React.FC<Props> = ({ emergencyContactName = 'Con gái (Nguyễn Thị Hoa)' }) => {
+function sanitizePhoneNumber(raw?: string | null): string {
+  if (!raw) return '';
+  return raw.replace(/[^\d+]/g, '').trim();
+}
+
+export const SOSButton: React.FC<Props> = ({
+  emergencyContactName = 'Người giám sát',
+  emergencyContactPhone,
+  onEmergencyPhoneUpdated,
+}) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [sending, setSending] = useState(false);
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneInput, setPhoneInput] = useState(emergencyContactPhone || '');
   const { fs } = useAccessibilityStore();
+  const { updateUser } = useAuthStore();
+
+  useEffect(() => {
+    setPhoneInput(emergencyContactPhone || '');
+    if (!sanitizePhoneNumber(emergencyContactPhone)) {
+      setEditingPhone(true);
+    } else {
+      setEditingPhone(false);
+    }
+  }, [emergencyContactPhone]);
+
+  const savedPhone = emergencyContactPhone?.trim() || '';
+  const draftPhone = phoneInput.trim();
+  const activeDisplayPhone = savedPhone || draftPhone;
+  const dialPhone = sanitizePhoneNumber(activeDisplayPhone);
+
+  const openPhoneDialer = async (phoneToCall: string) => {
+    const telUrl = `tel:${phoneToCall}`;
+    try {
+      await Linking.openURL(telUrl);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const persistEmergencyPhone = async (rawPhone: string): Promise<string | null> => {
+    const cleaned = rawPhone.trim();
+    const digitsOnly = sanitizePhoneNumber(cleaned);
+    if (cleaned && digitsOnly.length < 8) {
+      Alert.alert('Số điện thoại chưa hợp lệ', 'Vui lòng nhập số điện thoại có ít nhất 8 chữ số.');
+      return null;
+    }
+    const nextValue = cleaned ? digitsOnly : null;
+    setSavingPhone(true);
+    try {
+      const res = await apiClient<any>('/api/users/me', {
+        method: 'PUT',
+        body: JSON.stringify({ emergencyContact: nextValue }),
+      });
+      if (res.success) {
+        updateUser({ emergencyContact: nextValue ?? undefined });
+        onEmergencyPhoneUpdated?.(nextValue);
+        setEditingPhone(false);
+        return nextValue;
+      }
+      Alert.alert('Không thể lưu SĐT', res.message || 'Vui lòng thử lại.');
+      return null;
+    } catch (err: any) {
+      Alert.alert('Không thể lưu SĐT', err?.message || 'Vui lòng thử lại.');
+      return null;
+    } finally {
+      setSavingPhone(false);
+    }
+  };
+
+  const handleSavePhoneOnly = async () => {
+    const saved = await persistEmergencyPhone(phoneInput);
+    if (saved) {
+      Alert.alert('Đã lưu SĐT người giám sát', `Số ${saved} đã được gắn vào nút gọi khẩn cấp.`);
+    }
+  };
 
   const handleConfirmSOS = async () => {
+    let targetDialPhone = sanitizePhoneNumber(savedPhone);
+    let targetDisplayPhone = savedPhone;
+
+    if (!targetDialPhone && draftPhone) {
+      if (sanitizePhoneNumber(draftPhone).length < 8) {
+        Alert.alert('Số điện thoại chưa hợp lệ', 'Vui lòng nhập SĐT người giám sát hợp lệ hoặc để trống nếu chỉ muốn gửi cảnh báo trong app.');
+        return;
+      }
+      const saved = await persistEmergencyPhone(draftPhone);
+      if (saved) {
+        targetDialPhone = saved;
+        targetDisplayPhone = saved;
+      }
+    }
+
     try {
       setSending(true);
-      await apiClient('/api/notifications', {
+      await apiClient('/api/alerts/sos', {
         method: 'POST',
         body: JSON.stringify({
-          title: '🚨 TÍN HIỆU KHẨN CẤP TỪ NGƯỜI CAO TUỔI',
-          message: `Người cao tuổi vừa nhấn nút SOS khẩn cấp trên ứng dụng Mimamori AI! Vui lòng liên hệ kiểm tra ngay!`,
-          type: 'EMERGENCY',
+          message: `TÍN HIỆU KHẨN CẤP (SOS): Người cao tuổi vừa nhấn nút cần trợ giúp khẩn cấp! Vui lòng liên hệ kiểm tra ngay.`,
         }),
       }).catch(() => {});
 
       setModalVisible(false);
+
+      if (targetDialPhone) {
+        const opened = await openPhoneDialer(targetDialPhone);
+        if (!opened) {
+          Alert.alert(
+            'Đã phát tín hiệu khẩn cấp',
+            `Thông báo đã gửi tới ${emergencyContactName}. Thiết bị này chưa hỗ trợ mở cuộc gọi trực tiếp tới ${targetDisplayPhone}.`,
+            [{ text: 'Tôi đã hiểu', style: 'default' }]
+          );
+        }
+        return;
+      }
+
       Alert.alert(
         'Đã phát tín hiệu khẩn cấp',
-        `Thông báo khẩn cấp đã được gửi trực tiếp đến ${emergencyContactName} và hệ thống theo dõi gia đình.`,
+        `Cảnh báo khẩn cấp đã được gửi trực tiếp đến tài khoản của ${emergencyContactName} trên hệ thống.`,
         [{ text: 'Tôi đã hiểu', style: 'default' }]
       );
-    } catch {
-      setModalVisible(false);
-      Alert.alert('Đã gửi thông báo', `Đã liên lạc đến người thân của cụ.`);
     } finally {
       setSending(false);
     }
@@ -52,49 +156,113 @@ export const SOSButton: React.FC<Props> = ({ emergencyContactName = 'Con gái (N
     <>
       <TouchableOpacity
         style={styles.sosPill}
-        onPress={() => setModalVisible(true)}
+        onPress={() => {
+          setPhoneInput(emergencyContactPhone || '');
+          setEditingPhone(!sanitizePhoneNumber(emergencyContactPhone));
+          setModalVisible(true);
+        }}
         activeOpacity={0.85}
-        accessibilityLabel="Nút gọi khẩn cấp SOS"
+        accessibilityLabel="Nút gọi và phát tín hiệu khẩn cấp SOS"
         accessibilityRole="button"
       >
         <View style={styles.sosIconContainer}>
-          <Feather name="alert-triangle" size={18} color="#FFFFFF" />
+          <Feather name={sanitizePhoneNumber(savedPhone) ? 'phone-call' : 'alert-triangle'} size={18} color="#FFFFFF" />
         </View>
         <View style={styles.sosTextCol}>
           <Text style={[styles.sosTitle, { fontSize: fs(15) }]}>Cần trợ giúp khẩn cấp?</Text>
-          <Text style={[styles.sosSubtitle, { fontSize: fs(12) }]}>Bấm để báo ngay cho người thân</Text>
+          <Text style={[styles.sosSubtitle, { fontSize: fs(12) }]} numberOfLines={1}>
+            {sanitizePhoneNumber(savedPhone)
+              ? `Bấm để báo & gọi ngay: ${emergencyContactName} (${savedPhone})`
+              : `Bấm để gắn SĐT gọi hoặc báo ngay ${emergencyContactName}`}
+          </Text>
         </View>
       </TouchableOpacity>
 
-      {/* Confirmation Modal */}
+      {/* Confirmation & Caregiver Phone Quick Setup Modal */}
       <Modal visible={modalVisible} transparent animationType="fade">
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={styles.modalCard}>
             <View style={styles.modalIconBox}>
-              <Feather name="alert-triangle" size={32} color={colors.dangerText} />
+              <Feather name={dialPhone ? 'phone-call' : 'alert-triangle'} size={32} color={colors.dangerText} />
             </View>
 
-            <Text style={[styles.modalTitle, { fontSize: fs(20) }]}>Xác nhận gọi khẩn cấp</Text>
+            <Text style={[styles.modalTitle, { fontSize: fs(20) }]}>Phát tín hiệu & Gọi khẩn cấp</Text>
             <Text style={[styles.modalDesc, { fontSize: fs(14) }]}>
-              Hệ thống sẽ gửi ngay cảnh báo đỏ đến điện thoại của{' '}
-              <Text style={styles.boldContact}>{emergencyContactName}</Text>.
+              {dialPhone ? (
+                <>
+                  Hệ thống sẽ gửi cảnh báo tới{' '}
+                  <Text style={styles.boldContact}>{emergencyContactName}</Text> và gọi trực tiếp số{' '}
+                  <Text style={styles.boldContact}>{activeDisplayPhone}</Text>.
+                </>
+              ) : (
+                <>
+                  Hệ thống sẽ gửi cảnh báo đỏ tới{' '}
+                  <Text style={styles.boldContact}>{emergencyContactName}</Text>. Gắn thêm SĐT bên dưới nếu muốn bấm là gọi thẳng.
+                </>
+              )}
             </Text>
-            <Text style={[styles.modalSubDesc, { fontSize: fs(13) }]}>
-              Cụ có chắc chắn muốn phát tín hiệu khẩn cấp không?
-            </Text>
+
+            <View style={styles.phoneSetupBox}>
+              <View style={styles.phoneSetupHeader}>
+                <Text style={[styles.phoneSetupLabel, { fontSize: fs(12.5) }]}>
+                  SĐT người giám sát
+                </Text>
+                {Boolean(savedPhone) && !editingPhone && (
+                  <TouchableOpacity
+                    onPress={() => setEditingPhone(true)}
+                    disabled={sending || savingPhone}
+                  >
+                    <Text style={[styles.editPhoneLink, { fontSize: fs(12.5) }]}>Đổi SĐT</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {editingPhone ? (
+                <View style={styles.phoneInputRow}>
+                  <TextInput
+                    style={[styles.phoneInput, { fontSize: fs(14) }]}
+                    placeholder="Nhập SĐT người thân (VD: 0987...)"
+                    placeholderTextColor={colors.textMuted}
+                    value={phoneInput}
+                    onChangeText={setPhoneInput}
+                    keyboardType="phone-pad"
+                    editable={!sending && !savingPhone}
+                  />
+                  <TouchableOpacity
+                    style={[styles.savePhoneBtn, (sending || savingPhone) && { opacity: 0.6 }]}
+                    onPress={handleSavePhoneOnly}
+                    disabled={sending || savingPhone}
+                    activeOpacity={0.8}
+                  >
+                    {savingPhone ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={[styles.savePhoneBtnText, { fontSize: fs(13) }]}>Lưu</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={[styles.savedPhoneValue, { fontSize: fs(15) }]}>
+                  {savedPhone}
+                </Text>
+              )}
+            </View>
 
             <View style={styles.modalButtonStack}>
               <TouchableOpacity
                 style={styles.confirmButton}
                 onPress={handleConfirmSOS}
-                disabled={sending}
+                disabled={sending || savingPhone}
                 activeOpacity={0.8}
               >
                 {sending ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
                   <Text style={[styles.confirmButtonText, { fontSize: fs(15) }]}>
-                    Phát tín hiệu khẩn cấp ngay
+                    {dialPhone ? `Phát tín hiệu & Gọi ${activeDisplayPhone}` : 'Chỉ phát tín hiệu trong app'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -102,14 +270,14 @@ export const SOSButton: React.FC<Props> = ({ emergencyContactName = 'Con gái (N
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => setModalVisible(false)}
-                disabled={sending}
+                disabled={sending || savingPhone}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.cancelButtonText, { fontSize: fs(14) }]}>Hủy bỏ, tôi bấm nhầm</Text>
+                <Text style={[styles.cancelButtonText, { fontSize: fs(14) }]}>Đóng</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );
@@ -207,6 +375,64 @@ const styles = StyleSheet.create({
   modalButtonStack: {
     width: '100%',
     gap: 10,
+  },
+  phoneSetupBox: {
+    width: '100%',
+    backgroundColor: colors.surfaceWarm,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: 8,
+    marginBottom: 16,
+    gap: 6,
+  },
+  phoneSetupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  phoneSetupLabel: {
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  editPhoneLink: {
+    fontWeight: '800',
+    color: colors.primaryDark,
+  },
+  phoneInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  phoneInput: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  savePhoneBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    minHeight: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savePhoneBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  savedPhoneValue: {
+    fontWeight: '800',
+    color: colors.textPrimary,
   },
   confirmButton: {
     backgroundColor: colors.dangerText,
