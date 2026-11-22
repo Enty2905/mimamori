@@ -44,6 +44,10 @@ mimamori:
     expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours
   ai-service:
     url: ${AI_SERVICE_URL:http://localhost:8000}
+  deepseek:
+    enabled: ${DEEPSEEK_ENABLED:true}
+    url: ${DEEPSEEK_URL:http://localhost:8001}
+    thinking-enabled: ${DEEPSEEK_THINKING_ENABLED:false}
   groq:
     api-key: ${GROQ_API_KEY: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}
     base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}
