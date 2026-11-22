@@ -10,11 +10,13 @@ import com.mimamori.medication.dto.MedicationLogDto;
 import com.mimamori.medication.service.MedicationService;
 import com.mimamori.notification.dto.CareAlertDto;
 import com.mimamori.notification.service.AlertService;
+import com.mimamori.routine.service.CareRoutineService;
 import com.mimamori.userprofile.dto.UserDto;
 import com.mimamori.userprofile.entity.User;
 import com.mimamori.userprofile.entity.UserRole;
 import com.mimamori.userprofile.repository.FamilyRelationshipRepository;
 import com.mimamori.userprofile.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class DashboardService {
     private final AlertService alertService;
     private final DailySummaryRepository summaryRepository;
     private final CareAgentService careAgentService;
+    private final CareRoutineService careRoutineService;
 
     public DashboardService(
             UserRepository userRepository,
@@ -42,6 +45,20 @@ public class DashboardService {
             AlertService alertService,
             DailySummaryRepository summaryRepository,
             CareAgentService careAgentService) {
+        this(userRepository, relationshipRepository, medicationService, checkInRepository,
+                alertService, summaryRepository, careAgentService, null);
+    }
+
+    @Autowired
+    public DashboardService(
+            UserRepository userRepository,
+            FamilyRelationshipRepository relationshipRepository,
+            MedicationService medicationService,
+            DailyCheckInRepository checkInRepository,
+            AlertService alertService,
+            DailySummaryRepository summaryRepository,
+            CareAgentService careAgentService,
+            @Autowired(required = false) CareRoutineService careRoutineService) {
         this.userRepository = userRepository;
         this.relationshipRepository = relationshipRepository;
         this.medicationService = medicationService;
@@ -49,6 +66,7 @@ public class DashboardService {
         this.alertService = alertService;
         this.summaryRepository = summaryRepository;
         this.careAgentService = careAgentService;
+        this.careRoutineService = careRoutineService;
     }
 
     @Transactional
@@ -113,6 +131,11 @@ public class DashboardService {
         // Summary
         summaryRepository.findByElderlyIdAndSummaryDate(elderlyId, LocalDate.now())
                 .ifPresent(s -> dto.setRecentSummary(DailySummaryDto.fromEntity(s)));
+
+        // Care Routine (Water & Sleep)
+        if (careRoutineService != null) {
+            dto.setTodayRoutine(careRoutineService.getTodayRoutineForElderly(elderlyId));
+        }
 
         return dto;
     }

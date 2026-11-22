@@ -12,10 +12,13 @@ import com.mimamori.medication.entity.MedicationStatus;
 import com.mimamori.medication.repository.MedicationLogRepository;
 import com.mimamori.medication.repository.MedicationRepository;
 import com.mimamori.medication.repository.MedicationScheduleRepository;
+import com.mimamori.notification.service.NotificationService;
+import com.mimamori.userprofile.entity.RelationshipStatus;
 import com.mimamori.userprofile.entity.User;
 import com.mimamori.userprofile.entity.UserRole;
 import com.mimamori.userprofile.repository.FamilyRelationshipRepository;
 import com.mimamori.userprofile.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +38,7 @@ public class MedicationService {
     private final MedicationLogRepository logRepository;
     private final UserRepository userRepository;
     private final FamilyRelationshipRepository relationshipRepository;
+    private final NotificationService notificationService;
 
     public MedicationService(
             MedicationRepository medicationRepository,
@@ -42,11 +46,23 @@ public class MedicationService {
             MedicationLogRepository logRepository,
             UserRepository userRepository,
             FamilyRelationshipRepository relationshipRepository) {
+        this(medicationRepository, scheduleRepository, logRepository, userRepository, relationshipRepository, null);
+    }
+
+    @Autowired
+    public MedicationService(
+            MedicationRepository medicationRepository,
+            MedicationScheduleRepository scheduleRepository,
+            MedicationLogRepository logRepository,
+            UserRepository userRepository,
+            FamilyRelationshipRepository relationshipRepository,
+            @Autowired(required = false) NotificationService notificationService) {
         this.medicationRepository = medicationRepository;
         this.scheduleRepository = scheduleRepository;
         this.logRepository = logRepository;
         this.userRepository = userRepository;
         this.relationshipRepository = relationshipRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -151,6 +167,27 @@ public class MedicationService {
         }
 
         log = logRepository.save(log);
+
+        if (notificationService != null && log.getStatus() == MedicationStatus.TAKEN) {
+            Long savedLogId = log.getId();
+            Long elderlyId = log.getElderly().getId();
+            String elderlyName = log.getElderly().getFullName();
+            String medName = log.getMedication().getName();
+            String dosage = log.getMedication().getDosage();
+            relationshipRepository.findByElderlyId(elderlyId).stream()
+                    .filter(rel -> rel.getStatus() != RelationshipStatus.REJECTED)
+                    .map(rel -> rel.getCaregiver().getId())
+                    .filter(caregiverId -> !caregiverId.equals(currentUserId))
+                    .distinct()
+                    .forEach(caregiverId -> notificationService.sendNotification(
+                            caregiverId,
+                            "Đã uống thuốc: " + elderlyName,
+                            String.format("Bác %s vừa xác nhận đã uống '%s' (%s).", elderlyName, medName, dosage),
+                            "REMINDER",
+                            savedLogId
+                    ));
+        }
+
         return MedicationLogDto.fromEntity(log);
     }
 
