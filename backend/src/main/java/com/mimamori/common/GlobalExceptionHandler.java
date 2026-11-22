@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
         return ResponseEntity.status(413)
-                .body(ApiResponse.error("Tệp âm thanh vượt quá dung lượng tối đa 10MB."));
+                .body(ApiResponse.error("Tệp tải lên vượt quá dung lượng tối đa 10MB."));
     }
 
     @ExceptionHandler(Exception.class)

@@ -22,11 +22,24 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +47,22 @@ import java.util.stream.Collectors;
 public class ConversationService {
 
     private static final Logger log = LoggerFactory.getLogger(ConversationService.class);
+
+    static final int MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+    private static final int MAX_STORED_RAW_BASE64_LENGTH = 700_000;
+    private static final int THUMBNAIL_MAX_DIMENSION = 480;
+    private static final String DEFAULT_MEDICINE_QUESTION =
+            "Đây là thuốc gì? Công dụng, liều dùng và lưu ý an toàn như thế nào?";
+    private static final Set<String> ALLOWED_IMAGE_MIMES = Set.of(
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+            "image/heic",
+            "image/heif"
+    );
+    private static final Pattern DATA_URI_PATTERN =
+            Pattern.compile("^data:([^;]+);base64,(.*)$", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
     private final ConversationRepository conversationRepository;
     private final ChatMessageRepository messageRepository;
@@ -103,18 +132,23 @@ public class ConversationService {
 
     @Transactional
     public ChatMessageDto sendMessage(Long elderlyId, Long conversationId, ChatMessageRequest request) {
-        Conversation conv = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new ApiException(404, "Conversation not found"));
-
-        if (!conv.getElderly().getId().equals(elderlyId)) {
-            throw new ApiException(403, "You do not own this conversation");
+        if (request != null && request.hasImage()) {
+            return sendMedicineImageMessage(
+                    elderlyId,
+                    conversationId,
+                    request.getImageBase64(),
+                    request.getMimeType(),
+                    request.getContent()
+            );
         }
+
+        Conversation conv = requireOwnedConversation(elderlyId, conversationId);
 
         // 1. Save user message
         ChatMessage userMsg = new ChatMessage(conv, MessageSender.USER, request.getContent());
         userMsg = messageRepository.save(userMsg);
 
-        // 2. Query AI response from Groq LLM or internal AI service
+        // 2. Query AI response from DeepSeek / Groq LLM or internal AI service
         String aiReplyContent = fetchAiCompanionReply(conv, request.getContent());
 
         // 3. Save AI message
@@ -125,6 +159,71 @@ public class ConversationService {
         conversationRepository.save(conv);
 
         return ChatMessageDto.fromEntity(aiMsg);
+    }
+
+    @Transactional
+    public ChatMessageDto sendMedicineImageMessage(
+            Long elderlyId,
+            Long conversationId,
+            MultipartFile imageFile,
+            String rawQuestion) {
+        if (imageFile == null || imageFile.isEmpty()) {
+            throw new ApiException(400, "Vui lòng chọn hoặc chụp ảnh thuốc để cháu xem giúp bác nhé.");
+        }
+        if (imageFile.getSize() > MAX_IMAGE_BYTES) {
+            throw new ApiException(413, "Ảnh vượt quá dung lượng tối đa 10MB. Bác vui lòng chọn ảnh nhẹ hơn nhé.");
+        }
+        byte[] bytes;
+        try {
+            bytes = imageFile.getBytes();
+        } catch (IOException e) {
+            throw new ApiException(400, "Không thể đọc dữ liệu ảnh. Bác vui lòng thử chụp hoặc chọn lại ảnh nhé.");
+        }
+        String base64 = Base64.getEncoder().encodeToString(bytes);
+        String mimeType = resolveMultipartImageMime(imageFile.getContentType(), imageFile.getOriginalFilename());
+        return sendMedicineImageMessage(elderlyId, conversationId, base64, mimeType, rawQuestion);
+    }
+
+    @Transactional
+    public ChatMessageDto sendMedicineImageMessage(
+            Long elderlyId,
+            Long conversationId,
+            String rawImageBase64,
+            String rawMimeType,
+            String rawQuestion) {
+        Conversation conv = requireOwnedConversation(elderlyId, conversationId);
+        ValidatedImage image = validateAndNormalizeImage(rawImageBase64, rawMimeType);
+        String question = (rawQuestion != null && !rawQuestion.isBlank())
+                ? rawQuestion.trim()
+                : DEFAULT_MEDICINE_QUESTION;
+
+        String aiReplyContent = fetchMedicineVisionReply(conv, question, image.cleanBase64(), image.mimeType());
+
+        StoredThumbnail thumbnail = createThumbnailForStorage(image.bytes(), image.cleanBase64(), image.mimeType());
+        ChatMessage userMsg = new ChatMessage(conv, MessageSender.USER, question);
+        userMsg.setMessageType("MEDICINE_IMAGE");
+        userMsg.setImageBase64(thumbnail.base64());
+        userMsg.setImageMimeType(thumbnail.mimeType());
+        messageRepository.save(userMsg);
+
+        ChatMessage aiMsg = new ChatMessage(conv, MessageSender.AI, aiReplyContent);
+        aiMsg.setMessageType("TEXT");
+        aiMsg = messageRepository.save(aiMsg);
+
+        conv.setLastMessageAt(Instant.now());
+        conversationRepository.save(conv);
+
+        return ChatMessageDto.fromEntity(aiMsg);
+    }
+
+    private Conversation requireOwnedConversation(Long elderlyId, Long conversationId) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ApiException(404, "Conversation not found"));
+
+        if (!conv.getElderly().getId().equals(elderlyId)) {
+            throw new ApiException(403, "You do not own this conversation");
+        }
+        return conv;
     }
 
     public List<ChatMessageDto> getMessages(Long currentUserId, Long conversationId) {
@@ -227,4 +326,163 @@ public class ConversationService {
         }
         return "Dạ cháu luôn ở đây lắng nghe và trò chuyện cùng cụ. Cụ muốn cháu kể chuyện, chia sẻ món ăn bổ dưỡng hay điều gì cùng cụ không ạ?";
     }
+
+    private String fetchMedicineVisionReply(
+            Conversation conv,
+            String question,
+            String cleanBase64,
+            String mimeType) {
+        List<ChatMessage> recentList = messageRepository.findByConversationIdOrderByCreatedAtAsc(conv.getId());
+        List<Map<String, String>> history = new ArrayList<>();
+        for (ChatMessage m : recentList) {
+            String role = (m.getSender() == MessageSender.USER) ? "user" : "assistant";
+            history.add(Map.of("role", role, "content", m.getContent()));
+        }
+        String name = (conv.getElderly() != null) ? conv.getElderly().getFullName() : "bác";
+
+        if (deepSeekService != null && deepSeekService.isEnabled()) {
+            try {
+                String reply = deepSeekService.analyzeMedicineImage(question, name, cleanBase64, mimeType, history);
+                if (reply != null && !reply.isBlank()) {
+                    log.info("Medicine vision reply served by provider=DeepSeek for conversationId={}", conv.getId());
+                    return reply;
+                }
+            } catch (Exception e) {
+                log.warn("DeepSeek vision error for conversationId={}: {}", conv.getId(), e.getMessage());
+            }
+        }
+
+        if (groqService != null && groqService.isVisionConfigured()) {
+            try {
+                String reply = groqService.analyzeMedicineImage(question, name, cleanBase64, mimeType);
+                if (reply != null && !reply.isBlank()) {
+                    log.info("Medicine vision reply served by provider=GroqVision for conversationId={}", conv.getId());
+                    return reply;
+                }
+            } catch (Exception e) {
+                log.warn("Groq vision error for conversationId={}: {}", conv.getId(), e.getMessage());
+            }
+        }
+
+        throw new ApiException(
+                503,
+                "Hiện tại cháu chưa thể đọc được ảnh thuốc lúc này. Bác vui lòng thử chụp lại rõ nét hơn hoặc gửi lại sau ít phút, hoặc nhờ con cháu/dược sĩ xem giúp nhé ạ."
+        );
+    }
+
+    private ValidatedImage validateAndNormalizeImage(String rawBase64, String rawMimeType) {
+        if (rawBase64 == null || rawBase64.isBlank()) {
+            throw new ApiException(400, "Vui lòng chọn hoặc chụp ảnh thuốc để cháu xem giúp bác nhé.");
+        }
+
+        String trimmed = rawBase64.trim();
+        String mime = normalizeImageMime(rawMimeType);
+        Matcher dataUriMatcher = DATA_URI_PATTERN.matcher(trimmed);
+        if (dataUriMatcher.matches()) {
+            if (mime == null) {
+                mime = normalizeImageMime(dataUriMatcher.group(1));
+            }
+            trimmed = dataUriMatcher.group(2);
+        }
+
+        if (mime == null) {
+            mime = "image/jpeg";
+        }
+        if (!ALLOWED_IMAGE_MIMES.contains(mime)) {
+            throw new ApiException(400, "Định dạng ảnh không được hỗ trợ. Bác vui lòng chọn ảnh JPG, PNG hoặc WEBP nhé.");
+        }
+
+        String cleanBase64 = trimmed.replaceAll("\\s+", "");
+        byte[] bytes;
+        try {
+            bytes = Base64.getDecoder().decode(cleanBase64);
+        } catch (IllegalArgumentException e) {
+            throw new ApiException(400, "Dữ liệu ảnh không hợp lệ. Bác vui lòng chụp hoặc chọn lại ảnh nhé.");
+        }
+
+        if (bytes.length == 0) {
+            throw new ApiException(400, "Dữ liệu ảnh trống. Bác vui lòng chụp hoặc chọn lại ảnh nhé.");
+        }
+        if (bytes.length > MAX_IMAGE_BYTES) {
+            throw new ApiException(413, "Ảnh vượt quá dung lượng tối đa 10MB. Bác vui lòng chọn ảnh nhẹ hơn nhé.");
+        }
+
+        return new ValidatedImage(cleanBase64, mime, bytes);
+    }
+
+    private static String normalizeImageMime(String rawMime) {
+        if (rawMime == null || rawMime.isBlank()) {
+            return null;
+        }
+        int semicolon = rawMime.indexOf(';');
+        String base = (semicolon >= 0 ? rawMime.substring(0, semicolon) : rawMime)
+                .trim()
+                .toLowerCase(Locale.ROOT);
+        if ("image/jpg".equals(base)) {
+            return "image/jpeg";
+        }
+        return base.isEmpty() ? null : base;
+    }
+
+    private static String resolveMultipartImageMime(String contentType, String originalFilename) {
+        String normalized = normalizeImageMime(contentType);
+        if (normalized != null && ALLOWED_IMAGE_MIMES.contains(normalized)) {
+            return normalized;
+        }
+        if (originalFilename != null) {
+            String lower = originalFilename.toLowerCase(Locale.ROOT);
+            if (lower.endsWith(".png")) return "image/png";
+            if (lower.endsWith(".webp")) return "image/webp";
+            if (lower.endsWith(".gif")) return "image/gif";
+            if (lower.endsWith(".heic")) return "image/heic";
+            if (lower.endsWith(".heif")) return "image/heif";
+            if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+        }
+        if (normalized != null) {
+            return normalized;
+        }
+        return "image/jpeg";
+    }
+
+    private static StoredThumbnail createThumbnailForStorage(byte[] originalBytes, String cleanBase64, String mimeType) {
+        try {
+            BufferedImage source = ImageIO.read(new ByteArrayInputStream(originalBytes));
+            if (source != null && source.getWidth() > 0 && source.getHeight() > 0) {
+                int w = source.getWidth();
+                int h = source.getHeight();
+                double scale = Math.min(1.0, (double) THUMBNAIL_MAX_DIMENSION / Math.max(w, h));
+                int targetW = Math.max(1, (int) Math.round(w * scale));
+                int targetH = Math.max(1, (int) Math.round(h * scale));
+
+                BufferedImage rgbImage = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_RGB);
+                Graphics2D g2d = rgbImage.createGraphics();
+                try {
+                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    g2d.fillRect(0, 0, targetW, targetH);
+                    g2d.drawImage(source, 0, 0, targetW, targetH, null);
+                } finally {
+                    g2d.dispose();
+                }
+
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                if (ImageIO.write(rgbImage, "jpg", baos)) {
+                    byte[] thumbBytes = baos.toByteArray();
+                    if (thumbBytes.length > 0 && thumbBytes.length <= originalBytes.length) {
+                        return new StoredThumbnail(Base64.getEncoder().encodeToString(thumbBytes), "image/jpeg");
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Fall back to bounded original payload if ImageIO cannot decode format (e.g. WebP/synthetic)
+        }
+
+        if (cleanBase64.length() <= MAX_STORED_RAW_BASE64_LENGTH) {
+            return new StoredThumbnail(cleanBase64, mimeType);
+        }
+        return new StoredThumbnail(null, mimeType);
+    }
+
+    private record ValidatedImage(String cleanBase64, String mimeType, byte[] bytes) {}
+
+    private record StoredThumbnail(String base64, String mimeType) {}
 }

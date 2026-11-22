@@ -19,8 +19,17 @@ public class ChatMessage {
     @Column(nullable = false, length = 20)
     private MessageSender sender;
 
+    @Column(name = "message_type", nullable = false, length = 30)
+    private String messageType = "TEXT";
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
+
+    @Column(name = "image_base64", columnDefinition = "MEDIUMTEXT")
+    private String imageBase64;
+
+    @Column(name = "image_mime_type", length = 64)
+    private String imageMimeType;
 
     @Column(name = "tokens_used")
     private Integer tokensUsed = 0;
@@ -34,6 +43,7 @@ public class ChatMessage {
         this.conversation = conversation;
         this.sender = sender;
         this.content = content;
+        this.messageType = "TEXT";
     }
 
     public Long getId() { return id; }
@@ -42,8 +52,14 @@ public class ChatMessage {
     public void setConversation(Conversation conversation) { this.conversation = conversation; }
     public MessageSender getSender() { return sender; }
     public void setSender(MessageSender sender) { this.sender = sender; }
+    public String getMessageType() { return messageType; }
+    public void setMessageType(String messageType) { this.messageType = messageType; }
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
+    public String getImageBase64() { return imageBase64; }
+    public void setImageBase64(String imageBase64) { this.imageBase64 = imageBase64; }
+    public String getImageMimeType() { return imageMimeType; }
+    public void setImageMimeType(String imageMimeType) { this.imageMimeType = imageMimeType; }
     public Integer getTokensUsed() { return tokensUsed; }
     public void setTokensUsed(Integer tokensUsed) { this.tokensUsed = tokensUsed; }
     public Instant getCreatedAt() { return createdAt; }

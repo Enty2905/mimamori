@@ -30,6 +30,7 @@ public class GroqService {
     private final String apiKey;
     private final String primaryModel;
     private final String fallbackModel;
+    private final String visionModel;
 
     @Autowired
     public GroqService(
@@ -37,12 +38,14 @@ public class GroqService {
             @Value("${mimamori.groq.api-key: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}") String apiKey,
             @Value("${mimamori.groq.model:openai/gpt-oss-120b}") String primaryModel,
             @Value("${mimamori.groq.fallback-model:openai/gpt-oss-20b}") String fallbackModel,
+            @Value("${mimamori.groq.vision-model:}") String visionModel,
             ObjectMapper objectMapper) {
         this(
                 buildDefaultRestClient(baseUrl, apiKey),
                 apiKey,
                 primaryModel,
                 fallbackModel,
+                visionModel,
                 objectMapper
         );
     }
@@ -53,10 +56,21 @@ public class GroqService {
             String primaryModel,
             String fallbackModel,
             ObjectMapper objectMapper) {
+        this(restClient, apiKey, primaryModel, fallbackModel, "", objectMapper);
+    }
+
+    GroqService(
+            RestClient restClient,
+            String apiKey,
+            String primaryModel,
+            String fallbackModel,
+            String visionModel,
+            ObjectMapper objectMapper) {
         this.restClient = restClient;
         this.apiKey = apiKey;
         this.primaryModel = primaryModel;
         this.fallbackModel = fallbackModel;
+        this.visionModel = visionModel != null ? visionModel.trim() : "";
         this.objectMapper = objectMapper;
     }
 
@@ -148,6 +162,75 @@ public class GroqService {
         }
 
         return "Cháu mừng khi nhận được cập nhật sức khỏe hôm nay của bác! Bác nhớ giữ ấm cơ thể, uống nhiều nước ấm và nghỉ ngơi điều độ nhé ạ.";
+    }
+
+    public boolean isVisionConfigured() {
+        return visionModel != null && !visionModel.isBlank();
+    }
+
+    /**
+     * Analyze a medicine image using Groq Vision ONLY when a vision model is explicitly configured.
+     * Never falls back to text-only guessing if vision is unavailable.
+     */
+    public String analyzeMedicineImage(String question, String elderlyName, String imageBase64, String mimeType) {
+        if (!isVisionConfigured() || imageBase64 == null || imageBase64.isBlank()) {
+            return null;
+        }
+        String name = (elderlyName != null && !elderlyName.isBlank()) ? elderlyName : "ông/bà";
+        String userQuestion = (question != null && !question.isBlank())
+                ? question.trim()
+                : "Đây là thuốc gì? Công dụng, liều dùng và lưu ý an toàn như thế nào?";
+        String safeMime = (mimeType != null && !mimeType.isBlank()) ? mimeType : "image/jpeg";
+
+        String systemPrompt = String.format(
+                "Bạn là Mimamori AI - trợ lý đọc nhãn thuốc ấm áp, kính trọng người cao tuổi Việt Nam (xưng cháu, gọi bác/cụ) đang hỗ trợ %s. " +
+                "CHỈ đọc tên thuốc tiếng Anh, hoạt chất, hàm lượng, công dụng, cách dùng và cảnh báo mà bạn NHÌN THẤY RÕ trên ảnh. " +
+                "TUYỆT ĐỐI KHÔNG tự đoán hay bịa đặt tên thuốc khi ảnh mờ/không đọc được; nếu mờ hãy nói rõ và khuyên chụp lại hoặc hỏi bác sĩ/dược sĩ. " +
+                "Luôn nhắc uống thuốc theo chỉ dẫn bác sĩ và gọi 115 nếu có phản ứng nặng.",
+                name
+        );
+
+        String dataUri = "data:" + safeMime + ";base64," + imageBase64.trim();
+        List<Map<String, Object>> messages = List.of(
+                Map.of("role", "system", "content", systemPrompt),
+                Map.of("role", "user", "content", List.of(
+                        Map.of("type", "text", "text", userQuestion),
+                        Map.of("type", "image_url", "image_url", Map.of("url", dataUri))
+                ))
+        );
+
+        String reply = callGroqMultimodal(visionModel, messages, 550);
+        return (reply != null && !reply.isBlank()) ? reply.trim() : null;
+    }
+
+    private String callGroqMultimodal(String model, List<Map<String, Object>> messages, int maxTokens) {
+        try {
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", model);
+            requestBody.put("messages", messages);
+            requestBody.put("max_tokens", maxTokens);
+            requestBody.put("temperature", 0.3);
+
+            String responseJson = restClient.post()
+                    .uri("/chat/completions")
+                    .body(requestBody)
+                    .retrieve()
+                    .body(String.class);
+
+            if (responseJson != null) {
+                JsonNode root = objectMapper.readTree(responseJson);
+                JsonNode choices = root.path("choices");
+                if (choices.isArray() && !choices.isEmpty()) {
+                    String content = choices.get(0).path("message").path("content").asText();
+                    if (content != null && !content.isBlank()) {
+                        return content;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Groq Vision API call with model {} failed: {}", model, e.getMessage());
+        }
+        return null;
     }
 
     private String callGroq(String model, List<Map<String, String>> messages, int maxTokens) {

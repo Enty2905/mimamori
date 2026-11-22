@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from typing import List, Optional
 import httpx
 from config import build_headers, build_cookies
 from session import get_or_create_session
@@ -17,6 +18,99 @@ class DeepSeekUpstreamError(RuntimeError):
     """Raised when DeepSeek upstream fails or returns an invalid/empty response."""
 
 
+async def upload_file(
+    client: httpx.AsyncClient,
+    cfg: dict,
+    file_bytes: bytes,
+    filename: str,
+    mime_type: str,
+) -> str:
+    """Upload an image file to DeepSeek Web and return its file_id."""
+    pow_token = await get_pow_token(client, cfg, target_path="/api/v0/file/upload_file")
+    headers = {
+        k: v
+        for k, v in build_headers(cfg, pow_token).items()
+        if k.lower() != "content-type"
+    }
+    cookies = build_cookies(cfg)
+
+    url = "https://chat.deepseek.com/api/v0/file/upload_file"
+    files = {"file": (filename, file_bytes, mime_type)}
+    resp = await client.post(url, files=files, headers=headers, cookies=cookies, timeout=60.0)
+    if resp.status_code in (401, 403):
+        raise DeepSeekAuthError(
+            f"Auth token hoặc cookies đã hết hạn khi tải ảnh lên (HTTP {resp.status_code})! Vui lòng cập nhật config.json"
+        )
+    resp.raise_for_status()
+
+    data = resp.json()
+    code = data.get("code")
+    if code not in (None, 0):
+        raise DeepSeekUpstreamError(f"DeepSeek upload_file lỗi (code={code}): {data.get('msg') or data}")
+
+    biz_data = data.get("data", {}).get("biz_data", {})
+    file_id = biz_data.get("id") if isinstance(biz_data, dict) else None
+    if not file_id:
+        raise DeepSeekUpstreamError(f"DeepSeek upload_file không trả về file_id: {data}")
+    return str(file_id)
+
+
+async def wait_for_file_parsed(
+    client: httpx.AsyncClient,
+    cfg: dict,
+    file_id: str,
+    timeout_seconds: float = 25.0,
+) -> None:
+    """Poll DeepSeek fetch_files until the uploaded file finishes parsing."""
+    url = "https://chat.deepseek.com/api/v0/file/fetch_files"
+    headers = build_headers(cfg)
+    cookies = build_cookies(cfg)
+    deadline = asyncio.get_running_loop().time() + timeout_seconds
+
+    while True:
+        resp = await client.get(
+            url,
+            params={"file_ids": file_id},
+            headers=headers,
+            cookies=cookies,
+            timeout=20.0,
+        )
+        if resp.status_code in (401, 403):
+            raise DeepSeekAuthError(
+                f"Auth token hoặc cookies đã hết hạn khi kiểm tra ảnh (HTTP {resp.status_code})!"
+            )
+        resp.raise_for_status()
+
+        data = resp.json()
+        code = data.get("code")
+        if code not in (None, 0):
+            raise DeepSeekUpstreamError(f"DeepSeek fetch_files lỗi (code={code}): {data.get('msg') or data}")
+
+        biz_data = data.get("data", {}).get("biz_data")
+        records = []
+        if isinstance(biz_data, dict):
+            if isinstance(biz_data.get("files"), list):
+                records = biz_data["files"]
+            elif "status" in biz_data:
+                records = [biz_data]
+        elif isinstance(biz_data, list):
+            records = biz_data
+
+        status = ""
+        if records and isinstance(records[0], dict):
+            status = str(records[0].get("status") or "").upper()
+
+        if status == "SUCCESS":
+            return
+        if status in ("FAILED", "FAIL", "ERROR"):
+            raise DeepSeekUpstreamError(f"DeepSeek không thể xử lý tệp ảnh (status={status}).")
+
+        if asyncio.get_running_loop().time() >= deadline:
+            raise DeepSeekUpstreamError(f"Hết thời gian chờ DeepSeek xử lý ảnh (status={status or 'UNKNOWN'}).")
+
+        await asyncio.sleep(0.6)
+
+
 async def chat_completion(
     client: httpx.AsyncClient,
     cfg: dict,
@@ -24,6 +118,7 @@ async def chat_completion(
     thinking_enabled: bool = True,
     force_new_session: bool = False,
     max_retries: int = 3,
+    ref_file_ids: Optional[List[str]] = None,
 ) -> str:
     """Gửi câu hỏi tới DeepSeek Web và bóc tách câu trả lời từ luồng SSE."""
     try:
@@ -47,7 +142,7 @@ async def chat_completion(
                 "chat_session_id": session_id,
                 "parent_message_id": None,
                 "prompt": prompt,
-                "ref_file_ids": [],
+                "ref_file_ids": list(ref_file_ids) if ref_file_ids else [],
                 "thinking_enabled": thinking_enabled,
                 "search_enabled": False,
             }

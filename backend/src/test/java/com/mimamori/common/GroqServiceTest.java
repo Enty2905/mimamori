@@ -88,4 +88,53 @@ class GroqServiceTest {
         assertTrue(reply.contains("không thể tự chẩn đoán bệnh"));
         server.verify();
     }
+
+    @Test
+    void analyzeMedicineImageReturnsNullWhenVisionModelNotConfigured() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://api.groq.com/openai/v1");
+        GroqService groqService = new GroqService(
+                builder.build(),
+                "test-key",
+                "openai/gpt-oss-120b",
+                "openai/gpt-oss-20b",
+                objectMapper
+        );
+
+        assertFalse(groqService.isVisionConfigured());
+        assertNull(groqService.analyzeMedicineImage("Đây là thuốc gì?", "Cụ Ba", "iVBORw0KGgo=", "image/png"));
+    }
+
+    @Test
+    void analyzeMedicineImageCallsMultimodalEndpointWhenVisionModelConfigured() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("https://api.groq.com/openai/v1");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        GroqService groqService = new GroqService(
+                builder.build(),
+                "test-key",
+                "openai/gpt-oss-120b",
+                "openai/gpt-oss-20b",
+                "vision-test-model",
+                objectMapper
+        );
+
+        assertTrue(groqService.isVisionConfigured());
+
+        server.expect(requestTo("https://api.groq.com/openai/v1/chat/completions"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(request -> {
+                    JsonNode root = objectMapper.readTree(request.getBody().toString());
+                    assertEquals("vision-test-model", root.path("model").asText());
+                    JsonNode userContent = root.path("messages").get(1).path("content");
+                    assertTrue(userContent.isArray());
+                    assertEquals("data:image/png;base64,iVBORw0KGgo=", userContent.get(1).path("image_url").path("url").asText());
+                })
+                .andRespond(withSuccess(
+                        "{\"choices\":[{\"message\":{\"content\":\"Đây là Paracetamol 500mg ạ.\"}}]}",
+                        MediaType.APPLICATION_JSON
+                ));
+
+        String reply = groqService.analyzeMedicineImage("Đây là thuốc gì?", "Cụ Ba", "iVBORw0KGgo=", "image/png");
+        assertEquals("Đây là Paracetamol 500mg ạ.", reply);
+        server.verify();
+    }
 }

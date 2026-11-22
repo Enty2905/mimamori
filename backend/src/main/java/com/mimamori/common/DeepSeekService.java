@@ -33,8 +33,9 @@ public class DeepSeekService {
             @Value("${mimamori.deepseek.url:http://localhost:8001}") String baseUrl,
             @Value("${mimamori.deepseek.enabled:true}") boolean enabled,
             @Value("${mimamori.deepseek.thinking-enabled:false}") boolean thinkingEnabled,
+            @Value("${mimamori.deepseek.read-timeout-seconds:65}") long readTimeoutSeconds,
             ObjectMapper objectMapper) {
-        this(buildDefaultRestClient(baseUrl), enabled, thinkingEnabled, objectMapper);
+        this(buildDefaultRestClient(baseUrl, readTimeoutSeconds), enabled, thinkingEnabled, objectMapper);
     }
 
     DeepSeekService(
@@ -48,13 +49,13 @@ public class DeepSeekService {
         this.objectMapper = objectMapper;
     }
 
-    private static RestClient buildDefaultRestClient(String baseUrl) {
+    private static RestClient buildDefaultRestClient(String baseUrl, long readTimeoutSeconds) {
         HttpClient httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofSeconds(35));
+        requestFactory.setReadTimeout(Duration.ofSeconds(Math.max(15, readTimeoutSeconds)));
         return RestClient.builder()
                 .baseUrl(baseUrl)
                 .requestFactory(requestFactory)
@@ -134,6 +135,51 @@ public class DeepSeekService {
         return null;
     }
 
+    /**
+     * Read and explain a medicine box, blister pack, or prescription image in warm, elder-friendly Vietnamese
+     * using DeepSeek Web Vision. Returns null when disabled, invalid input, or proxy error.
+     */
+    public String analyzeMedicineImage(
+            String question,
+            String elderlyName,
+            String imageBase64,
+            String mimeType,
+            List<Map<String, String>> history) {
+        if (!enabled || imageBase64 == null || imageBase64.isBlank()) {
+            return null;
+        }
+
+        String name = (elderlyName != null && !elderlyName.isBlank()) ? elderlyName : "ông/bà";
+        String userQuestion = (question != null && !question.isBlank())
+                ? question.trim()
+                : "Đây là thuốc gì? Công dụng, liều dùng và lưu ý an toàn như thế nào?";
+
+        String systemPrompt = String.format(
+                "Bạn là Mimamori AI - trợ lý đọc nhãn thuốc và chăm sóc sức khỏe ấm áp, lễ phép dành cho người cao tuổi Việt Nam.\n" +
+                "Bạn đang hỗ trợ %s xem ảnh hộp thuốc, vỉ thuốc hoặc đơn thuốc (có thể in chữ tiếng Anh).\n" +
+                "QUY TẮC BẮT BUỘC VỀ ĐỘ CHÍNH XÁC & AN TOÀN:\n" +
+                "1. CHỈ đọc và nêu tên thuốc, hoạt chất, hàm lượng/liều lượng, cách dùng và cảnh báo mà bạn NHÌN THẤY RÕ RÀNG trong ảnh.\n" +
+                "2. TUYỆT ĐỐI KHÔNG tự ý suy đoán, bịa đặt hoặc điền thêm tên thuốc hay hàm lượng khi chữ bị mờ, khuất, lóa sáng hoặc không đọc được.\n" +
+                "3. Nếu ảnh quá mờ, bị cắt chữ hoặc không chắc chắn về tên thuốc: hãy nói thật rõ phần nào nhìn thấy, phần nào bị mờ không đọc được, và nhẹ nhàng khuyên bác chụp lại ảnh rõ nét hơn dưới ánh sáng tốt hoặc đưa người thân/bác sĩ/dược sĩ kiểm tra trực tiếp.\n" +
+                "4. Nếu đọc được thuốc rõ ràng, hãy giải thích bằng tiếng Việt giản dị, ấm áp (xưng 'cháu', gọi 'bác'/'cụ'), bố cục ngắn gọn dễ đọc gồm:\n" +
+                "   - Tên thuốc (nêu tên tiếng Anh trên vỏ nếu có + hoạt chất) và hàm lượng.\n" +
+                "   - Công dụng chính (giải thích dễ hiểu).\n" +
+                "   - Cách dùng tham khảo ghi trên nhãn/đơn (nếu thấy trong ảnh) và các lưu ý/cảnh báo quan trọng.\n" +
+                "   - Giải đáp trực tiếp câu hỏi kèm theo của bác (nếu có).\n" +
+                "5. AN TOÀN Y TẾ: Luôn nhắc bác không tự ý tăng/giảm liều, uống đúng theo chỉ dẫn của bác sĩ/dược sĩ hoặc hỏi con cháu trước khi dùng; nếu có dấu hiệu bất thường như khó thở, đau ngực, ngất, phát ban thì ngừng dùng và báo ngay người thân hoặc gọi cấp cứu 115.",
+                name
+        );
+
+        String messagePayload = buildMessageWithHistory(userQuestion, history);
+        String reply = callDeepSeekVision(messagePayload, systemPrompt, imageBase64, mimeType);
+        if (reply != null) {
+            log.info("DeepSeek medicine vision reply succeeded");
+            return reply;
+        }
+        log.warn("DeepSeek medicine vision reply failed or returned empty");
+        return null;
+    }
+
     private String buildMessageWithHistory(String userMessage, List<Map<String, String>> history) {
         if (history == null || history.isEmpty()) {
             return userMessage;
@@ -162,15 +208,34 @@ public class DeepSeekService {
     }
 
     private String callDeepSeek(String message, String systemPrompt) {
+        return callDeepSeekEndpoint("/chat", message, systemPrompt, null, null);
+    }
+
+    private String callDeepSeekVision(String message, String systemPrompt, String imageBase64, String mimeType) {
+        return callDeepSeekEndpoint("/chat-vision", message, systemPrompt, imageBase64, mimeType);
+    }
+
+    private String callDeepSeekEndpoint(
+            String uri,
+            String message,
+            String systemPrompt,
+            String imageBase64,
+            String mimeType) {
         try {
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("message", message);
             requestBody.put("system_prompt", systemPrompt);
             requestBody.put("thinking_enabled", thinkingEnabled);
             requestBody.put("new_chat", false);
+            if (imageBase64 != null && !imageBase64.isBlank()) {
+                requestBody.put("image_base64", imageBase64);
+                if (mimeType != null && !mimeType.isBlank()) {
+                    requestBody.put("image_mime_type", mimeType);
+                }
+            }
 
             String responseJson = restClient.post()
-                    .uri("/chat")
+                    .uri(uri)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(requestBody)
                     .retrieve()
@@ -184,7 +249,7 @@ public class DeepSeekService {
                 }
             }
         } catch (Exception e) {
-            log.warn("DeepSeek proxy call failed: {}", e.getMessage());
+            log.warn("DeepSeek proxy call ({}) failed: {}", uri, e.getMessage());
         }
         return null;
     }

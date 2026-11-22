@@ -139,4 +139,67 @@ class DeepSeekServiceTest {
         assertEquals("Cháu rất vui khi thấy bác khỏe khoắn hôm nay ạ!", analysis);
         server.verify();
     }
+
+    @Test
+    void analyzeMedicineImageCallsChatVisionWithAntiHallucinationPromptAndBase64() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("http://localhost:8001");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        DeepSeekService deepSeekService = new DeepSeekService(
+                builder.build(),
+                true,
+                false,
+                objectMapper
+        );
+
+        server.expect(requestTo("http://localhost:8001/chat-vision"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(request -> {
+                    JsonNode root = objectMapper.readTree(request.getBody().toString());
+                    String systemPrompt = root.path("system_prompt").asText();
+                    String message = root.path("message").asText();
+
+                    assertEquals("iVBORw0KGgo=", root.path("image_base64").asText());
+                    assertEquals("image/png", root.path("image_mime_type").asText());
+                    assertTrue(systemPrompt.contains("TUYỆT ĐỐI KHÔNG tự ý suy đoán"));
+                    assertTrue(systemPrompt.contains("115"));
+                    assertTrue(systemPrompt.contains("Cụ Ba"));
+                    assertTrue(message.contains("Thuốc này uống lúc nào"));
+                    assertFalse(root.path("thinking_enabled").asBoolean(true));
+                })
+                .andRespond(withSuccess(
+                        "{\"response\":\"Dạ đây là thuốc Paracetamol 500mg ạ.\"}",
+                        MediaType.APPLICATION_JSON
+                ));
+
+        String reply = deepSeekService.analyzeMedicineImage(
+                "Thuốc này uống lúc nào",
+                "Cụ Ba",
+                "iVBORw0KGgo=",
+                "image/png",
+                List.of()
+        );
+        assertEquals("Dạ đây là thuốc Paracetamol 500mg ạ.", reply);
+        server.verify();
+    }
+
+    @Test
+    void analyzeMedicineImageReturnsNullOnProxyFailureOrBlankImage() {
+        RestClient.Builder builder = RestClient.builder().baseUrl("http://localhost:8001");
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        DeepSeekService deepSeekService = new DeepSeekService(
+                builder.build(),
+                true,
+                false,
+                objectMapper
+        );
+
+        assertNull(deepSeekService.analyzeMedicineImage("Thuốc gì?", "Cụ Ba", "   ", "image/png", List.of()));
+
+        server.expect(requestTo("http://localhost:8001/chat-vision"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+        assertNull(deepSeekService.analyzeMedicineImage("Thuốc gì?", "Cụ Ba", "iVBORw0KGgo=", "image/png", List.of()));
+        server.verify();
+    }
 }
