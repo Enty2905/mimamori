@@ -34,6 +34,13 @@ import {
 import { CaregiverHeader } from '../../components/caregiver/CaregiverHeader';
 import { CaregiverMedicationFormModal } from '../../components/caregiver/CaregiverMedicationFormModal';
 import { CaregiverConditionFormModal } from '../../components/caregiver/CaregiverConditionFormModal';
+import {
+  CaregiverRoutineModal,
+  DailyRoutineOverviewDto,
+  formatRoutineTimesSummary,
+  getSleepStatusMeta,
+} from '../../components/caregiver/CaregiverRoutineModal';
+import { resolveWaterMetrics } from '../../core/routines/useCareRoutineStore';
 import { EmptyState } from '../../components/EmptyState';
 
 type MainTabMode = 'schedule' | 'prescriptions' | 'conditions';
@@ -92,6 +99,8 @@ export const CaregiverMedicationScreen: React.FC = () => {
   const [editingMedication, setEditingMedication] = useState<MedicationDto | null>(null);
   const [conditionModalVisible, setConditionModalVisible] = useState(false);
   const [editingCondition, setEditingCondition] = useState<HealthConditionDto | null>(null);
+  const [routineOverview, setRoutineOverview] = useState<DailyRoutineOverviewDto | null>(null);
+  const [routineModalVisible, setRoutineModalVisible] = useState(false);
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
@@ -108,11 +117,14 @@ export const CaregiverMedicationScreen: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      const [todayRes, historyRes, medsRes, condRes] = await Promise.all([
+      const [todayRes, historyRes, medsRes, condRes, routineRes] = await Promise.all([
         apiClient<MedicationLogDto[]>(`/api/medications/today?elderlyId=${elderlyId}`),
         apiClient<MedicationLogDto[]>(`/api/medications/history?elderlyId=${elderlyId}`),
         apiClient<MedicationDto[]>(`/api/medications?elderlyId=${elderlyId}`),
         apiClient<HealthConditionDto[]>(`/api/health-conditions?elderlyId=${elderlyId}`),
+        apiClient<DailyRoutineOverviewDto>(`/api/routines/today?elderlyId=${elderlyId}`).catch(
+          () => null
+        ),
       ]);
 
       if (reqId !== fetchSeqRef.current) return;
@@ -121,6 +133,9 @@ export const CaregiverMedicationScreen: React.FC = () => {
       setHistoryLogs(historyRes.success && Array.isArray(historyRes.data) ? historyRes.data : []);
       setMedications(medsRes.success && Array.isArray(medsRes.data) ? medsRes.data : []);
       setConditions(condRes.success && Array.isArray(condRes.data) ? condRes.data : []);
+      if (routineRes && routineRes.success && routineRes.data) {
+        setRoutineOverview(routineRes.data);
+      }
 
       const now = new Date();
       setTodayDate(startOfLocalDay(now));
@@ -149,6 +164,7 @@ export const CaregiverMedicationScreen: React.FC = () => {
           setHistoryLogs([]);
           setMedications([]);
           setConditions([]);
+          setRoutineOverview(null);
           return;
         }
 
@@ -200,6 +216,14 @@ export const CaregiverMedicationScreen: React.FC = () => {
       cancelled = true;
     };
   }, [selectedElderlyId, loadDataForElderly, members.length, syncMembersAndData]);
+
+  useEffect(() => {
+    if (selectedElderlyId === null) return;
+    const intervalId = setInterval(() => {
+      loadDataForElderly(selectedElderlyId);
+    }, 10000);
+    return () => clearInterval(intervalId);
+  }, [selectedElderlyId, loadDataForElderly]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -947,6 +971,105 @@ export const CaregiverMedicationScreen: React.FC = () => {
                 </View>
               </View>
 
+              {/* Daily Routine (Water & Sleep) Summary Card */}
+              {(() => {
+                const water = resolveWaterMetrics(routineOverview);
+                const waterTimesText = formatRoutineTimesSummary(
+                  routineOverview?.waterReminderTimes,
+                  routineOverview?.waterEnabled ?? true
+                );
+                const sleepMeta = getSleepStatusMeta(routineOverview);
+                const bedtimeStr = routineOverview?.bedtimeTime || '21:30';
+                const wakeupStr = routineOverview?.wakeupTime || '06:00';
+
+                return (
+                  <View style={styles.routineSummaryCard}>
+                    <View style={styles.routineCardHeader}>
+                      <View style={styles.routineTitleWrap}>
+                        <Feather name="sun" size={17} color={colors.primary} />
+                        <Text style={[styles.routineCardTitle, { fontSize: fs(15) }]}>
+                          Lịch Nước uống & Giấc ngủ
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.routineSetupBtn}
+                        onPress={() => setRoutineModalVisible(true)}
+                        activeOpacity={0.8}
+                      >
+                        <Feather name="sliders" size={13} color={colors.primaryDark} />
+                        <Text style={[styles.routineSetupBtnText, { fontSize: fs(12.5) }]}>
+                          Thiết lập
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.routineItemBox}>
+                      <View style={styles.routineItemTopRow}>
+                        <View style={styles.routineItemLabelRow}>
+                          <Feather name="droplet" size={14} color="#0284C7" />
+                          <Text style={[styles.routineItemLabel, { fontSize: fs(13.5) }]}>
+                            Nước lọc ({water.cupMl}ml/ly)
+                          </Text>
+                        </View>
+                        <Text style={[styles.routineWaterValue, { fontSize: fs(13.5), color: '#0369A1' }]}>
+                          {water.completedLitersLabel} / {water.targetLitersLabel} L ({water.completedCups}/{water.targetCups} ly)
+                        </Text>
+                      </View>
+                      <View style={[styles.routineProgressTrack, { backgroundColor: '#E0F2FE' }]}>
+                        <View
+                          style={[
+                            styles.routineProgressFill,
+                            { width: `${water.percent}%`, backgroundColor: '#0EA5E9' },
+                          ]}
+                        />
+                      </View>
+                      <Text style={[styles.routineSubMeta, { fontSize: fs(12), color: '#0369A1', fontWeight: '700' }]}>
+                        Đánh giá ngày: {water.evaluationText}
+                      </Text>
+                      <Text style={[styles.routineSubMeta, { fontSize: fs(12) }]}>
+                        Giờ nhắc: {waterTimesText}
+                      </Text>
+                    </View>
+
+                    <View style={styles.routineItemDivider} />
+
+                    <View style={styles.routineItemBox}>
+                      <View style={styles.routineItemTopRow}>
+                        <View style={styles.routineItemLabelRow}>
+                          <Feather name="moon" size={14} color={colors.accentDark} />
+                          <Text style={[styles.routineItemLabel, { fontSize: fs(13.5) }]}>
+                            Giấc ngủ
+                          </Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.routineSleepBadge,
+                            {
+                              backgroundColor: sleepMeta.bg,
+                              borderColor: sleepMeta.border,
+                            },
+                          ]}
+                        >
+                          <Feather name={sleepMeta.icon} size={12} color={sleepMeta.text} />
+                          <Text
+                            style={[
+                              styles.routineSleepBadgeText,
+                              { color: sleepMeta.text, fontSize: fs(11.5) },
+                            ]}
+                          >
+                            {sleepMeta.badgeLabel}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.routineSubMeta, { fontSize: fs(12.5) }]}>
+                        Đi ngủ {bedtimeStr} • Dậy {wakeupStr}
+                        {routineOverview?.sleepEnabled === false ? ' (Đang tắt nhắc)' : ''}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })()}
+
               {/* Sub-mode Toggle: Theo ngày | Lịch sử */}
               <View style={styles.subModeRow}>
                 <TouchableOpacity
@@ -1339,6 +1462,23 @@ export const CaregiverMedicationScreen: React.FC = () => {
             setEditingCondition(null);
           }}
           onSaved={() => loadDataForElderly(selectedElderlyId)}
+        />
+      )}
+
+      {/* Care Routine (Water & Sleep) Config Modal */}
+      {selectedElderlyId !== null && (
+        <CaregiverRoutineModal
+          visible={routineModalVisible}
+          elderlyId={selectedElderlyId}
+          elderlyName={activeElderlyName}
+          initialRoutine={routineOverview}
+          onClose={() => setRoutineModalVisible(false)}
+          onSaved={(updated) => {
+            if (updated) {
+              setRoutineOverview(updated);
+            }
+            loadDataForElderly(selectedElderlyId);
+          }}
         />
       )}
     </View>
@@ -2192,5 +2332,106 @@ const styles = StyleSheet.create({
   modalDateCountEmpty: {
     color: colors.textMuted,
     fontWeight: '500',
+  },
+  routineSummaryCard: {
+    marginHorizontal: 18,
+    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...shadows.subtle,
+  },
+  routineCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 12,
+  },
+  routineTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    minWidth: 0,
+  },
+  routineCardTitle: {
+    fontWeight: '800',
+    color: colors.textPrimary,
+    flexShrink: 1,
+  },
+  routineSetupBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 11,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    flexShrink: 0,
+  },
+  routineSetupBtnText: {
+    fontWeight: '800',
+    color: colors.primaryDark,
+  },
+  routineItemBox: {
+    gap: 6,
+  },
+  routineItemDivider: {
+    height: 1,
+    backgroundColor: colors.borderLight,
+    marginVertical: 10,
+  },
+  routineItemTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  routineItemLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  routineItemLabel: {
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  routineWaterValue: {
+    fontWeight: '800',
+    color: colors.primaryDark,
+    fontVariant: ['tabular-nums'],
+  },
+  routineProgressTrack: {
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceWarm,
+    overflow: 'hidden',
+  },
+  routineProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  routineSubMeta: {
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  routineSleepBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  routineSleepBadgeText: {
+    fontWeight: '700',
   },
 });

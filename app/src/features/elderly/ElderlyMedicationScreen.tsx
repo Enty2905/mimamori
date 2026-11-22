@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -19,30 +19,39 @@ import { useAccessibilityStore } from '../../core/accessibility/useAccessibility
 import { apiClient } from '../../core/api/client';
 import { StatusBadge, BadgeVariant } from '../../components/StatusBadge';
 import { EmptyState } from '../../components/EmptyState';
-
-interface MedicationLog {
-  id: number;
-  medicationId?: number;
-  medicationName: string;
-  dosage: string;
-  scheduledTime: string;
-  status: 'PENDING' | 'TAKEN' | 'MISSED' | 'SKIPPED';
-  instruction?: string;
-  actualTakenTime?: string;
-}
+import {
+  useCareRoutineStore,
+  extractHHmm,
+  resolveWaterMetrics,
+  type MedicationLog,
+} from '../../core/routines/useCareRoutineStore';
+import {
+  stopReminderSoundImmediately,
+  muteCurrentDueReminders,
+} from '../../core/routines/useElderlyReminderEngine';
+import { WaterFillCircle } from '../../components/WaterFillCircle';
 
 const PRESET_HOURS = ['07:00', '11:30', '18:00', '20:00'];
 
 export const ElderlyMedicationScreen: React.FC = () => {
   const { fs } = useAccessibilityStore();
-  const [logs, setLogs] = useState<MedicationLog[]>([]);
+
+  const logs = useCareRoutineStore((s) => s.todayMeds);
+  const todayRoutine = useCareRoutineStore((s) => s.todayRoutine);
+  const storeLoading = useCareRoutineStore((s) => s.loading);
+  const lastSyncedAt = useCareRoutineStore((s) => s.lastSyncedAt);
+  const confirmingKey = useCareRoutineStore((s) => s.confirmingKey);
+  const clockHHmm = useCareRoutineStore((s) => s.clockHHmm);
+  const fetchElderlyTodayData = useCareRoutineStore((s) => s.fetchElderlyTodayData);
+  const confirmMedicationLog = useCareRoutineStore((s) => s.confirmMedicationLog);
+  const confirmRoutineLog = useCareRoutineStore((s) => s.confirmRoutineLog);
+  const quickAddWater = useCareRoutineStore((s) => s.quickAddWater);
+
   const [historyLogs, setHistoryLogs] = useState<MedicationLog[]>([]);
   const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [savingMed, setSavingMed] = useState(false);
-  const [confirmingId, setConfirmingId] = useState<number | null>(null);
 
   // New med form state
   const [medName, setMedName] = useState('');
@@ -50,16 +59,10 @@ export const ElderlyMedicationScreen: React.FC = () => {
   const [scheduledHour, setScheduledHour] = useState('08:00');
   const [instruction, setInstruction] = useState('Sau khi ăn 15 phút');
 
-  const fetchSchedule = async () => {
+  const fetchSchedule = async (silent = false) => {
     try {
-      const res = await apiClient<MedicationLog[]>('/api/medications/today');
-      if (res.success && res.data) {
-        setLogs(res.data);
-      }
-    } catch {
-      // Handled
+      await fetchElderlyTodayData(silent);
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };
@@ -76,38 +79,52 @@ export const ElderlyMedicationScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchSchedule();
+    fetchSchedule(lastSyncedAt !== null);
     fetchHistory();
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
     if (activeTab === 'today') {
-      fetchSchedule();
+      fetchSchedule(true);
     } else {
       fetchHistory().then(() => setRefreshing(false));
     }
   };
 
   const handleConfirm = async (logId: number) => {
+    stopReminderSoundImmediately();
+    muteCurrentDueReminders('MEDICATION');
     try {
-      setConfirmingId(logId);
-      const res = await apiClient(`/api/medications/logs/${logId}/confirm`, {
-        method: 'POST',
-        body: JSON.stringify({
-          status: 'TAKEN',
-          note: 'Xác nhận uống thuốc từ danh sách thuốc',
-        }),
-      });
-      if (res.success) {
+      const ok = await confirmMedicationLog(logId, 'Xác nhận uống thuốc từ danh sách thuốc');
+      if (ok) {
         Alert.alert('Thành công', 'Đã ghi nhận cữ thuốc này đã uống!');
-        fetchSchedule();
         fetchHistory();
       }
     } catch (err: any) {
       Alert.alert('Thông báo', err.message || 'Không thể xác nhận');
-    } finally {
-      setConfirmingId(null);
+    }
+  };
+
+  const handleQuickWaterTap = async () => {
+    stopReminderSoundImmediately();
+    muteCurrentDueReminders('WATER');
+    try {
+      const dueWaterSlot = todayRoutine?.waterEnabled
+        ? [...(todayRoutine.logs ?? [])].reverse().find((l) => {
+            if (l.routineType !== 'WATER' || l.status !== 'PENDING') return false;
+            const hhmm = extractHHmm(l.scheduledTime);
+            return Boolean(hhmm && hhmm <= clockHHmm);
+          })
+        : undefined;
+
+      if (dueWaterSlot) {
+        await confirmRoutineLog(dueWaterSlot.id, 'Uống thêm 1 ly nước từ màn hình Sức khỏe & Thuốc');
+      } else {
+        await quickAddWater();
+      }
+    } catch (err: any) {
+      Alert.alert('Thông báo', err?.message || 'Không thể ghi nhận ly nước');
     }
   };
 
@@ -125,7 +142,7 @@ export const ElderlyMedicationScreen: React.FC = () => {
             try {
               await apiClient(`/api/medications/${medicationId}`, { method: 'DELETE' });
               Alert.alert('Đã xóa', 'Lịch thuốc đã được ngừng.');
-              fetchSchedule();
+              fetchSchedule(true);
             } catch (e: any) {
               Alert.alert('Lỗi', e.message || 'Không thể xóa thuốc');
             }
@@ -160,7 +177,7 @@ export const ElderlyMedicationScreen: React.FC = () => {
         setModalVisible(false);
         setMedName('');
         setDosage('');
-        fetchSchedule();
+        fetchSchedule(true);
       }
     } catch (err: any) {
       Alert.alert('Lỗi', err.message || 'Không thể lưu thuốc');
@@ -184,6 +201,18 @@ export const ElderlyMedicationScreen: React.FC = () => {
 
   const takenCount = logs.filter((l) => l.status === 'TAKEN').length;
   const adherencePercent = logs.length > 0 ? Math.round((takenCount / logs.length) * 100) : 100;
+  const loading = storeLoading && lastSyncedAt === null;
+
+  const nextWaterSlotTime = useMemo(() => {
+    const slot = todayRoutine?.logs?.find(
+      (l) => l.routineType === 'WATER' && l.status === 'PENDING'
+    );
+    return slot ? extractHHmm(slot.scheduledTime) : null;
+  }, [todayRoutine]);
+
+  const isAddingWater =
+    confirmingKey === 'WATER_QUICK_ADD' ||
+    Boolean(confirmingKey && confirmingKey.startsWith('WATER:'));
 
   return (
     <View style={styles.container}>
@@ -255,74 +284,126 @@ export const ElderlyMedicationScreen: React.FC = () => {
         >
           {activeTab === 'today' ? (
             <>
-              {/* Eldora Screen 3: Health Overview Card with Score Indicator */}
-              <View style={styles.healthOverviewCard}>
-                <View style={styles.overviewTopRow}>
-                  <Text style={[styles.overviewCardTitle, { fontSize: fs(15) }]}>
-                    Tổng quan sức khỏe hôm nay
-                  </Text>
-                  <View style={styles.statusBadgeSmall}>
-                    <Text style={styles.statusBadgeSmallText}>Tình trạng: Rất tốt</Text>
-                  </View>
-                </View>
-
-                <View style={styles.overviewBodyRow}>
-                  {/* Left: Eldora-Style Clean Adherence Indicator */}
-                  <View style={styles.scoreCol}>
-                    <View style={styles.circularScoreBox}>
-                      <Text style={[styles.scoreNumber, { fontSize: fs(21) }]}>
-                        {adherencePercent}%
+              {/* Eldora Screen 3: Health Overview Card with Real Caregiver-Configured Routine Metrics */}
+              {(() => {
+                const water = resolveWaterMetrics(todayRoutine);
+                return (
+                  <View style={styles.healthOverviewCard}>
+                    <View style={styles.overviewTopRow}>
+                      <Text style={[styles.overviewCardTitle, { fontSize: fs(15) }]}>
+                        Tổng quan sức khỏe hôm nay
                       </Text>
+                      <View style={styles.hydrationBadgeSmall}>
+                        <Text style={styles.hydrationBadgeSmallText}>
+                          {water.status === 'TARGET_ACHIEVED'
+                            ? 'Đủ nước ngày'
+                            : water.status === 'MINIMUM_MET'
+                              ? 'Đạt 1.3L+'
+                              : todayRoutine?.sleepStatus === 'COMPLETED'
+                                ? 'Đã đi ngủ'
+                                : 'Đang theo dõi'}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={[styles.scoreLabel, { fontSize: fs(11) }]}>
-                      Uống đúng giờ
-                    </Text>
+
+                    <View style={styles.overviewBodyRow}>
+                      {/* Left: Ocean-Blue Rising Water-Level Circle */}
+                      <View style={styles.scoreCol}>
+                        <WaterFillCircle
+                          percent={water.percent}
+                          completedMl={water.completedMl}
+                          targetMl={water.targetMl}
+                          size={88}
+                        />
+                        <Text style={[styles.waterCircleLabel, { fontSize: fs(11) }]}>
+                          Nước lọc hôm nay
+                        </Text>
+                      </View>
+
+                      {/* Right: Real Caregiver-Configured Metrics synced with useCareRoutineStore */}
+                      <View style={styles.metricsCol}>
+                        {/* 1. Giấc ngủ */}
+                        <View style={styles.metricItemRow}>
+                          <View style={[styles.metricIconWrap, { backgroundColor: '#EEF0FB' }]}>
+                            <Feather name="moon" size={14} color="#4F46E5" />
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={[styles.metricLabel, { fontSize: fs(11) }]}>Giấc ngủ</Text>
+                            <Text style={[styles.metricVal, { fontSize: fs(12.5) }]}>
+                              {todayRoutine
+                                ? `Ngủ ${todayRoutine.bedtimeTime} • Dậy ${todayRoutine.wakeupTime} (${todayRoutine.sleepTargetHours}h)`
+                                : 'Chưa có lịch ngủ'}
+                            </Text>
+                            <Text style={[styles.metricSubText, { fontSize: fs(11) }]}>
+                              {!todayRoutine
+                                ? 'Đang đồng bộ từ gia đình'
+                                : !todayRoutine.sleepEnabled
+                                  ? 'Đang tắt nhắc ngủ'
+                                  : todayRoutine.sleepStatus === 'COMPLETED'
+                                    ? 'Đã đi ngủ'
+                                    : 'Chờ đến giờ ngủ'}
+                              {todayRoutine?.lastNightSleepQuality
+                                ? ` • Ngủ qua: ${todayRoutine.lastNightSleepQuality}`
+                                : ''}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* 2. Nước uống */}
+                        <View style={styles.metricItemRow}>
+                          <View style={[styles.metricIconWrap, { backgroundColor: '#E0F2FE' }]}>
+                            <Feather name="droplet" size={14} color="#0284C7" />
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={[styles.metricLabel, { fontSize: fs(11) }]}>
+                              Nước lọc ({water.cupMl}ml/ly)
+                            </Text>
+                            <Text style={[styles.metricVal, { fontSize: fs(12.5), color: '#0369A1' }]}>
+                              {water.completedLitersLabel} / {water.targetLitersLabel} L ({water.completedCups}/{water.targetCups} ly)
+                            </Text>
+                            <Text style={[styles.metricSubText, { fontSize: fs(11) }]}>
+                              {!todayRoutine?.waterEnabled
+                                ? 'Đang tắt nhắc nước'
+                                : nextWaterSlotTime
+                                  ? `Nhắc tiếp: ${nextWaterSlotTime} • ${water.evaluationText}`
+                                  : water.evaluationText}
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.quickWaterPill}
+                            onPress={handleQuickWaterTap}
+                            disabled={isAddingWater}
+                            activeOpacity={0.75}
+                            accessibilityRole="button"
+                            accessibilityLabel="Tôi đã uống thêm 1 ly nước"
+                          >
+                            {isAddingWater ? (
+                              <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                              <Text style={[styles.quickWaterPillText, { fontSize: fs(11.5) }]}>
+                                +1 ly
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+
+                        {/* 3. Lịch thuốc */}
+                        <View style={styles.metricItemRow}>
+                          <View style={[styles.metricIconWrap, { backgroundColor: colors.primaryLight }]}>
+                            <MaterialCommunityIcons name="pill" size={14} color={colors.primary} />
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={[styles.metricLabel, { fontSize: fs(11) }]}>Lịch thuốc</Text>
+                            <Text style={[styles.metricVal, { fontSize: fs(12.5) }]}>
+                              {takenCount} / {logs.length} cữ ({adherencePercent}%)
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
                   </View>
-
-                  {/* Right: Quick Daily Metrics with Vector Icons */}
-                  <View style={styles.metricsCol}>
-                    <View style={styles.metricItemRow}>
-                      <View style={styles.metricIconWrap}>
-                        <Feather name="trending-up" size={14} color={colors.primary} />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={[styles.metricLabel, { fontSize: fs(11) }]}>Vận động</Text>
-                        <Text style={[styles.metricVal, { fontSize: fs(12.5) }]}>3,200 bước</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.metricItemRow}>
-                      <View style={styles.metricIconWrap}>
-                        <Feather name="heart" size={14} color="#B83232" />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={[styles.metricLabel, { fontSize: fs(11) }]}>Nhịp tim</Text>
-                        <Text style={[styles.metricVal, { fontSize: fs(12.5) }]}>72 nhịp/phút</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.metricItemRow}>
-                      <View style={styles.metricIconWrap}>
-                        <Feather name="moon" size={14} color="#4F46E5" />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={[styles.metricLabel, { fontSize: fs(11) }]}>Giấc ngủ</Text>
-                        <Text style={[styles.metricVal, { fontSize: fs(12.5) }]}>7h 30m ngon giấc</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.metricItemRow}>
-                      <View style={styles.metricIconWrap}>
-                        <Feather name="droplet" size={14} color="#0284C7" />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={[styles.metricLabel, { fontSize: fs(11) }]}>Nước uống</Text>
-                        <Text style={[styles.metricVal, { fontSize: fs(12.5) }]}>5 / 8 cốc</Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              </View>
+                );
+              })()}
 
               {/* Section Title */}
               <View style={styles.medSectionHeaderRow}>
@@ -417,10 +498,10 @@ export const ElderlyMedicationScreen: React.FC = () => {
                               <TouchableOpacity
                                 style={styles.confirmFullBtn}
                                 onPress={() => handleConfirm(item.id)}
-                                disabled={confirmingId === item.id}
+                                disabled={confirmingKey === `MEDICATION:${item.id}`}
                                 activeOpacity={0.8}
                               >
-                                {confirmingId === item.id ? (
+                                {confirmingKey === `MEDICATION:${item.id}` ? (
                                   <ActivityIndicator color="#FFFFFF" size="small" />
                                 ) : (
                                   <View style={styles.btnInnerRow}>
@@ -729,6 +810,26 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.textPrimary,
   },
+  hydrationBadgeSmall: {
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  hydrationBadgeSmallText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0369A1',
+  },
+  waterCircleLabel: {
+    color: '#0369A1',
+    fontWeight: '800',
+    textAlign: 'center',
+    maxWidth: 96,
+    marginTop: 6,
+  },
   statusBadgeSmall: {
     backgroundColor: colors.success,
     paddingHorizontal: 8,
@@ -795,6 +896,26 @@ const styles = StyleSheet.create({
   metricVal: {
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  metricSubText: {
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  quickWaterPill: {
+    backgroundColor: '#0284C7',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minWidth: 58,
+    minHeight: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  quickWaterPillText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
   },
   medSectionHeaderRow: {
     flexDirection: 'row',

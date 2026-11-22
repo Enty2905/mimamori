@@ -33,6 +33,13 @@ import {
 } from '../../core/utils/caregiverHelpers';
 import { CaregiverHeader } from '../../components/caregiver/CaregiverHeader';
 import { FamilyMemberSelector } from '../../components/caregiver/FamilyMemberSelector';
+import {
+  CaregiverRoutineModal,
+  DailyRoutineOverviewDto,
+  formatRoutineTimesSummary,
+  getSleepStatusMeta,
+} from '../../components/caregiver/CaregiverRoutineModal';
+import { resolveWaterMetrics } from '../../core/routines/useCareRoutineStore';
 
 interface DashboardOverview {
   elderly: CaregiverUserDto & {
@@ -44,6 +51,7 @@ interface DashboardOverview {
   todayMedications: MedicationLogDto[];
   activeAlerts: CareAlertDto[];
   recentSummary?: DailySummaryDto | null;
+  todayRoutine?: DailyRoutineOverviewDto | null;
 }
 
 interface Props {
@@ -120,6 +128,8 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
   const { selectedElderlyId, setSelectedElderlyId, setSelectedElderlyName } = useCaregiverStore();
   const [statusByMemberId, setStatusByMemberId] = useState<Record<number, string | undefined>>({});
   const [data, setData] = useState<DashboardOverview | null>(null);
+  const [routineFallback, setRoutineFallback] = useState<DailyRoutineOverviewDto | null>(null);
+  const [routineModalVisible, setRoutineModalVisible] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -173,6 +183,18 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
           setData(res.data);
           setLastUpdated(formatNowHHMM());
           const elderlyId = res.data.elderly?.id;
+          const resolvedId = elderlyId ?? idToFetch;
+          if (res.data.todayRoutine) {
+            setRoutineFallback(res.data.todayRoutine);
+          } else if (resolvedId) {
+            apiClient<DailyRoutineOverviewDto>(`/api/routines/today?elderlyId=${resolvedId}`)
+              .then((routineRes) => {
+                if (routineRes.success && routineRes.data) {
+                  setRoutineFallback(routineRes.data);
+                }
+              })
+              .catch(() => {});
+          }
           if (elderlyId) {
             setStatusByMemberId((prev) => ({
               ...prev,
@@ -192,7 +214,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
         setRefreshing(false);
       }
     },
-    []
+    [setSelectedElderlyId]
   );
 
   const fetchFamilyMembers = useCallback(
@@ -233,6 +255,14 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
     if (selectedElderlyId !== null) {
       fetchOverview(selectedElderlyId, false);
     }
+  }, [selectedElderlyId, fetchOverview]);
+
+  useEffect(() => {
+    if (selectedElderlyId === null) return;
+    const intervalId = setInterval(() => {
+      fetchOverview(selectedElderlyId, true);
+    }, 10000);
+    return () => clearInterval(intervalId);
   }, [selectedElderlyId, fetchOverview]);
 
   const onRefresh = useCallback(() => {
@@ -337,7 +367,19 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
     (todayCheckIn?.aiAnalysisSummary ?? todayCheckIn?.aiAnalysis)?.trim() || '';
   const hasAiSummary = Boolean(checkinSummaryText || aiHealthNoteText || checkInAiText);
 
+  // Daily routine (Water & Sleep) metrics
+  const todayRoutine = data?.todayRoutine ?? routineFallback;
+  const waterMetrics = resolveWaterMetrics(todayRoutine);
+  const waterTimesSummary = formatRoutineTimesSummary(
+    todayRoutine?.waterReminderTimes,
+    todayRoutine?.waterEnabled ?? true
+  );
+  const sleepMeta = getSleepStatusMeta(todayRoutine);
+  const bedtimeLabel = todayRoutine?.bedtimeTime || '21:30';
+  const wakeupLabel = todayRoutine?.wakeupTime || '06:00';
+
   return (
+    <View style={styles.container}>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -609,6 +651,107 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                       Người thân chưa gửi thông tin thăm hỏi trong ngày.
                     </Text>
                   </>
+                )}
+              </View>
+            </View>
+
+            {/* D2. Sinh hoạt (Giấc ngủ & Nước uống) Card */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionTitleWrap}>
+                  <Feather name="sun" size={18} color={colors.primary} />
+                  <Text style={[styles.sectionTitle, { fontSize: fs(15.5) }]}>
+                    Sinh hoạt (Giấc ngủ & Nước uống)
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => setRoutineModalVisible(true)}
+                  style={styles.routineSetupBtn}
+                  activeOpacity={0.8}
+                >
+                  <Feather name="sliders" size={13} color={colors.primaryDark} />
+                  <Text style={[styles.routineSetupBtnText, { fontSize: fs(12.5) }]}>
+                    Thiết lập
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.routineItemBlock}>
+                <View style={styles.routineRowHeader}>
+                  <View style={styles.routineLabelWrap}>
+                    <Feather name="droplet" size={15} color="#0284C7" />
+                    <Text style={[styles.routineLabel, { fontSize: fs(14) }]}>
+                      Nước lọc ({waterMetrics.cupMl}ml/ly)
+                    </Text>
+                  </View>
+                  <Text style={[styles.routineWaterValue, { fontSize: fs(13.5), color: '#0369A1' }]}>
+                    {waterMetrics.completedLitersLabel} / {waterMetrics.targetLitersLabel} L ({waterMetrics.completedCups}/{waterMetrics.targetCups} ly)
+                  </Text>
+                </View>
+
+                <View style={[styles.progressBarBg, { backgroundColor: '#E0F2FE' }]}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      {
+                        width: `${waterMetrics.percent}%`,
+                        backgroundColor: '#0EA5E9',
+                      },
+                    ]}
+                  />
+                </View>
+
+                <Text style={[styles.routineSubText, { fontSize: fs(12), color: '#0369A1', fontWeight: '700' }]}>
+                  Đánh giá ngày: {waterMetrics.evaluationText}
+                </Text>
+                <Text style={[styles.routineSubText, { fontSize: fs(12) }]}>
+                  Giờ nhắc: {waterTimesSummary}
+                </Text>
+              </View>
+
+              <View style={styles.routineDivider} />
+
+              <View style={styles.routineItemBlock}>
+                <View style={styles.routineRowHeader}>
+                  <View style={styles.routineLabelWrap}>
+                    <Feather name="moon" size={15} color={colors.accentDark} />
+                    <Text style={[styles.routineLabel, { fontSize: fs(14) }]}>
+                      Giấc ngủ
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.routineSleepBadge,
+                      {
+                        backgroundColor: sleepMeta.bg,
+                        borderColor: sleepMeta.border,
+                      },
+                    ]}
+                  >
+                    <Feather name={sleepMeta.icon} size={12} color={sleepMeta.text} />
+                    <Text
+                      style={[
+                        styles.routineSleepBadgeText,
+                        { color: sleepMeta.text, fontSize: fs(11.5) },
+                      ]}
+                    >
+                      {sleepMeta.badgeLabel}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={[styles.routineSubText, { fontSize: fs(12.5) }]}>
+                  Đi ngủ {bedtimeLabel} • Dậy {wakeupLabel}
+                  {todayRoutine?.sleepTargetHours
+                    ? ` • Mục tiêu ${todayRoutine.sleepTargetHours} giờ`
+                    : ''}
+                  {todayRoutine?.sleepEnabled === false ? ' (Đang tắt nhắc)' : ''}
+                </Text>
+                {sleepMeta.isCompleted && Boolean(todayRoutine?.sleepCompletedAt) && (
+                  <Text style={[styles.routineDoneTimeText, { fontSize: fs(12) }]}>
+                    Xác nhận đi ngủ lúc {formatTimeHHMM(todayRoutine?.sleepCompletedAt)}
+                  </Text>
                 )}
               </View>
             </View>
@@ -890,6 +1033,23 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
         )}
       </View>
     </ScrollView>
+
+      {selectedElderlyId !== null && (
+        <CaregiverRoutineModal
+          visible={routineModalVisible}
+          elderlyId={selectedElderlyId}
+          elderlyName={elderlyName}
+          initialRoutine={todayRoutine}
+          onClose={() => setRoutineModalVisible(false)}
+          onSaved={(updated) => {
+            if (updated) {
+              setRoutineFallback(updated);
+            }
+            fetchOverview(selectedElderlyId, true);
+          }}
+        />
+      )}
+    </View>
   );
 };
 
@@ -1357,5 +1517,72 @@ const styles = StyleSheet.create({
   summaryEmptyText: {
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+
+  // D2. Sinh hoạt (Giấc ngủ & Nước uống)
+  routineSetupBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 11,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    flexShrink: 0,
+  },
+  routineSetupBtnText: {
+    fontWeight: '800',
+    color: colors.primaryDark,
+  },
+  routineItemBlock: {
+    gap: 6,
+  },
+  routineDivider: {
+    height: 1,
+    backgroundColor: colors.borderLight,
+    marginVertical: 12,
+  },
+  routineRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  routineLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  routineLabel: {
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  routineWaterValue: {
+    fontWeight: '800',
+    color: colors.primaryDark,
+    fontVariant: ['tabular-nums'],
+  },
+  routineSubText: {
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  routineDoneTimeText: {
+    color: colors.successText,
+    fontWeight: '600',
+  },
+  routineSleepBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  routineSleepBadgeText: {
+    fontWeight: '700',
   },
 });

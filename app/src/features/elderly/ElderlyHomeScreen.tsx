@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -17,15 +17,16 @@ import { useAccessibilityStore } from '../../core/accessibility/useAccessibility
 import { apiClient } from '../../core/api/client';
 import { SOSButton } from '../../components/SOSButton';
 import { getAvatarSource } from '../../core/theme/avatar';
-
-interface MedicationLog {
-  id: number;
-  medicationName: string;
-  dosage: string;
-  scheduledTime: string;
-  status: 'PENDING' | 'TAKEN' | 'MISSED' | 'SKIPPED';
-  instruction?: string;
-}
+import {
+  useCareRoutineStore,
+  extractHHmm,
+  resolveWaterMetrics,
+} from '../../core/routines/useCareRoutineStore';
+import {
+  useDueRemindersState,
+  stopReminderSoundImmediately,
+  type DueReminderItem,
+} from '../../core/routines/useElderlyReminderEngine';
 
 interface CheckInRecord {
   id: number;
@@ -37,6 +38,17 @@ interface CheckInRecord {
   aiAnalysis?: string;
 }
 
+interface UpcomingPreviewItem {
+  key: string;
+  kind: 'MEDICATION' | 'WATER' | 'SLEEP';
+  logId: number;
+  time: string;
+  kicker: string;
+  title: string;
+  subtitle: string;
+  confirmLabel: string;
+}
+
 interface Props {
   onNavigateTab: (tab: 'home' | 'companion' | 'medication' | 'checkin' | 'profile') => void;
 }
@@ -44,67 +56,198 @@ interface Props {
 export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
   const { user } = useAuthStore();
   const { fs } = useAccessibilityStore();
-  const [todayMeds, setTodayMeds] = useState<MedicationLog[]>([]);
-  const [todayCheckIn, setTodayCheckIn] = useState<CheckInRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [confirmingId, setConfirmingId] = useState<number | null>(null);
 
-  const fetchHomeData = async () => {
+  const todayMeds = useCareRoutineStore((s) => s.todayMeds);
+  const todayRoutine = useCareRoutineStore((s) => s.todayRoutine);
+  const storeLoading = useCareRoutineStore((s) => s.loading);
+  const lastSyncedAt = useCareRoutineStore((s) => s.lastSyncedAt);
+  const confirmingKey = useCareRoutineStore((s) => s.confirmingKey);
+  const fetchElderlyTodayData = useCareRoutineStore((s) => s.fetchElderlyTodayData);
+  const confirmMedicationLog = useCareRoutineStore((s) => s.confirmMedicationLog);
+  const confirmRoutineLog = useCareRoutineStore((s) => s.confirmRoutineLog);
+
+  const {
+    dueReminders,
+    activeAlarmReminder,
+    isAlarmMuted,
+    confirmReminder,
+    muteAlarm,
+    unmuteAlarm,
+  } = useDueRemindersState();
+
+  const [todayCheckIn, setTodayCheckIn] = useState<CheckInRecord | null>(null);
+  const [checkInLoaded, setCheckInLoaded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchHomeData = async (silent = false) => {
     try {
-      const [medsRes, checkInRes] = await Promise.allSettled([
-        apiClient<MedicationLog[]>('/api/medications/today'),
+      const [, checkInRes] = await Promise.allSettled([
+        fetchElderlyTodayData(silent),
         apiClient<CheckInRecord>('/api/checkins/today'),
       ]);
 
-      if (medsRes.status === 'fulfilled' && medsRes.value.success) {
-        setTodayMeds(medsRes.value.data || []);
-      }
       if (checkInRes.status === 'fulfilled' && checkInRes.value.success) {
         setTodayCheckIn(checkInRes.value.data || null);
       }
     } catch {
       // Handled
     } finally {
-      setLoading(false);
+      setCheckInLoaded(true);
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchHomeData();
+    fetchHomeData(lastSyncedAt !== null);
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchHomeData();
+    fetchHomeData(true);
   };
 
-  const handleConfirmMedication = async (logId: number) => {
+  const handleConfirmDueReminder = async (reminder: DueReminderItem) => {
     try {
-      setConfirmingId(logId);
-      const res = await apiClient(`/api/medications/logs/${logId}/confirm`, {
-        method: 'POST',
-        body: JSON.stringify({
-          status: 'TAKEN',
-          note: 'Xác nhận trực tiếp từ màn hình chính',
-        }),
-      });
-      if (res.success) {
-        Alert.alert('Đã ghi nhận', 'Cảm ơn cụ đã uống thuốc đúng giờ! Chúc cụ luôn dồi dào sức khỏe.');
-        fetchHomeData();
+      const ok = await confirmReminder(reminder);
+      if (ok) {
+        const successMsg =
+          reminder.kind === 'SLEEP'
+            ? 'Đã ghi nhận cụ chuẩn bị đi ngủ! Chúc cụ một giấc ngủ thật ngon và sâu giấc.'
+            : reminder.kind === 'WATER'
+              ? 'Đã ghi nhận cụ vừa uống nước! Cơ thể đủ nước sẽ giúp cụ khỏe khoắn hơn.'
+              : 'Cảm ơn cụ đã uống thuốc đúng giờ! Chúc cụ luôn dồi dào sức khỏe.';
+        Alert.alert('Đã ghi nhận', successMsg);
+      } else {
+        Alert.alert('Thông báo', 'Không thể xác nhận lúc này. Cụ vui lòng thử lại nhé.');
       }
     } catch (err: any) {
-      Alert.alert('Thông báo', err.message || 'Không thể xác nhận uống thuốc');
-    } finally {
-      setConfirmingId(null);
+      Alert.alert('Thông báo', err?.message || 'Không thể xác nhận lúc này.');
     }
   };
 
-  const pendingMeds = todayMeds.filter((m) => m.status === 'PENDING');
-  const nextPendingMed = pendingMeds[0];
+  const handleConfirmUpcomingItem = async (item: UpcomingPreviewItem) => {
+    stopReminderSoundImmediately();
+    try {
+      if (item.kind === 'MEDICATION') {
+        const ok = await confirmMedicationLog(item.logId, 'Xác nhận trực tiếp từ màn hình chính');
+        if (ok) {
+          Alert.alert('Đã ghi nhận', 'Cảm ơn cụ đã uống thuốc đúng giờ! Chúc cụ luôn dồi dào sức khỏe.');
+        }
+      } else {
+        const note = item.kind === 'SLEEP' ? 'Tôi đã đi ngủ đúng giờ' : 'Tôi đã uống nước đúng giờ';
+        const res = await confirmRoutineLog(item.logId, note);
+        if (res) {
+          Alert.alert(
+            'Đã ghi nhận',
+            item.kind === 'SLEEP'
+              ? 'Đã ghi nhận cụ chuẩn bị đi ngủ! Chúc cụ ngủ ngon ạ.'
+              : 'Đã ghi nhận cụ vừa uống nước! Rất tốt cho sức khỏe ạ.'
+          );
+        }
+      }
+    } catch (err: any) {
+      Alert.alert('Thông báo', err?.message || 'Không thể xác nhận lúc này.');
+    }
+  };
+
   const takenCount = todayMeds.filter((m) => m.status === 'TAKEN').length;
   const totalMeds = todayMeds.length;
+
+  const nextUpcomingItem = useMemo<UpcomingPreviewItem | null>(() => {
+    const candidates: UpcomingPreviewItem[] = [];
+
+    const nextMed = todayMeds.find((m) => m.status === 'PENDING');
+    if (nextMed) {
+      const time = extractHHmm(nextMed.scheduledTime) || 'Đúng giờ';
+      candidates.push({
+        key: `MEDICATION:${nextMed.id}`,
+        kind: 'MEDICATION',
+        logId: nextMed.id,
+        time,
+        kicker: `Cữ thuốc hôm nay • ${time}`,
+        title: nextMed.medicationName,
+        subtitle: `Liều dùng: ${nextMed.dosage}${nextMed.instruction ? ` • ${nextMed.instruction}` : ''}`,
+        confirmLabel: 'Tôi đã uống thuốc này',
+      });
+    }
+
+    if (todayRoutine?.waterEnabled) {
+      const nextWater = todayRoutine.logs?.find(
+        (l) => l.routineType === 'WATER' && l.status === 'PENDING'
+      );
+      if (nextWater) {
+        const time = extractHHmm(nextWater.scheduledTime) || 'Hôm nay';
+        const water = resolveWaterMetrics(todayRoutine);
+        candidates.push({
+          key: `WATER:${nextWater.id}`,
+          kind: 'WATER',
+          logId: nextWater.id,
+          time,
+          kicker: `Nhắc uống nước • ${time}`,
+          title: `Uống 1 ly nước lọc (${water.cupMl}ml)`,
+          subtitle: `${water.completedLitersLabel}/${water.targetLitersLabel} L (${water.completedCups}/${water.targetCups} ly hôm nay)`,
+          confirmLabel: 'Tôi đã uống',
+        });
+      }
+    }
+
+    if (todayRoutine?.sleepEnabled) {
+      const nextSleep = todayRoutine.logs?.find(
+        (l) => l.routineType === 'SLEEP' && l.status === 'PENDING'
+      );
+      if (nextSleep) {
+        const time = extractHHmm(nextSleep.scheduledTime) || todayRoutine.bedtimeTime;
+        candidates.push({
+          key: `SLEEP:${nextSleep.id}`,
+          kind: 'SLEEP',
+          logId: nextSleep.id,
+          time,
+          kicker: `Giờ nghỉ ngơi • ${time}`,
+          title: 'Chuẩn bị đi ngủ',
+          subtitle: `Ngủ ${todayRoutine.bedtimeTime} • Dậy ${todayRoutine.wakeupTime} (${todayRoutine.sleepTargetHours}h)`,
+          confirmLabel: 'Tôi đã đi ngủ',
+        });
+      }
+    }
+
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => a.time.localeCompare(b.time));
+    return candidates[0];
+  }, [todayMeds, todayRoutine]);
+
+  const nextPendingWaterTime = useMemo(() => {
+    const slot = todayRoutine?.logs?.find(
+      (l) => l.routineType === 'WATER' && l.status === 'PENDING'
+    );
+    return slot ? extractHHmm(slot.scheduledTime) : null;
+  }, [todayRoutine]);
+
+  const isInitialLoading = (storeLoading || !checkInLoaded) && lastSyncedAt === null;
+
+  const getDueCardPalette = (kind: DueReminderItem['kind']) => {
+    if (kind === 'WATER') {
+      return {
+        bg: '#EAF4FB',
+        border: '#60A5FA',
+        badgeBg: '#0284C7',
+        titleColor: '#0C4A6E',
+      };
+    }
+    if (kind === 'SLEEP') {
+      return {
+        bg: '#EEF0FB',
+        border: '#818CF8',
+        badgeBg: '#4F46E5',
+        titleColor: '#312E81',
+      };
+    }
+    return {
+      bg: '#FEF3E7',
+      border: '#F59E0B',
+      badgeBg: '#D97706',
+      titleColor: '#78350F',
+    };
+  };
 
   return (
     <ScrollView
@@ -145,7 +288,112 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
         <SOSButton emergencyContactName="Con gái (Nguyễn Thị Hoa)" />
       </View>
 
-      {loading ? (
+      {/* 2b. Prominent Due Reminder Alert Card (Water / Medication / Sleep) */}
+      {activeAlarmReminder && (() => {
+        const palette = getDueCardPalette(activeAlarmReminder.kind);
+        const isConfirmingDue = confirmingKey === activeAlarmReminder.key;
+
+        return (
+          <View style={styles.sectionWrap}>
+            <View
+              style={[
+                styles.dueAlertCard,
+                { backgroundColor: palette.bg, borderColor: palette.border },
+              ]}
+              accessibilityRole="alert"
+            >
+              <View style={styles.dueAlertHeader}>
+                <View style={[styles.dueBellBadge, { backgroundColor: palette.badgeBg }]}>
+                  <Feather
+                    name={isAlarmMuted ? 'bell-off' : 'volume-2'}
+                    size={16}
+                    color="#FFFFFF"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.dueBellBadgeText, { fontSize: fs(12) }]}>
+                    {activeAlarmReminder.title}
+                  </Text>
+                </View>
+
+                <View style={styles.dueTimePill}>
+                  <Feather name="clock" size={13} color={palette.titleColor} style={{ marginRight: 4 }} />
+                  <Text style={[styles.dueTimeText, { color: palette.titleColor, fontSize: fs(13) }]}>
+                    {activeAlarmReminder.scheduledTime}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={[styles.dueSubtitle, { fontSize: fs(16) }]}>
+                {activeAlarmReminder.subtitle}
+              </Text>
+
+              {dueReminders.length > 1 && (
+                <View style={styles.dueExtraBox}>
+                  <Text style={[styles.dueExtraLabel, { fontSize: fs(12) }]}>
+                    Còn {dueReminders.length - 1} lời nhắc đến giờ khác:
+                  </Text>
+                  <View style={styles.dueExtraChips}>
+                    {dueReminders.slice(1, 3).map((extra) => (
+                      <View key={extra.key} style={styles.dueExtraChip}>
+                        <Text style={[styles.dueExtraChipText, { fontSize: fs(11.5) }]}>
+                          {extra.scheduledTime} •{' '}
+                          {extra.kind === 'MEDICATION'
+                            ? 'Uống thuốc'
+                            : extra.kind === 'WATER'
+                              ? 'Uống nước'
+                              : 'Đi ngủ'}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.dueActionsRow}>
+                <TouchableOpacity
+                  style={styles.duePrimaryBtn}
+                  onPress={() => handleConfirmDueReminder(activeAlarmReminder)}
+                  disabled={isConfirmingDue}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel={activeAlarmReminder.confirmLabel}
+                >
+                  {isConfirmingDue ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <View style={styles.duePrimaryBtnInner}>
+                      <Feather name="check-circle" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                      <Text style={[styles.duePrimaryBtnText, { fontSize: fs(17) }]}>
+                        {activeAlarmReminder.confirmLabel}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.dueMuteBtn}
+                  onPress={isAlarmMuted ? unmuteAlarm : muteAlarm}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={isAlarmMuted ? 'Bật chuông' : 'Tắt chuông'}
+                >
+                  <Feather
+                    name={isAlarmMuted ? 'volume-2' : 'volume-x'}
+                    size={16}
+                    color={colors.textPrimary}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={[styles.dueMuteBtnText, { fontSize: fs(12.5) }]}>
+                    {isAlarmMuted ? 'Bật chuông' : 'Tắt chuông'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        );
+      })()}
+
+      {isInitialLoading ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { fontSize: fs(14) }]}>
@@ -295,7 +543,7 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
             </View>
           </View>
 
-          {/* 5. Upcoming (Sắp tới - Cữ thuốc hoặc sự kiện) */}
+          {/* 5. Upcoming (Sắp tới - Thuốc, Nước uống & Giấc ngủ từ Store) */}
           <View style={styles.sectionWrap}>
             <View style={styles.sectionHeaderRow}>
               <Text style={[styles.sectionTitle, { fontSize: fs(17) }]}>Sắp tới</Text>
@@ -304,37 +552,52 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
               </TouchableOpacity>
             </View>
 
-            {nextPendingMed ? (
+            {nextUpcomingItem ? (
               <View style={styles.upcomingCard}>
                 <View style={styles.upcomingIconCircle}>
-                  <Feather name="clock" size={22} color={colors.primary} />
+                  <Feather
+                    name={
+                      nextUpcomingItem.kind === 'WATER'
+                        ? 'droplet'
+                        : nextUpcomingItem.kind === 'SLEEP'
+                          ? 'moon'
+                          : 'clock'
+                    }
+                    size={22}
+                    color={
+                      nextUpcomingItem.kind === 'WATER'
+                        ? '#0284C7'
+                        : nextUpcomingItem.kind === 'SLEEP'
+                          ? '#4F46E5'
+                          : colors.primary
+                    }
+                  />
                 </View>
 
                 <View style={styles.upcomingTextCol}>
                   <Text style={[styles.upcomingTime, { fontSize: fs(13) }]}>
-                    Cữ thuốc hôm nay • {nextPendingMed.scheduledTime ? nextPendingMed.scheduledTime.slice(0, 5) : 'Đúng giờ'}
+                    {nextUpcomingItem.kicker}
                   </Text>
                   <Text style={[styles.upcomingMedName, { fontSize: fs(16) }]}>
-                    {nextPendingMed.medicationName}
+                    {nextUpcomingItem.title}
                   </Text>
                   <Text style={[styles.upcomingMedDose, { fontSize: fs(12.5) }]}>
-                    Liều dùng: {nextPendingMed.dosage}
-                    {nextPendingMed.instruction ? ` • ${nextPendingMed.instruction}` : ''}
+                    {nextUpcomingItem.subtitle}
                   </Text>
 
                   <TouchableOpacity
                     style={styles.upcomingConfirmBtn}
-                    onPress={() => handleConfirmMedication(nextPendingMed.id)}
-                    disabled={confirmingId === nextPendingMed.id}
+                    onPress={() => handleConfirmUpcomingItem(nextUpcomingItem)}
+                    disabled={confirmingKey === nextUpcomingItem.key}
                     activeOpacity={0.8}
                   >
-                    {confirmingId === nextPendingMed.id ? (
+                    {confirmingKey === nextUpcomingItem.key ? (
                       <ActivityIndicator color="#FFFFFF" size="small" />
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Feather name="check" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
                         <Text style={[styles.upcomingConfirmBtnText, { fontSize: fs(13) }]}>
-                          Tôi đã uống thuốc này
+                          {nextUpcomingItem.confirmLabel}
                         </Text>
                       </View>
                     )}
@@ -348,7 +611,7 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
                 </View>
                 <View style={styles.allDoneTextCol}>
                   <Text style={[styles.allDoneTitle, { fontSize: fs(15) }]}>
-                    Đã hoàn thành toàn bộ cữ thuốc hôm nay
+                    Đã hoàn thành toàn bộ lịch hôm nay
                   </Text>
                   <Text style={[styles.allDoneSub, { fontSize: fs(12) }]}>
                     Cụ đã uống đủ {takenCount}/{totalMeds} cữ thuốc đúng giờ. Rất tuyệt vời ạ!
@@ -369,6 +632,58 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
                   </Text>
                 </View>
               </View>
+            )}
+
+            {/* Quick status preview for Water & Sleep synced from CareRoutineStore */}
+            {todayRoutine && (
+              <TouchableOpacity
+                style={styles.routinePreviewRow}
+                onPress={() => onNavigateTab('medication')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.routinePreviewItem}>
+                  <View style={[styles.routineMiniIcon, { backgroundColor: '#EAF4FB' }]}>
+                    <Feather name="droplet" size={15} color="#0284C7" />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[styles.routinePreviewLabel, { fontSize: fs(11.5) }]}>
+                      Nước lọc hôm nay
+                    </Text>
+                    <Text style={[styles.routinePreviewValue, { fontSize: fs(13), color: '#0369A1' }]}>
+                      {(() => {
+                        const water = resolveWaterMetrics(todayRoutine);
+                        return `${water.completedLitersLabel}/${water.targetLitersLabel} L (${water.completedCups}/${water.targetCups} ly)`;
+                      })()}
+                    </Text>
+                    <Text style={[styles.routinePreviewSub, { fontSize: fs(11) }]} numberOfLines={1}>
+                      {!todayRoutine.waterEnabled
+                        ? 'Đang tắt nhắc'
+                        : nextPendingWaterTime
+                          ? `Nhắc tiếp: ${nextPendingWaterTime}`
+                          : resolveWaterMetrics(todayRoutine).evaluationText}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.routinePreviewDivider} />
+
+                <View style={styles.routinePreviewItem}>
+                  <View style={[styles.routineMiniIcon, { backgroundColor: '#EEF0FB' }]}>
+                    <Feather name="moon" size={15} color="#4F46E5" />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={[styles.routinePreviewLabel, { fontSize: fs(11.5) }]}>
+                      Giấc ngủ
+                    </Text>
+                    <Text style={[styles.routinePreviewValue, { fontSize: fs(13) }]}>
+                      {todayRoutine.sleepStatus === 'COMPLETED' ? 'Đã đi ngủ' : `Ngủ ${todayRoutine.bedtimeTime}`}
+                    </Text>
+                    <Text style={[styles.routinePreviewSub, { fontSize: fs(11) }]} numberOfLines={1}>
+                      Dậy {todayRoutine.wakeupTime} • {todayRoutine.sleepTargetHours}h
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
             )}
           </View>
 
@@ -448,6 +763,115 @@ const styles = StyleSheet.create({
   },
   sosContainer: {
     marginBottom: 16,
+  },
+  dueAlertCard: {
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 2,
+    ...shadows.card,
+  },
+  dueAlertHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  dueBellBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  dueBellBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    letterSpacing: 0.4,
+  },
+  dueTimePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  dueTimeText: {
+    fontWeight: '800',
+  },
+  dueSubtitle: {
+    color: colors.textPrimary,
+    fontWeight: '800',
+    lineHeight: 23,
+    marginBottom: 12,
+  },
+  dueExtraBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+  },
+  dueExtraLabel: {
+    color: colors.textSecondary,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  dueExtraChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  dueExtraChip: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  dueExtraChipText: {
+    color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  dueActionsRow: {
+    gap: 10,
+  },
+  duePrimaryBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    minHeight: 54,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.subtle,
+  },
+  duePrimaryBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  duePrimaryBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
+  dueMuteBtn: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  dueMuteBtnText: {
+    color: colors.textPrimary,
+    fontWeight: '700',
   },
   centerLoading: {
     paddingVertical: 50,
@@ -677,6 +1101,48 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: colors.borderLight,
+  },
+  routinePreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...shadows.subtle,
+  },
+  routinePreviewItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  routineMiniIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  routinePreviewLabel: {
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  routinePreviewValue: {
+    color: colors.textPrimary,
+    fontWeight: '800',
+  },
+  routinePreviewSub: {
+    color: colors.textSecondary,
+  },
+  routinePreviewDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: colors.borderLight,
+    marginHorizontal: 10,
   },
   tipCard: {
     flexDirection: 'row',

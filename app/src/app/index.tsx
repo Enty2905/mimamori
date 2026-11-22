@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -14,9 +15,12 @@ import { colors, shadows } from '../core/theme/colors';
 import { useAuthStore } from '../core/auth/useAuthStore';
 import { useAccessibilityStore } from '../core/accessibility/useAccessibilityStore';
 import { useCaregiverStore } from '../core/caregiver/useCaregiverStore';
+import { useCareRoutineStore } from '../core/routines/useCareRoutineStore';
+import { useElderlyReminderEngine } from '../core/routines/useElderlyReminderEngine';
 import { apiClient } from '../core/api/client';
 import { CareAlertDto, isAlertResolved } from '../core/utils/caregiverHelpers';
 import { AuthScreen } from '../features/auth/AuthScreen';
+import { ElderlyReminderModalBar } from '../components/ElderlyReminderModalBar';
 
 // Elderly Screens
 import { ElderlyHomeScreen } from '../features/elderly/ElderlyHomeScreen';
@@ -39,6 +43,17 @@ export default function IndexRoute() {
   const [elderlyTab, setElderlyTab] = useState<'home' | 'medication' | 'companion' | 'checkin' | 'profile'>('home');
   const [caregiverTab, setCaregiverTab] = useState<'dashboard' | 'alerts' | 'medication' | 'family'>('dashboard');
   const [unresolvedAlertCount, setUnresolvedAlertCount] = useState(0);
+
+  const isElderlyAuthenticated = Boolean(isAuthenticated && user?.role === 'ELDERLY');
+  const confirmingKey = useCareRoutineStore((s) => s.confirmingKey);
+  const {
+    dueReminders,
+    activeAlarmReminder,
+    isAlarmMuted,
+    confirmReminder,
+    muteAlarm,
+    unmuteAlarm,
+  } = useElderlyReminderEngine(isElderlyAuthenticated);
 
   useEffect(() => {
     checkAuth();
@@ -102,6 +117,27 @@ export default function IndexRoute() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
+
+      {/* Persistent Reminder Bar when Elderly is on any tab other than Home */}
+      {isElderly && elderlyTab !== 'home' && activeAlarmReminder && (
+        <ElderlyReminderModalBar
+          reminder={activeAlarmReminder}
+          extraDueCount={Math.max(0, dueReminders.length - 1)}
+          isConfirming={confirmingKey === activeAlarmReminder.key}
+          isMuted={isAlarmMuted}
+          onConfirm={async (rem) => {
+            try {
+              const ok = await confirmReminder(rem);
+              if (!ok) {
+                Alert.alert('Thông báo', 'Không thể xác nhận lúc này. Cụ vui lòng thử lại nhé.');
+              }
+            } catch (err: any) {
+              Alert.alert('Thông báo', err?.message || 'Không thể xác nhận lúc này.');
+            }
+          }}
+          onToggleMute={isAlarmMuted ? unmuteAlarm : muteAlarm}
+        />
+      )}
 
       {/* Main Content Area */}
       <View style={styles.content}>
