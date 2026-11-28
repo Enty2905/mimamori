@@ -1,6 +1,8 @@
 import {create} from 'zustand';
 import Storage from 'expo-sqlite/kv-store';
-import {colors} from './colors';
+import {colors, darkColors} from './colors';
+import {useAccessibilityStore} from '../accessibility/useAccessibilityStore';
+import {useAuthStore} from '../auth/useAuthStore';
 type Preferences={darkMode:boolean;highContrast:boolean};
 const defaults:Preferences={darkMode:false,highContrast:false};
 export const useThemeStore=create<Preferences & {set:(values:Partial<Preferences>)=>void;load:()=>void}>((set,get)=>({
@@ -13,5 +15,15 @@ const high:typeof colors={...colors,textPrimary:'#16251C',textSecondary:'#273C2F
 const darkHigh:typeof colors={...dark,textPrimary:'#FFFFFF',textSecondary:'#FFFFFF',textMuted:'#F0F7F1',border:'#BDD1C1'};
 export function useColors(){
   const preferences=useThemeStore();
-  return preferences.darkMode?(preferences.highContrast?darkHigh:dark):(preferences.highContrast?high:colors);
+  const role=useAuthStore(state=>state.role);
+  if (!preferences.darkMode) return preferences.highContrast ? high : colors;
+  if (preferences.highContrast) return darkHigh;
+  return role === 'CAREGIVER' ? darkColors : dark;
+}
+
+export function useCaregiverTheme() {
+  const isDark = useThemeStore(state => state.darkMode);
+  const set = useThemeStore(state => state.set);
+  const fs = useAccessibilityStore(state => state.fs);
+  return { isDark, c: useColors(), fs, setCaregiverDarkMode: (darkMode: boolean) => set({darkMode}) };
 }

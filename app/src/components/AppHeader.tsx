@@ -93,6 +93,7 @@ const styles = StyleSheet.create({
   dateText: {
     color: colors.textSecondary,
     fontWeight: '500',
+    flexShrink: 1,
   },
   greetingTitle: {
     fontWeight: '800',

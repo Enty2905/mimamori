@@ -310,4 +310,3 @@ const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
     marginTop: 6,
   },
 });
-

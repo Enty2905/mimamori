@@ -71,4 +71,3 @@ const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
     borderColor: colors.background === baseColors.background ? '#FFFFFF' : colors.border,
   },
 });
-

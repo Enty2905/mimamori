@@ -1,0 +1,22 @@
+[
+  {
+    "doc_id": "emergency_guidance_01",
+    "title": "Đường dây nóng cấp cứu y tế 115 tại Việt Nam và dấu hiệu cần gọi ngay",
+    "category": "emergency_guidance",
+    "source": "Bộ Y tế Việt Nam - Thông tin đường dây nóng Cấp cứu y tế 115",
+    "updated_date": "2026-11-01",
+    "version": "1.0.0",
+    "review_status": "reviewed_official_hotline",
+    "content": "Số điện thoại cấp cứu y tế khẩn cấp toàn quốc tại Việt Nam là 115. Cần gọi ngay 115 và báo cho người thân khi người cao tuổi xuất hiện các dấu hiệu nguy hiểm như: đau tức ngực dữ dội, khó thở hoặc ngạt thở, ngất xỉu hoặc mất ý thức, té ngã nặng không đứng dậy được hoặc đập đầu, dấu hiệu đột quỵ (méo miệng, nói ngọng, yếu liệt tay chân một bên), hoặc chảy máu nhiều không cầm. Khi gọi 115, cần cung cấp rõ địa chỉ, số điện thoại liên hệ và tình trạng người bệnh."
+  },
+  {
+    "doc_id": "emergency_guidance_02",
+    "title": "Các bước giữ an toàn cho người cao tuổi trong lúc chờ cấp cứu 115",
+    "category": "emergency_guidance",
+    "source": "Mimamori Sample Emergency Preparedness Guide (Draft Pending Clinical Review)",
+    "updated_date": "2026-11-01",
+    "version": "1.0.0",
+    "review_status": "sample_educational_pending_review",
+    "content": "Trong lúc chờ xe cấp cứu 115 hoặc người thân đến hỗ trợ, người cao tuổi nên ngừng di chuyển, ngồi tựa hoặc nằm ở nơi thoáng an toàn, mở cửa nhà nếu có thể và giữ điện thoại bên cạnh. Không tự lái xe đến bệnh viện, không chờ đợi các triệu chứng nguy hiểm tự hết, và không tự ý dùng thuốc mới khi chưa có chỉ định y tế."
+  }
+]

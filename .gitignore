@@ -47,6 +47,9 @@ app/dist/
 .superdesign/improvements-*/*.png
 
 # Python / uv
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
 ai/.venv/
 ai/.pytest_cache/
 ai/.ruff_cache/
@@ -55,6 +58,7 @@ ai/**/__pycache__/
 ai/**/*.py[cod]
 ai/coverage.xml
 ai/.coverage
+deepseek/config.json
 
 # AI data and generated artifacts
 ai/datasets/*

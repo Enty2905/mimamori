@@ -10,6 +10,7 @@ export interface ApiResponse<T = unknown> {
 }
 export interface RequestOptions extends RequestInit {
   sessionOwner?: number;
+  timeoutMs?: number;
 }
 export class ApiError extends Error {
   constructor(
@@ -59,7 +60,7 @@ function baseUrl() {
 }
 async function wire(
   endpoint: string,
-  options: RequestInit,
+  options: RequestOptions,
   accessToken?: string,
 ) {
   if (!endpoint.startsWith("/api/") || endpoint.includes("://"))
@@ -68,14 +69,17 @@ async function wire(
   const abort = () => controller.abort();
   if (options.signal?.aborted) abort();
   options.signal?.addEventListener("abort", abort, { once: true });
-  const timer = setTimeout(abort, 12_000);
+  const { timeoutMs = 12_000, sessionOwner: _sessionOwner, ...request } = options;
+  const timer = setTimeout(abort, Math.max(1, Math.min(timeoutMs, 30_000)));
   try {
     const headers = new Headers(options.headers);
     if (!headers.has("Accept")) headers.set("Accept", "application/json");
-    headers.set("Content-Type", "application/json");
+    if (!(request.body instanceof FormData) && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
     if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     return await fetch(baseUrl() + endpoint, {
-      ...options,
+      ...request,
       headers,
       signal: controller.signal,
       credentials: "omit",

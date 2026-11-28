@@ -82,6 +82,7 @@ const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
+    paddingVertical: 10,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.15,
@@ -92,5 +93,7 @@ const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
     color: colors.textInverse,
     fontWeight: '700',
     letterSpacing: 0.3,
+    flexShrink: 1,
+    textAlign: 'center',
   },
 });

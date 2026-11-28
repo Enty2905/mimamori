@@ -3,6 +3,7 @@ package com.mimamori.agent.dto;
 import com.mimamori.conversation.dto.DailyCheckInDto;
 import com.mimamori.medication.dto.MedicationLogDto;
 import com.mimamori.notification.dto.CareAlertDto;
+import com.mimamori.routine.dto.DailyRoutineOverviewDto;
 import com.mimamori.userprofile.dto.UserDto;
 
 import java.util.List;
@@ -15,6 +16,7 @@ public class DashboardOverviewDto {
     private Double medicationAdherence;
     private List<CareAlertDto> activeAlerts;
     private DailySummaryDto recentSummary;
+    private DailyRoutineOverviewDto todayRoutine;
 
     public UserDto getElderly() { return elderly; }
     public void setElderly(UserDto elderly) { this.elderly = elderly; }
@@ -30,5 +32,7 @@ public class DashboardOverviewDto {
     public void setActiveAlerts(List<CareAlertDto> activeAlerts) { this.activeAlerts = activeAlerts; }
     public DailySummaryDto getRecentSummary() { return recentSummary; }
     public void setRecentSummary(DailySummaryDto recentSummary) { this.recentSummary = recentSummary; }
+    public DailyRoutineOverviewDto getTodayRoutine() { return todayRoutine; }
+    public void setTodayRoutine(DailyRoutineOverviewDto todayRoutine) { this.todayRoutine = todayRoutine; }
 }
 

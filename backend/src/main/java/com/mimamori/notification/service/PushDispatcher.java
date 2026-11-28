@@ -33,7 +33,7 @@ public class PushDispatcher {
                         jdbc.update("UPDATE notifications SET push_status='COMPLETE' WHERE id=?",id); continue;
                     }
                     routing.put("doseId",reference); routing.put("occurrenceId",doses.getFirst().get("occurrence_id").toString());
-                } else routing.put("alertId",reference);
+                } else if ("ALERT".equals(notification.get("type"))) routing.put("alertId",reference);
             }
             var devices = jdbc.queryForList("SELECT device_id,token FROM device_registrations WHERE user_id=?",userId);
             boolean complete = !devices.isEmpty();

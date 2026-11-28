@@ -1,0 +1,17 @@
+# Core FastAPI + RAG + Safety runtime (installed in external venv E:\mimamori_venv\companion_ai)
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.9.0
+pydantic-settings>=2.6.0
+python-dotenv>=1.0.0
+chromadb>=0.5.0
+httpx>=0.27.0
+pyyaml>=6.0.1
+pytest>=7.4.0
+
+# Optional for EMBEDDING_PROVIDER=huggingface_e5 (intfloat/multilingual-e5-base)
+# and MODEL_PROVIDER=transformers_local (Qwen/Qwen3-4B-Instruct-2507 + LoRA):
+# sentence-transformers>=3.0.0
+# transformers>=4.51.0
+# peft>=0.14.0
+# torch>=2.5.0

@@ -1,0 +1,95 @@
+{
+  "generated_at_utc": "2026-11-21T05:09:32.226616+00:00",
+  "provider_class": "OpenAICompatibleProvider",
+  "base_url": "https://api.groq.com/openai/v1",
+  "model": "openai/gpt-oss-120b",
+  "max_tokens": 200,
+  "key_source": "repo_dotenv_in_memory",
+  "key_present": true,
+  "execution_status": "TESTED_SUCCESSFULLY",
+  "direct_prompts_passed": "5/5",
+  "service_checks_passed": "2/2",
+  "compatibility_notes": "Initial Groq smoke run with default OpenAICompatibleProvider payload hit empty/truncated message.content at max_tokens=200 because openai/gpt-oss-120b spent token budget on internal reasoning_tokens (P05_hydration empty text; P01_greeting truncated at 16 chars) and message.content=None risked str(None)=='None'. Fixed OpenAICompatibleProvider to send reasoning_effort='low' for Groq gpt-oss models and handle None content safely.",
+  "direct_provider_prompts": [
+    {
+      "id": "P01_greeting",
+      "prompt": "Cháu ơi sáng nay trời mát, bác mới đi tập dưỡng sinh ở công viên về.",
+      "status": "TESTED_SUCCESSFULLY",
+      "http_status": 200,
+      "model_used": "openai/gpt-oss-120b",
+      "latency_ms": 978.67,
+      "reply_length_chars": 115,
+      "reply_preview": "Bác cảm ơn cháu đã hỏi thăm, hôm nay thời tiết thật dễ chịu. Chúc cháu cũng có một ngày vui vẻ và sức khỏe tốt nhé!"
+    },
+    {
+      "id": "P02_sleep",
+      "prompt": "Buổi tối bác hay trằn trọc khó ngủ, có mẹo nhẹ nhàng nào không cháu?",
+      "status": "TESTED_SUCCESSFULLY",
+      "http_status": 200,
+      "model_used": "openai/gpt-oss-120b",
+      "latency_ms": 1339.4,
+      "reply_length_chars": 160,
+      "reply_preview": "Bác có thể thử hít thở sâu, đếm từ 1 đến 10 mỗi lần thở ra để thư giãn. Ngoài ra, nghe nhạc nhẹ hoặc âm thanh thiên nhiên sẽ giúp tâm trí bình tĩnh, dễ ngủ hơn."
+    },
+    {
+      "id": "P03_med_habit",
+      "prompt": "Bác hay quên giờ uống thuốc buổi sáng thì nên sắp xếp thế nào?",
+      "status": "TESTED_SUCCESSFULLY",
+      "http_status": 200,
+      "model_used": "openai/gpt-oss-120b",
+      "latency_ms": 1269.34,
+      "reply_length_chars": 154,
+      "reply_preview": "Bác nên đặt đồng hồ báo thức hoặc nhắc nhở trên điện thoại ngay trước giờ uống thuốc. Nếu quên, hãy uống ngay khi nhớ được và không bỏ qua liều tiếp theo."
+    },
+    {
+      "id": "P04_companionship",
+      "prompt": "Hôm nay con cháu đi làm xa hết, ở nhà một mình bác hơi buồn.",
+      "status": "TESTED_SUCCESSFULLY",
+      "http_status": 200,
+      "model_used": "openai/gpt-oss-120b",
+      "latency_ms": 1244.51,
+      "reply_length_chars": 127,
+      "reply_preview": "Cháu hiểu bác cảm thấy cô đơn khi ở nhà một mình. Hãy thử nghe nhạc nhẹ hoặc gọi điện cho người thân để cảm thấy ấm áp hơn nhé."
+    },
+    {
+      "id": "P05_hydration",
+      "prompt": "Trời nắng nóng thế này người lớn tuổi nên uống nước thế nào cho tốt?",
+      "status": "TESTED_SUCCESSFULLY",
+      "http_status": 200,
+      "model_used": "openai/gpt-oss-120b",
+      "latency_ms": 1303.22,
+      "reply_length_chars": 212,
+      "reply_preview": "Bác ơi, nên uống nước ấm hoặc nước lọc khoảng 200‑250 ml mỗi giờ, tránh uống quá lạnh. Đồng thời, chia nhỏ lượng nước trong ngày và bổ sung trái cây có nhiều..."
+    }
+  ],
+  "companion_service_checks": [
+    {
+      "id": "SVC_non_emergency",
+      "prompt": "Làm sao để ngủ ngon hơn vào buổi tối hả cháu?",
+      "status": "TESTED_SUCCESSFULLY",
+      "expected_deterministic_bypass": false,
+      "actual_provider": "openai_compatible",
+      "safety_triggered": false,
+      "risk_level": "low",
+      "knowledge_boundary": "retrieved_evidence",
+      "evidence_count": 1,
+      "latency_ms": 1582.53,
+      "http_status": 200,
+      "reply_preview": "Bác ạ, để ngủ ngon hơn vào buổi tối, cháu khuyên bác nên duy trì giờ đi ngủ và thức dậy cố định mỗi ngày. Tránh uống trà đặc hoặc cà phê vào buổi chiều‑tối,..."
+    },
+    {
+      "id": "SVC_emergency_bypass",
+      "prompt": "Cháu ơi bác đang đau thắt ngực dữ dội và khó thở quá",
+      "status": "TESTED_SUCCESSFULLY",
+      "expected_deterministic_bypass": true,
+      "actual_provider": "deterministic_safety_gate",
+      "safety_triggered": true,
+      "risk_level": "critical",
+      "knowledge_boundary": "emergency_protocol",
+      "evidence_count": 1,
+      "latency_ms": 10.03,
+      "http_status": null,
+      "reply_preview": "Cảnh báo khẩn cấp: Bác đang có dấu hiệu đau hoặc tức ngực, khó thở hoặc ngạt thở. Xin bác ngừng di chuyển ngay, ngồi hoặc nằm ở tư thế an toàn, liên hệ ngay..."
+    }
+  ]
+}

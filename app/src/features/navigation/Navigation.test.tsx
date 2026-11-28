@@ -6,6 +6,9 @@ import {queryClient} from '../../core/api/queryClient';
 import {useAuthStore} from '../../core/auth/useAuthStore';
 import {careApi} from '../../core/api/careApi';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
+
+// This suite mounts the complete navigation tree and waits for several screens.
+jest.setTimeout(30_000);
 const user={id:1,username:'test_elder',fullName:'Synthetic Elder',email:'test@example.invalid',role:'ELDERLY' as const};
 jest.mock('../../core/api/careApi',()=>({careApi:{profile:jest.fn(),family:jest.fn(),overview:jest.fn(),alerts:jest.fn(async()=>[]),today:jest.fn(async()=>[]),history:jest.fn(async()=>[]),todayCheckin:jest.fn(async()=>null),medications:jest.fn(async()=>[])}}));
 jest.mock('../../core/api/conversationApi',()=>({conversationApi:{active:jest.fn(async()=>({id:1,title:'Test'})),messages:jest.fn(async()=>[])}}));

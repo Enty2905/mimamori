@@ -270,10 +270,15 @@ class RemediationIntegrationTest {
         assertEquals("",link.path("member").path("email").asText());
         mvc.perform(get("/api/medications?elderlyId="+elder.getId()).header("Authorization","Bearer "+outsiderToken)).andExpect(status().isForbidden());
         mvc.perform(get("/api/dashboard/overview?elderlyId="+elder.getId()).header("Authorization","Bearer "+outsiderToken)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/health-conditions").header("Authorization","Bearer "+outsiderToken)).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/health-conditions?elderlyId="+elder.getId()).header("Authorization","Bearer "+outsiderToken)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/routines/today?elderlyId="+elder.getId()).header("Authorization","Bearer "+outsiderToken)).andExpect(status().isForbidden());
         String accept="/api/family/link/"+link.path("relationshipId").asLong()+"/accept";
         mvc.perform(put(accept).header("Authorization","Bearer "+outsiderToken)).andExpect(status().isForbidden());
         mvc.perform(put(accept).header("Authorization","Bearer "+elderToken)).andExpect(status().isOk());
         mvc.perform(get("/api/medications?elderlyId="+elder.getId()).header("Authorization","Bearer "+outsiderToken)).andExpect(status().isOk());
+        mvc.perform(get("/api/health-conditions?elderlyId="+elder.getId()).header("Authorization","Bearer "+outsiderToken)).andExpect(status().isOk());
+        mvc.perform(get("/api/routines/today?elderlyId="+elder.getId()).header("Authorization","Bearer "+outsiderToken)).andExpect(status().isOk());
     }
 
     @Test

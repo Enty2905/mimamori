@@ -16,10 +16,22 @@ quản lý và xác nhận thuốc, lịch Quartz JDBC, cảnh báo và trò chu
 Dịch vụ RAG xử lý nguồn được duyệt, truy xuất Qdrant và fallback có giới hạn.
 Giao diện giữ nhận diện kem–xanh, hỗ trợ Việt/Nhật và cài đặt hiển thị.
 
+Bản tích hợp bổ sung avatar, màu tối cho người chăm sóc, API sinh hoạt, hồ sơ
+sức khỏe và API phiên âm từ GitHub. Luồng điều hướng và nhắc thuốc dùng cơ chế
+đã kiểm thử trên máy. Giao diện nhắc sinh hoạt và nhập giọng nói của nhánh
+GitHub chưa nối vào điều hướng này. Hỏi đáp qua ảnh thuốc và DeepSeek không
+được bật trong bản tích hợp. Tài liệu tính năng của nhánh GitHub nằm trong
+[tổng quan AI](docs/companion-ai-architecture.md) và
+[báo cáo giao diện](docs/frontend-report.md).
+
 ## Chuẩn bị môi trường
 
 Sao chép `.env.example` thành `.env` và điền các giá trị local cần thiết. Không
 commit `.env` hoặc thông tin bí mật.
+
+Flyway giữ V1–V5 của GitHub và chạy các migration từ bản local ở V6–V12.
+Database từng chạy migration V2–V8 của bản local 16/11 có lịch sử khác. Dùng
+schema mới khi thử bản tích hợp để giữ nguyên database cũ.
 
 ## Lệnh khởi tạo
 

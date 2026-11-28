@@ -47,6 +47,54 @@ export const colors = {
   warningLight: '#FEF6EC',
 };
 
+export const darkColors: typeof colors = {
+  // Minimalist Monochrome Neutral Dark Palette for young Caregivers
+  background: '#0B0B0D',      // Deep obsidian charcoal background
+  surface: '#141417',         // Clean dark slate-charcoal card surface
+  surfaceWarm: '#1C1C20',     // Elevated neutral container
+  surfaceMuted: '#242429',    // Subtle muted chip / divider background
+
+  primary: '#E4E4E7',         // Crisp minimalist zinc-white primary action
+  primaryDark: '#F4F4F6',     // High-contrast label on dark/primaryLight containers
+  primaryLight: '#242429',    // Neutral dark pill / active tab container
+
+  secondary: '#52525B',       // Restrained neutral zinc secondary
+  secondaryDark: '#D4D4D8',
+  secondaryLight: '#1C1C20',
+
+  accent: '#A1A1AA',          // Minimalist silver-zinc accent (lets alerts stand out)
+  accentDark: '#D4D4D8',
+  accentLight: '#1C1C20',
+
+  textPrimary: '#F4F4F6',     // Crisp off-white primary text
+  textSecondary: '#B4B4BC',   // Clear medium-light neutral metadata
+  textMuted: '#7E7E88',       // Subtle caption / hint text
+  textInverse: '#0B0B0D',     // Deep obsidian text on light primary buttons
+
+  border: '#2A2A32',          // Crisp neutral border
+  borderLight: '#222228',
+
+  // High-visibility vivid semantic status containers for Dark Mode
+  success: '#10241A',
+  successText: '#4ADE80',
+  successBorder: '#22C55E',
+
+  warning: '#2B1E0A',
+  warningText: '#FBBF24',
+  warningBorder: '#F59E0B',
+
+  danger: '#2A1215',
+  dangerText: '#FF6B6B',
+  dangerBorder: '#EF4444',
+
+  divider: '#222228',
+
+  cardBorder: '#2A2A32',
+  dangerLight: '#2A1215',
+  successLight: '#10241A',
+  warningLight: '#2B1E0A',
+};
+
 export const typography = {
   h1: {
     fontSize: 26,

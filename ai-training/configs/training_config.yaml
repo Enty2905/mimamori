@@ -1,0 +1,99 @@
+# Mimamori Companion AI - Training & QLoRA Configuration
+# Tuned for Free Google Colab NVIDIA Tesla T4 (15GB VRAM, Turing sm_75).
+
+experiment:
+  name: mimamori-qwen3-4b-companion-qlora
+  base_model_id: Qwen/Qwen3-4B-Instruct-2507
+  seed: 42
+
+hardware_target:
+  platform: google_colab_free_t4
+  gpu: NVIDIA Tesla T4
+  vram_gb: 15.0
+  compute_capability: "7.5"
+  supports_bf16: false
+  supports_flash_attention_2: false
+
+quantization:
+  load_in_4bit: true
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_compute_dtype: float16
+  bnb_4bit_use_double_quant: true
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  bias: none
+  task_type: CAUSAL_LM
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+
+training:
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  max_seq_length: 1024
+  fp16: true
+  bf16: false
+  optim: paged_adamw_8bit
+  gradient_checkpointing: true
+  gradient_checkpointing_kwargs:
+    use_reentrant: false
+  num_train_epochs: 3
+  learning_rate: 0.0002
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.05
+  weight_decay: 0.01
+  max_grad_norm: 0.3
+  logging_steps: 5
+  eval_strategy: steps
+  eval_steps: 10
+  save_strategy: steps
+  save_steps: 10
+  save_total_limit: 3
+  load_best_model_at_end: true
+  metric_for_best_model: eval_loss
+  greater_is_better: false
+  packing: false
+  resume_from_checkpoint: true
+  report_to: none
+
+t4_oom_fallback:
+  batch_size: 1
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 16
+  max_seq_length: 768
+  fp16: true
+  bf16: false
+  gradient_checkpointing: true
+  trigger_reason: "Use automatically when VRAM <= 15.5GB hits OOM or memory warning on Colab T4."
+
+paths:
+  drive_root: /content/drive/MyDrive/mimamori_companion_ai
+  drive_checkpoints_dir: /content/drive/MyDrive/mimamori_companion_ai/checkpoints
+  drive_final_adapter_dir: /content/drive/MyDrive/mimamori_companion_ai/adapters/qwen3-4b-companion-lora
+  drive_eval_outputs_dir: /content/drive/MyDrive/mimamori_companion_ai/eval_outputs
+  drive_processed_data_dir: /content/drive/MyDrive/mimamori_companion_ai/processed_data
+  local_raw_seed_file: datasets/raw/synthetic_companion_seed.jsonl
+  local_train_file: datasets/processed/train.jsonl
+  local_val_file: datasets/processed/val.jsonl
+  local_test_file: datasets/processed/test.jsonl
+  local_eval_benchmark_file: datasets/evaluation/eval_benchmark.jsonl
+  local_outputs_dir: outputs
+
+safety_and_review_gate:
+  require_human_review_before_production_training: true
+  allow_synthetic_seed_smoke_test: true
+  min_recommended_reviewed_examples: 200
+  notes: >
+    Current raw dataset (synthetic_companion_seed.jsonl) is a synthetic v1 seed
+    with reviewed=false. Only use it for pipeline validation and Colab smoke tests
+    until clinically/geriatric-reviewed dialogues are approved.

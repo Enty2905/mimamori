@@ -1,0 +1,32 @@
+# Python & test caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Model weights, checkpoints, and local HF caches (never commit large binaries)
+checkpoints/
+adapters/
+models/
+weights/
+hf_cache/
+outputs/checkpoints/
+outputs/adapters/
+*.bin
+*.ckpt
+*.gguf
+*.onnx
+*.pt
+*.pth
+*.safetensors
+*.model
+*.tar.gz
+*.zip
+
+# Keep quality & evaluation reports visible
+!outputs/.gitkeep
+!outputs/*.json
+!outputs/*.md
+!outputs/*.csv

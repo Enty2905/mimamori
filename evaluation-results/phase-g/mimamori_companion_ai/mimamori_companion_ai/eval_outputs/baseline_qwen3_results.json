@@ -1,0 +1,98 @@
+{
+  "generated_at_utc": "2026-11-21T05:36:59.817798+00:00",
+  "eval_file": "/content/drive/MyDrive/mimamori/ai-training/datasets/evaluation/eval_benchmark.jsonl",
+  "total_benchmark_cases": 20,
+  "metric_directions": {
+    "vietnamese_naturalness": "higher_is_better (0.0-1.0)",
+    "empathy": "higher_is_better (0.0-1.0)",
+    "clarity_for_elderly": "higher_is_better (0.0-1.0)",
+    "multi_turn_consistency": "higher_is_better (0.0-1.0)",
+    "instruction_following": "higher_is_better (0.0-1.0)",
+    "medical_safety": "higher_is_better (0.0-1.0)",
+    "hallucination": "lower_is_better (0.0-1.0)",
+    "medication_accuracy": "higher_is_better (0.0-1.0)",
+    "latency_ms": "lower_is_better (milliseconds)"
+  },
+  "targets": [
+    {
+      "target": "groq_fallback",
+      "model_id": "openai/gpt-oss-120b -> openai/gpt-oss-20b",
+      "is_mock": false,
+      "execution_status": "NOT_TESTED",
+      "status_reason": "Target was not selected in this run.",
+      "cases_evaluated": 0,
+      "summary_metrics": {
+        "vietnamese_naturalness": null,
+        "empathy": null,
+        "clarity_for_elderly": null,
+        "multi_turn_consistency": null,
+        "instruction_following": null,
+        "medical_safety": null,
+        "hallucination": null,
+        "medication_accuracy": null,
+        "latency_ms": null
+      },
+      "case_results": []
+    },
+    {
+      "target": "qwen3_4b_instruct_2507",
+      "model_id": "Qwen/Qwen3-4B-Instruct-2507",
+      "is_mock": false,
+      "execution_status": "FAILED",
+      "status_reason": "ImportError: Using `bitsandbytes` 4-bit quantization requires bitsandbytes: `pip install -U bitsandbytes>=0.46.1`",
+      "cases_evaluated": 0,
+      "summary_metrics": {
+        "vietnamese_naturalness": null,
+        "empathy": null,
+        "clarity_for_elderly": null,
+        "multi_turn_consistency": null,
+        "instruction_following": null,
+        "medical_safety": null,
+        "hallucination": null,
+        "medication_accuracy": null,
+        "latency_ms": null
+      },
+      "case_results": []
+    },
+    {
+      "target": "qwen3_5_4b",
+      "model_id": "Qwen/Qwen3.5-4B",
+      "is_mock": false,
+      "execution_status": "NOT_TESTED",
+      "status_reason": "Target was not selected in this run.",
+      "cases_evaluated": 0,
+      "summary_metrics": {
+        "vietnamese_naturalness": null,
+        "empathy": null,
+        "clarity_for_elderly": null,
+        "multi_turn_consistency": null,
+        "instruction_following": null,
+        "medical_safety": null,
+        "hallucination": null,
+        "medication_accuracy": null,
+        "latency_ms": null
+      },
+      "case_results": []
+    },
+    {
+      "target": "mock_dev",
+      "model_id": "local-deterministic-mock",
+      "is_mock": true,
+      "execution_status": "NOT_TESTED",
+      "status_reason": "Target was not selected in this run.",
+      "cases_evaluated": 0,
+      "summary_metrics": {
+        "vietnamese_naturalness": null,
+        "empathy": null,
+        "clarity_for_elderly": null,
+        "multi_turn_consistency": null,
+        "instruction_following": null,
+        "medical_safety": null,
+        "hallucination": null,
+        "medication_accuracy": null,
+        "latency_ms": null
+      },
+      "case_results": []
+    }
+  ]
+}
