@@ -2,173 +2,89 @@ package com.mimamori.conversation.service;
 
 import com.mimamori.common.ApiException;
 import com.mimamori.common.GroqService;
-import com.mimamori.conversation.dto.ChatMessageDto;
-import com.mimamori.conversation.dto.ChatMessageRequest;
-import com.mimamori.conversation.dto.ConversationDto;
-import com.mimamori.conversation.entity.ChatMessage;
-import com.mimamori.conversation.entity.Conversation;
-import com.mimamori.conversation.entity.MessageSender;
-import com.mimamori.conversation.repository.ChatMessageRepository;
-import com.mimamori.conversation.repository.ConversationRepository;
-import com.mimamori.userprofile.entity.User;
+import com.mimamori.conversation.dto.*;
+import com.mimamori.conversation.entity.*;
+import com.mimamori.conversation.repository.*;
 import com.mimamori.userprofile.entity.UserRole;
-import com.mimamori.userprofile.repository.FamilyRelationshipRepository;
-import com.mimamori.userprofile.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Value;
+import com.mimamori.userprofile.repository.*;
+import java.time.Instant;
+import java.sql.Timestamp;
+import java.util.*;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestClient;
-
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
-@Transactional
 public class ConversationService {
-
-    private final ConversationRepository conversationRepository;
-    private final ChatMessageRepository messageRepository;
-    private final UserRepository userRepository;
-    private final FamilyRelationshipRepository relationshipRepository;
-    private final RestClient restClient;
-    private final GroqService groqService;
-
-    public ConversationService(
-            ConversationRepository conversationRepository,
-            ChatMessageRepository messageRepository,
-            UserRepository userRepository,
-            FamilyRelationshipRepository relationshipRepository,
-            @Value("${mimamori.ai-service.url:http://localhost:8000}") String aiServiceUrl,
-            GroqService groqService) {
-        this.conversationRepository = conversationRepository;
-        this.messageRepository = messageRepository;
-        this.userRepository = userRepository;
-        this.relationshipRepository = relationshipRepository;
-        this.groqService = groqService;
-        this.restClient = RestClient.builder().baseUrl(aiServiceUrl).build();
+    private final ConversationRepository conversations;
+    private final ChatMessageRepository messages;
+    private final UserRepository users;
+    private final FamilyRelationshipRepository links;
+    private final JdbcTemplate jdbc;
+    public ConversationService(ConversationRepository conversations, ChatMessageRepository messages, UserRepository users, FamilyRelationshipRepository links, JdbcTemplate jdbc) {
+        this.conversations=conversations;this.messages=messages;this.users=users;this.links=links;this.jdbc=jdbc;
     }
-
     @Transactional
-    public ConversationDto getOrCreateActiveConversation(Long elderlyId) {
-        User elderly = userRepository.findById(elderlyId)
-                .orElseThrow(() -> new ApiException(404, "Elderly user not found"));
-
-        Conversation conv = conversationRepository.findFirstByElderlyIdOrderByLastMessageAtDesc(elderlyId)
-                .orElseGet(() -> {
-                    Conversation newConv = new Conversation(elderly, "Trò chuyện cùng Mimamori AI");
-                    newConv = conversationRepository.save(newConv);
-                    // Add welcoming system message
-                    ChatMessage welcomeMsg = new ChatMessage(
-                            newConv,
-                            MessageSender.AI,
-                            "Cháu chào bác ạ! Hôm nay bác cảm thấy trong người thế nào ạ? Bác đã ăn cơm và uống thuốc chưa?"
-                    );
-                    messageRepository.save(welcomeMsg);
-                    return newConv;
-                });
-
-        return ConversationDto.fromEntity(conv, true);
+    public ConversationDto getOrCreateActiveConversation(Long userId) {
+        var user=users.findLockedById(userId).orElseThrow(()->new ApiException(401,"Invalid session"));
+        if(user.getRole()!=UserRole.ELDERLY)throw new ApiException(403,"Only elderly users can use the companion");
+        var conversation=conversations.findFirstByElderlyIdOrderByLastMessageAtDesc(userId)
+                .orElseGet(()->conversations.save(new Conversation(user,"Mimamori")));
+        return ConversationDto.fromEntity(conversation,false);
     }
-
+    public record Turn(UUID requestId,UUID lease,Long conversationId,Long userId,String text,List<Map<String,String>> history,ChatMessageDto replay) {
+        @Override public String toString(){return "ConversationTurn[redacted]";}
+    }
     @Transactional
-    public ChatMessageDto sendMessage(Long elderlyId, Long conversationId, ChatMessageRequest request) {
-        Conversation conv = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new ApiException(404, "Conversation not found"));
-
-        if (!conv.getElderly().getId().equals(elderlyId)) {
-            throw new ApiException(403, "You do not own this conversation");
+    public Turn prepare(Long userId,Long conversationId,ChatMessageRequest request) {
+        var conversation=conversations.findLockedById(conversationId).orElseThrow(()->new ApiException(404,"Conversation not found"));
+        if(!conversation.getElderly().getId().equals(userId))throw new ApiException(403,"Not authorized");
+        if(request.getContent().isBlank()||request.getContent().length()>4000)throw new ApiException(400,"Invalid message");
+        UUID id=request.getRequestId()==null?UUID.randomUUID():request.getRequestId();
+        UUID lease=UUID.randomUUID();
+        var existing=jdbc.queryForList("SELECT * FROM conversation_turns WHERE request_id=? FOR UPDATE",id.toString());
+        if(!existing.isEmpty()){
+            var row=existing.getFirst();
+            if(((Number)row.get("user_id")).longValue()!=userId||((Number)row.get("conversation_id")).longValue()!=conversationId)throw new ApiException(403,"Not authorized");
+            if("COMPLETE".equals(row.get("status")))return new Turn(id,lease,conversationId,userId,"",List.of(),ChatMessageDto.fromEntity(messages.findById(((Number)row.get("reply_message_id")).longValue()).orElseThrow()));
+            if("PROCESSING".equals(row.get("status"))&&((Timestamp)row.get("lease_until")).toInstant().isAfter(Instant.now()))throw new ApiException(409,"A reply is already being generated");
+            jdbc.update("UPDATE conversation_turns SET status='PROCESSING',lease_id=?,lease_until=? WHERE request_id=?",lease.toString(),Timestamp.from(Instant.now().plusSeconds(20)),id.toString());
+        }else{
+            messages.saveAndFlush(new ChatMessage(conversation,MessageSender.USER,request.getContent()));
+            jdbc.update("INSERT INTO conversation_turns(request_id,conversation_id,user_id,status,lease_id,lease_until) VALUES (?,?,?,'PROCESSING',?,?)",id.toString(),conversationId,userId,lease.toString(),Timestamp.from(Instant.now().plusSeconds(20)));
         }
-
-        // 1. Save user message
-        ChatMessage userMsg = new ChatMessage(conv, MessageSender.USER, request.getContent());
-        userMsg = messageRepository.save(userMsg);
-
-        // 2. Query AI response from Groq LLM or internal AI service
-        String aiReplyContent = fetchAiCompanionReply(conv, request.getContent());
-
-        // 3. Save AI message
-        ChatMessage aiMsg = new ChatMessage(conv, MessageSender.AI, aiReplyContent);
-        aiMsg = messageRepository.save(aiMsg);
-
-        conv.setLastMessageAt(Instant.now());
-        conversationRepository.save(conv);
-
-        return ChatMessageDto.fromEntity(aiMsg);
+        var history=new ArrayList<Map<String,String>>();
+        var recent=new ArrayList<>(messages.findTop6ByConversationIdOrderByCreatedAtDesc(conversationId));
+        Collections.reverse(recent);
+        for(var message:recent)history.add(Map.of("role",message.getSender()==MessageSender.USER?"user":"assistant","content",message.getContent()));
+        if(!history.isEmpty()&&history.getLast().get("content").equals(request.getContent()))history.removeLast();
+        return new Turn(id,lease,conversationId,userId,request.getContent(),List.copyOf(history),null);
     }
-
-    public List<ChatMessageDto> getMessages(Long currentUserId, Long conversationId) {
-        Conversation conv = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new ApiException(404, "Conversation not found"));
-
-        Long ownerId = conv.getElderly().getId();
-        if (!ownerId.equals(currentUserId)) {
-            // Check if current user is linked caregiver with permission
-            boolean hasPermission = relationshipRepository.findByCaregiverIdAndElderlyId(currentUserId, ownerId)
-                    .map(rel -> Boolean.TRUE.equals(rel.getCanViewConversations()))
-                    .orElse(false);
-
-            if (!hasPermission) {
-                throw new ApiException(403, "You do not have permission to view this conversation");
-            }
-        }
-
-        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId)
-                .stream()
-                .map(ChatMessageDto::fromEntity)
-                .collect(Collectors.toList());
+    @Transactional
+    public ChatMessageDto finish(Turn turn,String reply) {
+        var conversation=conversations.findLockedById(turn.conversationId()).orElseThrow();
+        var rows=jdbc.queryForList("SELECT status,lease_id FROM conversation_turns WHERE request_id=? FOR UPDATE",turn.requestId().toString());
+        if(rows.isEmpty()||!"PROCESSING".equals(rows.getFirst().get("status"))||!turn.lease().toString().equals(rows.getFirst().get("lease_id")))throw new ApiException(409,"Reply was canceled");
+        if(reply.isBlank()||reply.length()>16000)throw new ApiException(503,"Reply unavailable");
+        var message=messages.saveAndFlush(new ChatMessage(conversation,MessageSender.AI,reply));
+        conversation.setLastMessageAt(Instant.now());
+        jdbc.update("UPDATE conversation_turns SET status='COMPLETE',reply_message_id=? WHERE request_id=?",message.getId(),turn.requestId().toString());
+        return ChatMessageDto.fromEntity(message);
     }
-
-    private String fetchAiCompanionReply(Conversation conv, String userMessage) {
-        // 1. Try Groq AI with conversation history
-        try {
-            List<ChatMessage> recentList = messageRepository.findByConversationIdOrderByCreatedAtAsc(conv.getId());
-            List<Map<String, String>> history = new ArrayList<>();
-            for (ChatMessage m : recentList) {
-                String role = (m.getSender() == MessageSender.USER) ? "user" : "assistant";
-                history.add(Map.of("role", role, "content", m.getContent()));
-            }
-
-            String name = (conv.getElderly() != null) ? conv.getElderly().getFullName() : "bác";
-            String groqReply = groqService.generateCompanionReply(userMessage, name, history);
-            if (groqReply != null && !groqReply.isBlank()) {
-                return groqReply;
-            }
-        } catch (Exception e) {
-            // Groq error handled, fallback to AI service
+    @Transactional
+    public void cancel(Turn turn) {
+        jdbc.update("UPDATE conversation_turns SET status='CANCELED' WHERE request_id=? AND lease_id=? AND status='PROCESSING'",turn.requestId().toString(),turn.lease().toString());
+    }
+    @Transactional(readOnly=true)
+    public List<ChatMessageDto> getMessages(Long userId,Long conversationId) {
+        var conversation=conversations.findById(conversationId).orElseThrow(()->new ApiException(404,"Conversation not found"));
+        Long owner=conversation.getElderly().getId();
+        if(!owner.equals(userId)){
+            boolean accepted=links.existsByCaregiverIdAndElderlyId(userId,owner);
+            boolean permission=links.findByCaregiverIdAndElderlyId(userId,owner).map(link->Boolean.TRUE.equals(link.getCanViewConversations())).orElse(false);
+            if(!accepted||!permission)throw new ApiException(403,"Not authorized");
         }
-
-        // 2. Try secondary internal AI service
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = restClient.post()
-                    .uri("/api/companion/chat")
-                    .body(Map.of("elderly_id", conv.getElderly().getId(), "message", userMessage))
-                    .retrieve()
-                    .body(Map.class);
-
-            if (response != null && response.containsKey("reply")) {
-                return (String) response.get("reply");
-            }
-        } catch (Exception e) {
-            // Graceful empathetic fallback
-        }
-
-        // 3. Empathetic heuristic response when AI service is processing or offline
-        String lower = userMessage.toLowerCase();
-        if (lower.contains("chuyện vui") || lower.contains("kể chuyện") || lower.contains("hài")) {
-            return "Dạ cháu kể cụ nghe mẩu chuyện vui nhé: Có một cụ ông đi đo mắt, bác sĩ ân cần hỏi: 'Cụ nhìn bảng chữ này có rõ không?'. Cụ mỉm cười hiền từ: 'Chữ thì hơi mờ, nhưng bác sĩ đứng bên cạnh thì cụ thấy rất tươi tỉnh!'. Chúc cụ luôn vui tươi, yêu đời mỗi ngày ạ!";
-        } else if (lower.contains("mệt") || lower.contains("đau") || lower.contains("buồn") || lower.contains("sốt")) {
-            return "Cháu nghe thấy cụ đang không được khỏe. Cụ nhớ ngồi nghỉ ngơi, uống một cốc nước ấm nhé. Cụ có cần cháu nhắn cho con cháu sang bên cụ ngay không ạ?";
-        } else if (lower.contains("thuốc") || lower.contains("uống")) {
-            return "Dạ cụ nhớ uống thuốc đúng giờ và theo đúng liều lượng bác sĩ dặn nhé! Cụ đã uống cữ thuốc hôm nay chưa ạ?";
-        } else if (lower.contains("thời tiết")) {
-            return "Dạ tiết trời hôm nay khá dễ chịu, cụ nhớ chú ý giữ ấm cổ ngực vào sáng sớm và chiều tối khi ra ngoài dạo bước nhé ạ!";
-        } else if (lower.contains("chào") || lower.contains("khỏe") || lower.contains("vui")) {
-            return "Dạ cháu kính chào cụ! Thấy cụ luôn vui khỏe, an yên là niềm vui lớn nhất của con cháu trong nhà đấy ạ!";
-        }
-        return "Dạ cháu luôn ở đây lắng nghe và trò chuyện cùng cụ. Cụ muốn cháu kể chuyện, chia sẻ món ăn bổ dưỡng hay điều gì cùng cụ không ạ?";
+        var recent=new ArrayList<>(messages.findTop200ByConversationIdOrderByCreatedAtDesc(conversationId));Collections.reverse(recent);
+        return recent.stream().map(ChatMessageDto::fromEntity).toList();
     }
 }

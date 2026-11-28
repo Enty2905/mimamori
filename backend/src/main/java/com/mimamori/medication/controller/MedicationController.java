@@ -41,6 +41,12 @@ public class MedicationController {
         return ApiResponse.ok(medicationService.getMedications(userId, elderlyId));
     }
 
+    @PutMapping("/{id}")
+    public ApiResponse<MedicationDto> updateMedication(@AuthenticationPrincipal Long userId,
+            @PathVariable("id") Long id, @Valid @RequestBody CreateMedicationRequest request) {
+        return ApiResponse.ok(medicationService.updateMedication(userId, id, request));
+    }
+
     @GetMapping("/today")
     @Operation(summary = "Get today's medication reminder schedules and statuses")
     public ApiResponse<List<MedicationLogDto>> getTodaySchedule(
@@ -56,6 +62,11 @@ public class MedicationController {
             @PathVariable("id") Long logId,
             @RequestBody ConfirmMedicationRequest request) {
         return ApiResponse.ok("Medication confirmation recorded", medicationService.confirmMedication(userId, logId, request));
+    }
+
+    @GetMapping("/logs/{id}")
+    public ApiResponse<MedicationLogDto> dose(@AuthenticationPrincipal Long userId, @PathVariable("id") Long id) {
+        return ApiResponse.ok(medicationService.getDose(userId,id));
     }
 
     @GetMapping("/history")

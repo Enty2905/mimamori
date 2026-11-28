@@ -13,7 +13,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
     ports:
-      - "${MYSQL_HOST_PORT:-3307}:3306"
+      - "127.0.0.1:${MYSQL_HOST_PORT:-13317}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-16379}:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -40,8 +40,7 @@ services:
     image: qdrant/qdrant:v1.18.3
     restart: unless-stopped
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      - "127.0.0.1:${QDRANT_HOST_PORT:-16333}:6333"
     volumes:
       - qdrant-data:/qdrant/storage
 
@@ -50,9 +49,10 @@ services:
       context: ../ai
     restart: unless-stopped
     environment:
-      QDRANT_URL: http://qdrant:6333
+      RAG_QDRANT_URL: http://qdrant:6333
+      RAG_INTERNAL_TOKEN: ${RAG_INTERNAL_TOKEN:-}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:${AI_HOST_PORT:-18000}:8000"
     depends_on:
       - qdrant
 
@@ -67,12 +67,15 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       AI_SERVICE_URL: http://ai:8000
+      JWT_SECRET: ${JWT_SECRET:?Set a private JWT_SECRET of at least 32 bytes}
+      RAG_ENABLED: ${RAG_ENABLED:-false}
+      RAG_INTERNAL_TOKEN: ${RAG_INTERNAL_TOKEN:-}
+      FCM_ENABLED: ${FCM_ENABLED:-false}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-}
       SPRING_AI_MODEL_CHAT: ${SPRING_AI_MODEL_CHAT:-none}
-      SPRING_AI_OPENAI_API_KEY: ${GROQ_API_KEY:-}
-      SPRING_AI_OPENAI_BASE_URL: https://api.groq.com/openai/v1
-      SPRING_AI_OPENAI_CHAT_MODEL: ${GROQ_MODEL:-}
     ports:
-      - "8080:8080"
+      - "${BACKEND_HOST_PORT:-18080}:8080"
     depends_on:
       mysql:
         condition: service_healthy

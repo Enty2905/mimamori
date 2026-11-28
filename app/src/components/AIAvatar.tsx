@@ -1,6 +1,7 @@
+import {useColors} from '../core/theme/useTheme';
 import React from 'react';
 import { View, StyleSheet, Image } from 'react-native';
-import { colors } from '../core/theme/colors';
+import { colors as baseColors } from '../core/theme/colors';
 
 interface Props {
   size?: number;
@@ -8,6 +9,9 @@ interface Props {
 }
 
 export const AIAvatar: React.FC<Props> = ({ size = 48, showOnlineStatus = true }) => {
+  const colors=useColors();
+  const styles=buildStyles(colors);
+
   const isLarge = size >= 60;
   const iconSize = Math.round(size * 0.65);
 
@@ -49,7 +53,7 @@ export const AIAvatar: React.FC<Props> = ({ size = 48, showOnlineStatus = true }
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   wrapper: {
     position: 'relative',
     alignItems: 'center',
@@ -62,9 +66,9 @@ const styles = StyleSheet.create({
   },
   onlineDot: {
     position: 'absolute',
-    backgroundColor: '#326847',
+    backgroundColor: colors.background === baseColors.background ? '#326847' : colors.surfaceWarm,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: colors.background === baseColors.background ? '#FFFFFF' : colors.border,
   },
 });
 

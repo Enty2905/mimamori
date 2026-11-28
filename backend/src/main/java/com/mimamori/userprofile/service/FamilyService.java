@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
 public class FamilyService {
 
     private final FamilyRelationshipRepository relationshipRepository;
@@ -42,7 +43,7 @@ public class FamilyService {
             throw new ApiException(400, "The requested user is not registered as an ELDERLY role");
         }
 
-        if (relationshipRepository.existsByCaregiverIdAndElderlyId(caregiverId, elderly.getId())) {
+        if (relationshipRepository.findByCaregiverIdAndElderlyId(caregiverId, elderly.getId()).isPresent()) {
             throw new ApiException(400, "Family relationship already exists between these users");
         }
 
@@ -50,11 +51,19 @@ public class FamilyService {
                 caregiver,
                 elderly,
                 request.getRelationshipType() != null ? request.getRelationshipType() : "FAMILY",
-                RelationshipStatus.ACCEPTED
+                RelationshipStatus.PENDING
         );
 
         relationship = relationshipRepository.save(relationship);
         return FamilyMemberDto.fromCaregiverView(relationship);
+    }
+
+    @Transactional
+    public FamilyMemberDto accept(Long userId, Long id) {
+        var link = relationshipRepository.findById(id).orElseThrow(() -> new ApiException(404, "Link not found"));
+        if (!link.getElderly().getId().equals(userId)) throw new ApiException(403, "Only the elderly owner can accept this link");
+        link.setStatus(RelationshipStatus.ACCEPTED);
+        return FamilyMemberDto.fromElderlyView(link);
     }
 
     public List<FamilyMemberDto> getFamilyMembers(Long currentUserId) {

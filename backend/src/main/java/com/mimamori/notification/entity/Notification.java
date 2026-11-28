@@ -11,6 +11,8 @@ public class Notification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(name = "event_key", length = 180, unique = true)
+    private String eventKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -37,6 +39,8 @@ public class Notification {
     public Notification() {}
 
     public Long getId() { return id; }
+    public String getEventKey() { return eventKey; }
+    public void setEventKey(String value) { eventKey = value; }
     public void setId(Long id) { this.id = id; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }

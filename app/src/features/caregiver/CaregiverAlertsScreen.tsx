@@ -1,78 +1,61 @@
-import React, { useEffect, useState } from 'react';
+import {useOriginalLabels} from '../../core/localization/original';
+import {useColors} from '../../core/theme/useTheme';
+import {CareText as Text, CareTouchable as TouchableOpacity} from '../../components/CareText';
+import React, { useState } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
+    StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
+    ActivityIndicator,
   Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors } from '../../core/theme/colors';
-import { apiClient } from '../../core/api/client';
-
-interface CareAlert {
-  id: number;
-  alertType: 'MISSED_MEDICATION' | 'MISSED_CHECKIN' | 'CHECKIN_CONCERN' | 'EMERGENCY_BUTTON';
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  title: string;
-  description: string;
-  resolved: boolean;
-  createdAt: string;
-}
+import { colors as baseColors } from '../../core/theme/colors';
+import {careApi} from '../../core/api/careApi';
+import {CareAlert} from '../../core/api/contracts';
+import {useQuery} from '@tanstack/react-query';
+import {useAuthStore} from '../../core/auth/useAuthStore';
+import {Notice,Button} from '../../components/CareUI';
 
 export const CaregiverAlertsScreen: React.FC = () => {
-  const [alerts, setAlerts] = useState<CareAlert[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'ALL' | 'UNRESOLVED'>('UNRESOLVED');
-  const [resolvingId, setResolvingId] = useState<number | null>(null);
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
 
-  const fetchAlerts = async () => {
-    try {
-      setLoading(true);
-      const res = await apiClient<CareAlert[]>('/api/alerts');
-      if (res.success && res.data) {
-        setAlerts(res.data);
-      }
-    } catch {
-      // Ignored
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAlerts();
-  }, []);
-
+  const owner=useAuthStore(state=>state.userId);
+  const query=useQuery({queryKey:['alerts',owner],enabled:!!owner,queryFn:careApi.alerts});
+  const alerts=query.data ?? [];
+  const loading=query.isPending;
+  const fetchAlerts=()=>query.refetch();
+  const [filter,setFilter]=useState<'ALL'|'UNRESOLVED'>('UNRESOLVED');
+  const [resolvingId,setResolvingId]=useState<number|null>(null);
   const handleResolve = async (alertId: number) => {
     try {
       setResolvingId(alertId);
-      const res = await apiClient(`/api/alerts/${alertId}/resolve`, { method: 'PUT' });
-      if (res.success) {
-        Alert.alert('Thành công', 'Đã đánh dấu xử lý cảnh báo này.');
+      await careApi.resolve(alertId);
+       {
+        Alert.alert(tr("Thành công"), tr("Đã đánh dấu xử lý cảnh báo này."));
         fetchAlerts();
       }
-    } catch (err: any) {
-      Alert.alert('Lỗi', err.message || 'Không thể cập nhật cảnh báo');
+    } catch (err: unknown) {
+      Alert.alert(tr("Lỗi"), (err instanceof Error ? err.message : '') || 'Không thể cập nhật cảnh báo');
     } finally {
       setResolvingId(null);
     }
   };
 
-  const filteredAlerts = alerts.filter((a) => (filter === 'UNRESOLVED' ? !a.resolved : true));
+  const filteredAlerts = alerts.filter((a) => (filter === 'UNRESOLVED' ? !a.isResolved : true));
 
   const getSeverityBadge = (severity: CareAlert['severity']) => {
     switch (severity) {
       case 'CRITICAL':
-        return { label: 'KHẨN CẤP', bg: '#FEE2E2', text: '#DC2626' };
+        return { label: 'KHẨN CẤP', bg: colors.background === baseColors.background ? '#FEE2E2' : colors.surfaceWarm, text: colors.background === baseColors.background ? '#DC2626' : colors.textPrimary };
       case 'HIGH':
-        return { label: 'MỨC ĐỘ CAO', bg: '#FEF3C7', text: '#D97706' };
+        return { label: 'MỨC ĐỘ CAO', bg: colors.background === baseColors.background ? '#FEF3C7' : colors.surfaceWarm, text: colors.background === baseColors.background ? '#D97706' : colors.textPrimary };
       case 'MEDIUM':
-        return { label: 'TRUNG BÌNH', bg: '#E0E7FF', text: '#4F46E5' };
+        return { label: 'TRUNG BÌNH', bg: colors.background === baseColors.background ? '#E0E7FF' : colors.surfaceWarm, text: colors.background === baseColors.background ? '#4F46E5' : colors.textPrimary };
       default:
-        return { label: 'THÔNG TIN', bg: '#F1F5F9', text: '#64748B' };
+        return { label: 'THÔNG TIN', bg: colors.background === baseColors.background ? '#F1F5F9' : colors.surfaceWarm, text: colors.background === baseColors.background ? '#64748B' : colors.textPrimary };
     }
   };
 
@@ -80,8 +63,8 @@ export const CaregiverAlertsScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Cảnh báo an toàn người thân</Text>
-        <Text style={styles.subtitle}>Care Agent tự động phát hiện và gửi thông báo</Text>
+        <Text style={styles.title}>{tr("Cảnh báo an toàn người thân")}</Text>
+        <Text style={styles.subtitle}>{tr("Care Agent tự động phát hiện và gửi thông báo")}</Text>
 
         {/* Filter Toggle */}
         <View style={styles.filterRow}>
@@ -89,43 +72,38 @@ export const CaregiverAlertsScreen: React.FC = () => {
             style={[styles.filterBtn, filter === 'UNRESOLVED' && styles.filterBtnActive]}
             onPress={() => setFilter('UNRESOLVED')}
           >
-            <Text style={[styles.filterText, filter === 'UNRESOLVED' && styles.filterTextActive]}>
-              Chưa xử lý ({alerts.filter((a) => !a.resolved).length})
-            </Text>
+            <Text style={[styles.filterText, filter === 'UNRESOLVED' && styles.filterTextActive]}>{tr("Chưa xử lý (")}{alerts.filter((a) => !a.isResolved).length}{tr(")")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterBtn, filter === 'ALL' && styles.filterBtnActive]}
             onPress={() => setFilter('ALL')}
           >
-            <Text style={[styles.filterText, filter === 'ALL' && styles.filterTextActive]}>
-              Tất cả ({alerts.length})
-            </Text>
+            <Text style={[styles.filterText, filter === 'ALL' && styles.filterTextActive]}>{tr("Tất cả (")}{alerts.length}{tr(")")}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
+      {query.isError && <><Notice tone="danger" text={tr("Không thể tải cảnh báo.")} /><Button title={tr("Thử lại")} onPress={()=>{void fetchAlerts();}} /></>}
       {loading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Đang tải cảnh báo...</Text>
+          <Text style={styles.loadingText}>{tr("Đang tải cảnh báo...")}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
-          {filteredAlerts.length === 0 ? (
+          {query.isError ? null : filteredAlerts.length === 0 ? (
             <View style={styles.emptyCard}>
               <View style={styles.emptyIconWrap}>
                 <Feather name="shield" size={28} color={colors.successText} />
               </View>
-              <Text style={styles.emptyTitle}>Mọi thứ đều an toàn!</Text>
-              <Text style={styles.emptySub}>
-                Không có cảnh báo nào chưa được xử lý vào lúc này.
-              </Text>
+              <Text style={styles.emptyTitle}>{tr("Mọi thứ đều an toàn!")}</Text>
+              <Text style={styles.emptySub}>{tr("Không có cảnh báo nào chưa được xử lý vào lúc này.")}</Text>
             </View>
           ) : (
             filteredAlerts.map((item) => {
               const sev = getSeverityBadge(item.severity);
               return (
-                <View key={item.id} style={[styles.alertCard, item.resolved && styles.alertCardResolved]}>
+                <View key={item.id} style={[styles.alertCard, item.isResolved && styles.alertCardResolved]}>
                   <View style={styles.alertTopRow}>
                     <View style={[styles.sevBadge, { backgroundColor: sev.bg }]}>
                       <Text style={[styles.sevBadgeText, { color: sev.text }]}>{sev.label}</Text>
@@ -135,10 +113,10 @@ export const CaregiverAlertsScreen: React.FC = () => {
                     </Text>
                   </View>
 
-                  <Text style={styles.alertTitle}>{item.title}</Text>
+                  <Text style={styles.alertTitle}>{item.title || item.alertType}</Text>
                   <Text style={styles.alertDesc}>{item.description}</Text>
 
-                  {!item.resolved ? (
+                  {!item.isResolved ? (
                     <TouchableOpacity
                       style={styles.resolveBtn}
                       onPress={() => handleResolve(item.id)}
@@ -146,18 +124,18 @@ export const CaregiverAlertsScreen: React.FC = () => {
                       activeOpacity={0.8}
                     >
                       {resolvingId === item.id ? (
-                        <ActivityIndicator color="#FFFFFF" size="small" />
+                        <ActivityIndicator color={colors.textInverse} size="small" />
                       ) : (
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <Feather name="check" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
-                          <Text style={styles.resolveBtnText}>Xác nhận đã kiểm tra & xử lý</Text>
+                          <Feather name="check" size={14} color={colors.textInverse} style={{ marginRight: 6 }} />
+                          <Text style={styles.resolveBtnText}>{tr("Xác nhận đã kiểm tra & xử lý")}</Text>
                         </View>
                       )}
                     </TouchableOpacity>
                   ) : (
                     <View style={styles.resolvedBadge}>
                       <Feather name="check" size={12} color={colors.successText} style={{ marginRight: 4 }} />
-                      <Text style={styles.resolvedText}>Đã xử lý xong</Text>
+                      <Text style={styles.resolvedText}>{tr("Đã xử lý xong")}</Text>
                     </View>
                   )}
                 </View>
@@ -170,7 +148,7 @@ export const CaregiverAlertsScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -245,7 +223,7 @@ const styles = StyleSheet.create({
   },
   alertCardResolved: {
     opacity: 0.65,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.background === baseColors.background ? '#F8FAFC' : colors.surfaceWarm,
   },
   alertTopRow: {
     flexDirection: 'row',
@@ -275,7 +253,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 4,
-    lineHeight: 18,
+
   },
   resolveBtn: {
     backgroundColor: colors.primary,
@@ -285,7 +263,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   resolveBtnText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontSize: 13,
     fontWeight: '700',
   },

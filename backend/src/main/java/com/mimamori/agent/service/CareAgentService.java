@@ -25,6 +25,8 @@ import java.util.List;
 @Service
 public class CareAgentService {
 
+    private final com.mimamori.medication.repository.MedicationRepository medications;
+    private final com.mimamori.medication.reminder.ReminderService reminders;
     private final UserRepository userRepository;
     private final MedicationLogRepository logRepository;
     private final DailyCheckInRepository checkInRepository;
@@ -36,7 +38,10 @@ public class CareAgentService {
             MedicationLogRepository logRepository,
             DailyCheckInRepository checkInRepository,
             AlertService alertService,
-            DailySummaryRepository summaryRepository) {
+            DailySummaryRepository summaryRepository,
+            com.mimamori.medication.repository.MedicationRepository medications,
+            com.mimamori.medication.reminder.ReminderService reminders) {
+        this.medications=medications;this.reminders=reminders;
         this.userRepository = userRepository;
         this.logRepository = logRepository;
         this.checkInRepository = checkInRepository;
@@ -62,22 +67,26 @@ public class CareAgentService {
         User elderly = userRepository.findById(elderlyId).orElse(null);
         if (elderly == null) return "NORMAL";
 
-        LocalDate today = LocalDate.now();
-        LocalDateTime now = LocalDateTime.now();
+        java.time.ZoneId zone = java.time.ZoneId.of(elderly.getTimeZone());
+        LocalDate today = LocalDate.now(zone);
+        LocalDateTime now = LocalDateTime.now(zone);
+
+        for(var med:medications.findByElderlyIdAndIsActiveTrue(elderlyId))reminders.materialize(med.getId());
 
         // 1. OBSERVE & ANALYZE: Missed Medications
         LocalDateTime startOfDay = today.atStartOfDay();
-        List<MedicationLog> todayLogs = logRepository.findByElderlyIdAndScheduledTimeBetweenOrderByScheduledTimeAsc(
-                elderlyId, startOfDay, today.atTime(LocalTime.MAX));
+        List<MedicationLog> todayLogs = logRepository.findByElderlyIdAndScheduledAtBetweenOrderByScheduledAt(
+                elderlyId, today.atStartOfDay(zone).toInstant(), today.plusDays(1).atStartOfDay(zone).toInstant().minusNanos(1)).stream().filter(log -> !log.isCanceled()).toList();
 
         int missedCount = 0;
         int takenCount = 0;
-        for (MedicationLog log : todayLogs) {
+        for (MedicationLog candidate : todayLogs) {
+            MedicationLog log = logRepository.findLockedById(candidate.getId()).orElseThrow();
             if (log.getStatus() == MedicationStatus.MISSED) {
                 missedCount++;
             } else if (log.getStatus() == MedicationStatus.TAKEN) {
                 takenCount++;
-            } else if (log.getStatus() == MedicationStatus.PENDING && log.getScheduledTime().plusHours(1).isBefore(now)) {
+            } else if (log.getStatus() == MedicationStatus.PENDING && log.getScheduledAt().plusSeconds(3600).isBefore(java.time.Instant.now())) {
                 // If more than 1 hour overdue, mark as MISSED and generate alert
                 log.setStatus(MedicationStatus.MISSED);
                 logRepository.save(log);
@@ -88,7 +97,8 @@ public class CareAgentService {
                         AlertType.MISSED_MEDICATION,
                         AlertSeverity.HIGH,
                         String.format("Bác %s chưa xác nhận uống thuốc '%s' lịch %s.",
-                                elderly.getFullName(), log.getMedication().getName(), log.getScheduledTime().toLocalTime())
+                                elderly.getFullName(), log.getMedication().getName(), log.getScheduledTime().toLocalTime()),
+                        "MISSED_DOSE:" + log.getId()
                 );
             }
         }
@@ -104,7 +114,7 @@ public class CareAgentService {
                         elderlyId,
                         AlertType.MISSED_CHECKIN,
                         AlertSeverity.MEDIUM,
-                        String.format("Bác %s hôm nay chưa hoàn thành khảo sát sức khỏe Daily Check-in.", elderly.getFullName())
+                        String.format("Bác %s hôm nay chưa hoàn thành khảo sát sức khỏe Daily Check-in.", elderly.getFullName()), "MISSED_CHECKIN:" + today
                 );
             }
         } else {
@@ -115,13 +125,13 @@ public class CareAgentService {
                         AlertType.CHECKIN_CONCERN,
                         AlertSeverity.HIGH,
                         String.format("Bác %s ghi nhận dấu hiệu sức khỏe cần chú ý hôm nay: %s.",
-                                elderly.getFullName(), checkIn.getAiAnalysisSummary())
+                                elderly.getFullName(), "Cần liên hệ để kiểm tra"), "CHECKIN:" + today
                 );
             }
         }
 
         // 3. DECIDE: Classification
-        String status = "NORMAL";
+        String status = todayLogs.isEmpty() && checkIn == null ? "UNKNOWN" : "NORMAL";
         if (missedCount > 0 || checkinConcerning) {
             status = "NEEDS_ATTENTION";
         } else if (checkIn == null && now.getHour() >= 14) {
@@ -129,7 +139,7 @@ public class CareAgentService {
         }
 
         // 4. ACT: Generate or update Daily Summary
-        double adherenceRate = todayLogs.isEmpty() ? 1.0 : (double) takenCount / todayLogs.size();
+        Double adherenceRate = todayLogs.isEmpty() ? null : (double) takenCount / todayLogs.size();
         DailySummary summary = summaryRepository.findByElderlyIdAndSummaryDate(elderlyId, today)
                 .orElse(new DailySummary());
 
@@ -138,9 +148,9 @@ public class CareAgentService {
         summary.setMedicationAdherenceRate(adherenceRate);
         summary.setCheckinSummary(checkIn != null ? checkIn.getAiAnalysisSummary() : "Chưa hoàn thành điểm danh hôm nay");
         summary.setAlertCount(missedCount + (checkinConcerning ? 1 : 0));
-        summary.setAiHealthNote(status.equals("NORMAL") ?
-                "Bác duy trì sức khỏe và sinh hoạt điều độ trong ngày." :
-                "Cần gia đình lưu tâm thăm hỏi thêm do có lịch thuốc chưa uống hoặc thể trạng mệt mỏi.");
+        summary.setAiHealthNote(status.equals("UNKNOWN") ? "Chưa có dữ liệu để đánh giá hôm nay." : status.equals("NORMAL") ?
+                "Chưa có tín hiệu cảnh báo theo dữ liệu đã ghi nhận." :
+                "Có dữ liệu cần gia đình kiểm tra và liên hệ trực tiếp.");
 
         summaryRepository.save(summary);
 

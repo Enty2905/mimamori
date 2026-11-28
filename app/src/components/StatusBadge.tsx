@@ -1,6 +1,9 @@
+import {useOriginalLabels} from '../core/localization/original';
+import {useColors} from '../core/theme/useTheme';
+import {CareText as Text} from './CareText';
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../core/theme/colors';
+import { View, StyleSheet } from 'react-native';
+import { colors as baseColors } from '../core/theme/colors';
 import { useAccessibilityStore } from '../core/accessibility/useAccessibilityStore';
 
 export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
@@ -12,6 +15,10 @@ interface Props {
 }
 
 export const StatusBadge: React.FC<Props> = ({ label, variant = 'neutral', size = 'medium' }) => {
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
+
   const { fs } = useAccessibilityStore();
 
   const getStyles = () => {
@@ -73,13 +80,13 @@ export const StatusBadge: React.FC<Props> = ({ label, variant = 'neutral', size 
           },
         ]}
       >
-        {label}
+        {tr(label)}
       </Text>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   badge: {
     borderRadius: 10,
     borderWidth: 1,

@@ -26,10 +26,10 @@ public class FamilyRelationship {
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
-    private RelationshipStatus status = RelationshipStatus.ACCEPTED;
+    private RelationshipStatus status = RelationshipStatus.PENDING;
 
     @Column(name = "can_view_conversations")
-    private Boolean canViewConversations = true;
+    private Boolean canViewConversations = false;
 
     @Column(name = "created_at", updatable = false)
     private Instant createdAt = Instant.now();

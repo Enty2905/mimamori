@@ -45,4 +45,9 @@ public class FamilyController {
         familyService.removeFamilyLink(userId, relationshipId);
         return ApiResponse.ok("Family relationship removed", null);
     }
+
+    @PutMapping("/link/{id}/accept")
+    public ApiResponse<FamilyMemberDto> accept(@AuthenticationPrincipal Long userId, @PathVariable("id") Long id) {
+        return ApiResponse.ok(familyService.accept(userId,id));
+    }
 }

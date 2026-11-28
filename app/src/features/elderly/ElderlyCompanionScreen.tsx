@@ -1,35 +1,25 @@
+import {useOriginalLabels} from '../../core/localization/original';
+import {useColors} from '../../core/theme/useTheme';
+import {CareText as Text, CareTouchable as TouchableOpacity} from '../../components/CareText';
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
+    StyleSheet,
   TextInput,
-  TouchableOpacity,
-  FlatList,
+    FlatList,
   ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
-import { Feather, Ionicons } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
+import { Feather } from '@expo/vector-icons';
+import { colors as baseColors, shadows } from '../../core/theme/colors';
 import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
-import { apiClient } from '../../core/api/client';
+import {useCompanion} from './useCompanion';
+import {Notice,Button} from '../../components/CareUI';
+import * as Speech from 'expo-speech';
+import {useTranslation} from 'react-i18next';
 import { AIAvatar } from '../../components/AIAvatar';
-
-interface Message {
-  id: number;
-  sender: 'USER' | 'ASSISTANT' | 'SYSTEM';
-  content: string;
-  createdAt: string;
-  detectedEmotion?: string;
-}
-
-interface Conversation {
-  id: number;
-  title: string;
-}
 
 const QUICK_PROMPTS = [
   'Hôm nay thời tiết thế nào cháu?',
@@ -40,101 +30,35 @@ const QUICK_PROMPTS = [
 ];
 
 export const ElderlyCompanionScreen: React.FC = () => {
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
+
   const { fs } = useAccessibilityStore();
-  const [conversation, setConversation] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const flatListRef = useRef<FlatList>(null);
-
-  const initConversation = async () => {
-    try {
-      setLoading(true);
-      const convRes = await apiClient<Conversation>('/api/conversations/active');
-      if (convRes.success && convRes.data) {
-        setConversation(convRes.data);
-        const msgRes = await apiClient<Message[]>(`/api/conversations/${convRes.data.id}/messages`);
-        if (msgRes.success) {
-          setMessages(msgRes.data || []);
-        }
-      }
-    } catch {
-      // Handled
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    initConversation();
-  }, []);
-
-  const handleSendMessage = async (textToSend?: string) => {
-    const text = (textToSend || inputText).trim();
-    if (!text || !conversation || sending) return;
-
-    const tempUserMsg: Message = {
-      id: Date.now(),
-      sender: 'USER',
-      content: text,
-      createdAt: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, tempUserMsg]);
+  const chat=useCompanion();
+  const {t,i18n}=useTranslation();
+  const {messages,loading,sending}=chat;
+  const [inputText,setInputText]=useState('');
+  const [speaking,setSpeaking]=useState(false);
+  const flatListRef=useRef<FlatList>(null);
+  useEffect(()=>()=>{void Speech.stop();},[]);
+  const handleSendMessage=async (value?:string)=>{
+    const text=(value??inputText).trim();
+    if(!text || sending) return;
     setInputText('');
-    setSending(true);
-
-    try {
-      const res = await apiClient<Message>(`/api/conversations/${conversation.id}/messages`, {
-        method: 'POST',
-        body: JSON.stringify({ content: text, message: text }),
-      });
-
-      if (res.success && res.data) {
-        setMessages((prev) => [...prev, res.data]);
-      } else {
-        throw new Error(res.message || 'Không thể nhận phản hồi');
-      }
-    } catch (err: any) {
-      console.warn('AI Chat Error:', err);
-      let fallbackText =
-        'Dạ cháu hiểu và luôn ở bên cạnh tâm sự cùng cụ ạ! Cụ có muốn cháu kể một câu chuyện vui hay chia sẻ thêm điều gì không ạ?';
-      const lower = text.toLowerCase();
-      if (lower.includes('chuyện vui') || lower.includes('kể chuyện') || lower.includes('hài')) {
-        fallbackText =
-          'Dạ cháu kể cụ nghe mẩu chuyện vui nhé: Có một cụ ông đi khám mắt, bác sĩ hỏi: "Cụ nhìn chữ này có rõ không?". Cụ mỉm cười: "Chữ thì hơi mờ, nhưng bác sĩ đứng bên cạnh thì cụ thấy rất tươi tỉnh!". Chúc cụ luôn vui tươi, yêu đời ạ!';
-      } else if (lower.includes('thời tiết')) {
-        fallbackText =
-          'Dạ tiết trời hôm nay khá dễ chịu, cụ nhớ chú ý giữ ấm cơ thể khi sáng sớm hoặc chiều tối ra vườn dạo bước nhé ạ!';
-      } else if (lower.includes('thuốc') || lower.includes('uống')) {
-        fallbackText =
-          'Dạ cụ nhớ uống thuốc đúng giờ và theo đúng chỉ dẫn của bác sĩ nhé! Cụ đã uống thuốc cữ này chưa ạ?';
-      }
-      const fallbackAssistantMsg: Message = {
-        id: Date.now() + 1,
-        sender: 'ASSISTANT',
-        content: fallbackText,
-        createdAt: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, fallbackAssistantMsg]);
-    } finally {
-      setSending(false);
-    }
+    if(!await chat.send(text)) setInputText(text);
   };
-
-  const handleVoicePress = () => {
-    Alert.alert(
-      'Tính năng Giọng nói (Voice Assistant)',
-      'Tính năng trò chuyện bằng giọng nói tiếng Việt đang được hoàn thiện và sẽ sẵn sàng trong bản cập nhật tới!',
-      [{ text: 'Đã hiểu', style: 'default' }]
-    );
+  const handleVoicePress=async ()=>{
+    if(speaking){await Speech.stop();setSpeaking(false);return;}
+    const reply=[...messages].reverse().find(item=>item.sender==='AI'||item.sender==='ASSISTANT');
+    if(!reply)return;
+    setSpeaking(true);
+    Speech.speak(reply.content,{language:i18n.language==='ja'?'ja-JP':'vi-VN',onDone:()=>setSpeaking(false),onStopped:()=>setSpeaking(false),onError:()=>setSpeaking(false)});
   };
-
   const formatMessageTime = (isoString: string) => {
     try {
       const date = new Date(isoString);
-      return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      return date.toLocaleTimeString(i18n.language==='ja'?'ja-JP':'vi-VN', { hour: '2-digit', minute: '2-digit' });
     } catch {
       return '';
     }
@@ -150,12 +74,10 @@ export const ElderlyCompanionScreen: React.FC = () => {
       <View style={styles.topBar}>
         <AIAvatar size={46} />
         <View style={styles.topBarInfo}>
-          <Text style={[styles.companionName, { fontSize: fs(17) }]}>Trợ lý Mimamori AI</Text>
+          <Text style={[styles.companionName, { fontSize: fs(20) }]}>{tr("Trợ lý Mimamori AI")}</Text>
           <View style={styles.onlineBadgeRow}>
             <View style={styles.greenPulse} />
-            <Text style={[styles.onlineStatusText, { fontSize: fs(12) }]}>
-              Luôn sẵn sàng lắng nghe cụ
-            </Text>
+            <Text style={[styles.onlineStatusText, { fontSize: fs(12) }]}>{tr("Trò chuyện cùng Mimamori")}</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -163,18 +85,18 @@ export const ElderlyCompanionScreen: React.FC = () => {
           onPress={handleVoicePress}
           activeOpacity={0.7}
         >
-          <Feather name="mic" size={14} color={colors.primary} style={{ marginRight: 4 }} />
-          <Text style={[styles.voiceHeaderText, { fontSize: fs(12) }]}>Giọng nói</Text>
+          <Feather name="volume-2" size={14} color={colors.primary} style={{ marginRight: 4 }} />
+          <Text style={[styles.voiceHeaderText, { fontSize: fs(12) }]}>{t(speaking?'stopSpeaking':'readAloud')}</Text>
         </TouchableOpacity>
       </View>
 
+      {chat.error && <><Notice tone="danger" text={t('error')} /><Button title={t('retry')} onPress={chat.reload} /></>}
+      {sending && <Button variant="secondary" title={t('cancel')} onPress={chat.cancel} />}
       {/* Messages Feed */}
       {loading ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { fontSize: fs(14) }]}>
-            Đang chuẩn bị cuộc trò chuyện...
-          </Text>
+          <Text style={[styles.loadingText, { fontSize: fs(14) }]}>{tr("Đang chuẩn bị cuộc trò chuyện...")}</Text>
         </View>
       ) : (
         <FlatList
@@ -186,10 +108,8 @@ export const ElderlyCompanionScreen: React.FC = () => {
           ListEmptyComponent={
             <View style={styles.emptyWelcome}>
               <AIAvatar size={64} />
-              <Text style={[styles.emptyWelcomeTitle, { fontSize: fs(19) }]}>Kính chào cụ!</Text>
-              <Text style={[styles.emptyWelcomeSub, { fontSize: fs(14) }]}>
-                Cháu là trợ lý Mimamori AI. Cụ có thể trò chuyện về sức khỏe, kể chuyện vui, hay hỏi bất kỳ điều gì với cháu nhé!
-              </Text>
+              <Text style={[styles.emptyWelcomeTitle, { fontSize: fs(20) }]}>{tr("Kính chào cụ!")}</Text>
+              <Text style={[styles.emptyWelcomeSub, { fontSize: fs(14) }]}>{tr("Cháu là trợ lý Mimamori AI. Cụ có thể trò chuyện về sức khỏe, kể chuyện vui, hay hỏi bất kỳ điều gì với cháu nhé!")}</Text>
             </View>
           }
           renderItem={({ item }) => {
@@ -209,7 +129,7 @@ export const ElderlyCompanionScreen: React.FC = () => {
                     <Text
                       style={[
                         styles.messageText,
-                        { fontSize: fs(16) },
+                        { fontSize: fs(20) },
                         isUser ? styles.userText : styles.aiText,
                       ]}
                     >
@@ -238,9 +158,7 @@ export const ElderlyCompanionScreen: React.FC = () => {
       <View style={styles.suggestionsContainer}>
         <View style={styles.suggestionsHeaderRow}>
           <Feather name="help-circle" size={13} color={colors.primary} style={{ marginRight: 5 }} />
-          <Text style={[styles.suggestionsHeader, { fontSize: fs(12) }]}>
-            Gợi ý trò chuyện cùng trợ lý:
-          </Text>
+          <Text style={[styles.suggestionsHeader, { fontSize: fs(12) }]}>{tr("Gợi ý trò chuyện cùng trợ lý:")}</Text>
         </View>
         <ScrollView
           horizontal
@@ -252,10 +170,10 @@ export const ElderlyCompanionScreen: React.FC = () => {
               key={idx}
               style={styles.suggestionChip}
               onPress={() => handleSendMessage(prompt)}
-              disabled={sending}
+              disabled={sending || !chat.conversation}
               activeOpacity={0.7}
             >
-              <Text style={[styles.suggestionChipText, { fontSize: fs(13) }]}>{prompt}</Text>
+              <Text style={[styles.suggestionChipText, { fontSize: fs(13) }]}>{tr(prompt)}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -267,14 +185,15 @@ export const ElderlyCompanionScreen: React.FC = () => {
           style={styles.voiceInputBtn}
           onPress={handleVoicePress}
           activeOpacity={0.7}
-          accessibilityLabel="Thu âm giọng nói (Sắp ra mắt)"
+          accessibilityLabel={t(speaking?"stopSpeaking":"readAloud")}
+          disabled={loading || messages.length===0}
         >
-          <Feather name="mic" size={20} color={colors.primary} />
+          <Feather name="volume-2" size={20} color={colors.primary} />
         </TouchableOpacity>
 
         <TextInput
-          style={[styles.textInput, { fontSize: fs(15) }]}
-          placeholder="Nhập điều cụ muốn tâm sự..."
+          style={[styles.textInput, { fontSize: fs(20) }]}
+          placeholder={tr("Nhập điều cụ muốn tâm sự...")}
           placeholderTextColor={colors.textMuted}
           value={inputText}
           onChangeText={setInputText}
@@ -288,9 +207,9 @@ export const ElderlyCompanionScreen: React.FC = () => {
           activeOpacity={0.8}
         >
           {sending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={colors.textInverse} />
           ) : (
-            <Feather name="send" size={16} color="#FFFFFF" />
+            <Feather name="send" size={16} color={colors.textInverse} />
           )}
         </TouchableOpacity>
       </View>
@@ -298,7 +217,7 @@ export const ElderlyCompanionScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -376,7 +295,7 @@ const styles = StyleSheet.create({
   emptyWelcomeSub: {
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
+
   },
   messageRow: {
     flexDirection: 'row',
@@ -419,10 +338,10 @@ const styles = StyleSheet.create({
     ...shadows.subtle,
   },
   messageText: {
-    lineHeight: 23,
+
   },
   userText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '500',
   },
   aiText: {
@@ -484,7 +403,7 @@ const styles = StyleSheet.create({
   },
   voiceInputBtn: {
     width: 44,
-    height: 44,
+    minHeight: 56,
     borderRadius: 22,
     backgroundColor: colors.surfaceWarm,
     alignItems: 'center',
@@ -501,7 +420,7 @@ const styles = StyleSheet.create({
   },
   sendBtn: {
     width: 44,
-    height: 44,
+    minHeight: 56,
     borderRadius: 22,
     backgroundColor: colors.primary,
     alignItems: 'center',

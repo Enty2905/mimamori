@@ -1,0 +1,378 @@
+{
+  "dataset_version": "spec006-engineering-v1",
+  "recorded_at": "2026-11-09T02:47:42.385122+00:00",
+  "pipeline_id": "7a45e41d782fba9431e4c21e954641861473e71725dd69bf70d56059b7489016",
+  "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "embedding_revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+  "score_threshold": 0.45,
+  "context_budget": 384,
+  "corpus_sha256": {
+    "reminders-ja": "3a3692a594d61ee4ef4a555e5c32c872bd3042318e34602cd0ab6c39c16b62c4",
+    "reminders-vi": "492263d7c3acaa826aec171b1c39b8e03d6a2f45332731e22e9aa56cc701e194"
+  },
+  "limitations": "Small authored engineering fixtures; not clinical evaluation or calibrated confidence.",
+  "metrics": [
+    {
+      "language": "ja",
+      "k": 1,
+      "answerable_count": 5,
+      "unanswerable_count": 2,
+      "hit_at_k": 1.0,
+      "recall_at_k": 0.9,
+      "no_context_accuracy": 1.0,
+      "rows": [
+        {
+          "id": "ja-access",
+          "language": "ja",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "予定とアクセス"
+          ]
+        },
+        {
+          "id": "ja-confirm",
+          "language": "ja",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "お知らせと確認"
+          ]
+        },
+        {
+          "id": "ja-offline",
+          "language": "ja",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "接続がないとき"
+          ]
+        },
+        {
+          "id": "ja-ai",
+          "language": "ja",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "支援の範囲"
+          ]
+        },
+        {
+          "id": "ja-multi",
+          "language": "ja",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 0.5,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "予定とアクセス"
+          ]
+        },
+        {
+          "id": "ja-negative-space",
+          "language": "ja",
+          "status": "no_context",
+          "reason": "LOW_CONFIDENCE",
+          "hit": false,
+          "recall": null,
+          "no_context_correct": true,
+          "retrieved_sections": []
+        },
+        {
+          "id": "ja-negative-cooking",
+          "language": "ja",
+          "status": "no_context",
+          "reason": "LOW_CONFIDENCE",
+          "hit": false,
+          "recall": null,
+          "no_context_correct": true,
+          "retrieved_sections": []
+        }
+      ]
+    },
+    {
+      "language": "ja",
+      "k": 3,
+      "answerable_count": 5,
+      "unanswerable_count": 2,
+      "hit_at_k": 1.0,
+      "recall_at_k": 0.9,
+      "no_context_accuracy": 1.0,
+      "rows": [
+        {
+          "id": "ja-access",
+          "language": "ja",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "予定とアクセス"
+          ]
+        },
+        {
+          "id": "ja-confirm",
+          "language": "ja",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "お知らせと確認"
+          ]
+        },
+        {
+          "id": "ja-offline",
+          "language": "ja",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "接続がないとき"
+          ]
+        },
+        {
+          "id": "ja-ai",
+          "language": "ja",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "支援の範囲"
+          ]
+        },
+        {
+          "id": "ja-multi",
+          "language": "ja",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 0.5,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "予定とアクセス"
+          ]
+        },
+        {
+          "id": "ja-negative-space",
+          "language": "ja",
+          "status": "no_context",
+          "reason": "LOW_CONFIDENCE",
+          "hit": false,
+          "recall": null,
+          "no_context_correct": true,
+          "retrieved_sections": []
+        },
+        {
+          "id": "ja-negative-cooking",
+          "language": "ja",
+          "status": "no_context",
+          "reason": "LOW_CONFIDENCE",
+          "hit": false,
+          "recall": null,
+          "no_context_correct": true,
+          "retrieved_sections": []
+        }
+      ]
+    },
+    {
+      "language": "vi",
+      "k": 1,
+      "answerable_count": 5,
+      "unanswerable_count": 2,
+      "hit_at_k": 0.8,
+      "recall_at_k": 0.7,
+      "no_context_accuracy": 1.0,
+      "rows": [
+        {
+          "id": "vi-access",
+          "language": "vi",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "Lịch và quyền truy cập"
+          ]
+        },
+        {
+          "id": "vi-confirm",
+          "language": "vi",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "Thông báo và xác nhận"
+          ]
+        },
+        {
+          "id": "vi-offline",
+          "language": "vi",
+          "status": "no_context",
+          "reason": "LOW_CONFIDENCE",
+          "hit": false,
+          "recall": 0.0,
+          "no_context_correct": null,
+          "retrieved_sections": []
+        },
+        {
+          "id": "vi-ai",
+          "language": "vi",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "Giới hạn của trợ lý"
+          ]
+        },
+        {
+          "id": "vi-multi",
+          "language": "vi",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 0.5,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "Thông báo và xác nhận"
+          ]
+        },
+        {
+          "id": "vi-negative-space",
+          "language": "vi",
+          "status": "no_context",
+          "reason": "LOW_CONFIDENCE",
+          "hit": false,
+          "recall": null,
+          "no_context_correct": true,
+          "retrieved_sections": []
+        },
+        {
+          "id": "vi-negative-cooking",
+          "language": "vi",
+          "status": "no_context",
+          "reason": "LOW_CONFIDENCE",
+          "hit": false,
+          "recall": null,
+          "no_context_correct": true,
+          "retrieved_sections": []
+        }
+      ]
+    },
+    {
+      "language": "vi",
+      "k": 3,
+      "answerable_count": 5,
+      "unanswerable_count": 2,
+      "hit_at_k": 0.8,
+      "recall_at_k": 0.8,
+      "no_context_accuracy": 1.0,
+      "rows": [
+        {
+          "id": "vi-access",
+          "language": "vi",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "Lịch và quyền truy cập"
+          ]
+        },
+        {
+          "id": "vi-confirm",
+          "language": "vi",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "Thông báo và xác nhận"
+          ]
+        },
+        {
+          "id": "vi-offline",
+          "language": "vi",
+          "status": "no_context",
+          "reason": "LOW_CONFIDENCE",
+          "hit": false,
+          "recall": 0.0,
+          "no_context_correct": null,
+          "retrieved_sections": []
+        },
+        {
+          "id": "vi-ai",
+          "language": "vi",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "Giới hạn của trợ lý"
+          ]
+        },
+        {
+          "id": "vi-multi",
+          "language": "vi",
+          "status": "context",
+          "reason": "NONE",
+          "hit": true,
+          "recall": 1.0,
+          "no_context_correct": null,
+          "retrieved_sections": [
+            "Giới hạn của trợ lý",
+            "Lịch và quyền truy cập",
+            "Thông báo và xác nhận"
+          ]
+        },
+        {
+          "id": "vi-negative-space",
+          "language": "vi",
+          "status": "no_context",
+          "reason": "LOW_CONFIDENCE",
+          "hit": false,
+          "recall": null,
+          "no_context_correct": true,
+          "retrieved_sections": []
+        },
+        {
+          "id": "vi-negative-cooking",
+          "language": "vi",
+          "status": "no_context",
+          "reason": "LOW_CONFIDENCE",
+          "hit": false,
+          "recall": null,
+          "no_context_correct": true,
+          "retrieved_sections": []
+        }
+      ]
+    }
+  ]
+}

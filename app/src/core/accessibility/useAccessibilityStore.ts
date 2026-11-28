@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
+import Storage from 'expo-sqlite/kv-store';
 import { Platform } from 'react-native';
 
 export type FontSizeLevel = 'small' | 'standard' | 'large' | 'xlarge';
@@ -44,7 +44,7 @@ export const useAccessibilityStore = create<AccessibilityState>((set, get) => ({
       if (Platform.OS === 'web') {
         localStorage.setItem(STORAGE_KEY, option.id);
       } else {
-        await SecureStore.setItemAsync(STORAGE_KEY, option.id);
+        await Storage.setItem(STORAGE_KEY, option.id);
       }
     } catch {
       // Ignore write errors
@@ -52,14 +52,13 @@ export const useAccessibilityStore = create<AccessibilityState>((set, get) => ({
   },
 
   resetToDefault: async () => {
-    const standard = FONT_SIZE_OPTIONS[1];
     set({ fontSizeLevel: 'standard', fontScale: 1.0 });
 
     try {
       if (Platform.OS === 'web') {
         localStorage.setItem(STORAGE_KEY, 'standard');
       } else {
-        await SecureStore.setItemAsync(STORAGE_KEY, 'standard');
+        await Storage.setItem(STORAGE_KEY, 'standard');
       }
     } catch {
       // Ignore
@@ -72,7 +71,7 @@ export const useAccessibilityStore = create<AccessibilityState>((set, get) => ({
       if (Platform.OS === 'web') {
         savedLevel = localStorage.getItem(STORAGE_KEY);
       } else {
-        savedLevel = await SecureStore.getItemAsync(STORAGE_KEY);
+        savedLevel = await Storage.getItem(STORAGE_KEY);
       }
 
       if (savedLevel && (savedLevel === 'small' || savedLevel === 'standard' || savedLevel === 'large' || savedLevel === 'xlarge')) {

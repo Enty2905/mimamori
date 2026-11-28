@@ -19,9 +19,11 @@ import java.util.List;
 public class ConversationController {
 
     private final ConversationService conversationService;
+    private final com.mimamori.common.GroqService companion;
 
-    public ConversationController(ConversationService conversationService) {
+    public ConversationController(ConversationService conversationService, com.mimamori.common.GroqService companion) {
         this.conversationService = conversationService;
+        this.companion = companion;
     }
 
     @GetMapping("/active")
@@ -39,7 +41,10 @@ public class ConversationController {
         if (request == null || request.getContent().isBlank()) {
             throw new ApiException(400, "Nội dung tin nhắn không được để trống");
         }
-        return ApiResponse.ok(conversationService.sendMessage(elderlyId, conversationId, request));
+        var turn = conversationService.prepare(elderlyId,conversationId,request);
+        if (turn.replay() != null) return ApiResponse.ok(turn.replay());
+        try { return ApiResponse.ok(conversationService.finish(turn,companion.generateCompanionReply(turn.text(),"",turn.history()))); }
+        catch (RuntimeException failure) { conversationService.cancel(turn); throw failure; }
     }
 
     @GetMapping("/{id}/messages")

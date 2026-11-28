@@ -13,6 +13,15 @@ import java.util.Optional;
 
 @Repository
 public interface MedicationLogRepository extends JpaRepository<MedicationLog, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT l FROM MedicationLog l WHERE l.id=:id")
+    Optional<MedicationLog> findLockedById(@Param("id") Long id);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT l FROM MedicationLog l WHERE l.occurrenceId=:id")
+    Optional<MedicationLog> findLockedByOccurrenceId(@Param("id") String id);
+    Optional<MedicationLog> findByOccurrenceId(String id);
+    List<MedicationLog> findByMedicationId(Long medicationId);
+    List<MedicationLog> findByElderlyIdAndScheduledAtBetweenOrderByScheduledAt(Long userId, java.time.Instant start, java.time.Instant end);
 
     List<MedicationLog> findByElderlyIdOrderByScheduledTimeDesc(Long elderlyId);
 

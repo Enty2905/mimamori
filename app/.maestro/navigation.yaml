@@ -1,0 +1,36 @@
+appId: com.mimamori.app
+name: All elderly tabs remain usable
+---
+# Open the installed app with Expo's AndroidDeviceManager before this flow.
+# Xiaomi may return to its launcher when a driver installation overlaps launch.
+- runFlow:
+    when:
+      visible: "Bắt đầu trải nghiệm"
+    commands:
+      - tapOn: "Bắt đầu trải nghiệm"
+      - scrollUntilVisible:
+          element:
+            text: "Người cao tuổi"
+          direction: DOWN
+      - tapOn: "Người cao tuổi"
+- extendedWaitUntil:
+    visible: "Thuốc"
+    timeout: 20000
+- tapOn: "Thuốc"
+- assertVisible: "Sức khỏe & Thuốc"
+- takeScreenshot: medication-native
+- tapOn: "Hồ sơ"
+- assertVisible: "Thông tin cá nhân"
+- takeScreenshot: profile-native
+- tapOn: "AI"
+- assertVisible: "Trợ lý Mimamori AI"
+- takeScreenshot: companion-native
+- tapOn: "Điểm danh"
+- assertVisible: "Hôm nay tâm trạng của cụ thế nào ạ?"
+- takeScreenshot: checkin-native
+- tapOn:
+    text: "Trang chủ"
+    index: 0
+- tapOn: "Thuốc"
+- assertVisible: "Sức khỏe & Thuốc"
+- takeScreenshot: medication-return-native

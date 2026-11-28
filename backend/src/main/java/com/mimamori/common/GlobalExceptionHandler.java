@@ -1,37 +1,37 @@
 package com.mimamori.common;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
     @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ApiResponse<Void>> handleApiException(ApiException ex) {
-        return ResponseEntity.status(ex.getStatus()).body(ApiResponse.error(ex.getMessage()));
+    public ResponseEntity<ApiError> api(ApiException error) {
+        return ResponseEntity.status(error.getStatus()).body(ApiError.of(error.getStatus(), error.getMessage()));
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationException(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-            errors.put(error.getField(), error.getDefaultMessage());
-        }
-        ApiResponse<Map<String, String>> response = new ApiResponse<>(false, "Validation failed", errors);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
+    public ResponseEntity<ApiError> validation(Exception error) {
+        return ResponseEntity.badRequest().body(ApiError.of(400, "Request data is invalid"));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> method(Exception error) {
+        return ResponseEntity.status(405).body(new ApiError("METHOD_NOT_ALLOWED", "Method not supported", java.time.Instant.now()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> conflict(Exception error) {
+        return ResponseEntity.status(409).body(ApiError.of(409, "The request conflicts with existing data"));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception ex) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Internal server error: " + ex.getMessage()));
+    public ResponseEntity<ApiError> unexpected(Exception error) {
+        return ResponseEntity.internalServerError().body(ApiError.of(500, "An unexpected error occurred"));
     }
 }
-

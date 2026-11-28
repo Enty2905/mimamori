@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "key": "reminders-ja",
+      "path": "reminders.ja.md",
+      "source": "repo://mimamori/ai/datasets/approved/reminders.ja.md",
+      "title": "Mimamori\u306e\u304a\u85ac\u306e\u304a\u77e5\u3089\u305b",
+      "language": "ja",
+      "version": "1.0.0",
+      "sha256": "3a3692a594d61ee4ef4a555e5c32c872bd3042318e34602cd0ab6c39c16b62c4",
+      "approved": true,
+      "reviewed_by": "Spec005 engineering fixture review (not clinical review)",
+      "reviewed_at": "2026-09-10",
+      "sensitivity_class": "public",
+      "content_kind": "project_knowledge"
+    },
+    {
+      "key": "reminders-vi",
+      "path": "reminders.vi.md",
+      "source": "repo://mimamori/ai/datasets/approved/reminders.vi.md",
+      "title": "Nh\u1eafc thu\u1ed1c trong Mimamori",
+      "language": "vi",
+      "version": "1.0.0",
+      "sha256": "492263d7c3acaa826aec171b1c39b8e03d6a2f45332731e22e9aa56cc701e194",
+      "approved": true,
+      "reviewed_by": "Spec005 engineering fixture review (not clinical review)",
+      "reviewed_at": "2026-09-10",
+      "sensitivity_class": "public",
+      "content_kind": "project_knowledge"
+    }
+  ]
+}

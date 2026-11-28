@@ -22,6 +22,7 @@ public interface FamilyRelationshipRepository extends JpaRepository<FamilyRelati
     @Query("SELECT r FROM FamilyRelationship r WHERE (r.caregiver.id = :userId OR r.elderly.id = :userId) AND r.status = :status")
     List<FamilyRelationship> findAllActiveForUser(@Param("userId") Long userId, @Param("status") RelationshipStatus status);
 
-    boolean existsByCaregiverIdAndElderlyId(Long caregiverId, Long elderlyId);
+    @Query("SELECT COUNT(r) > 0 FROM FamilyRelationship r WHERE r.caregiver.id = :caregiverId AND r.elderly.id = :elderlyId AND r.status = com.mimamori.userprofile.entity.RelationshipStatus.ACCEPTED")
+    boolean existsByCaregiverIdAndElderlyId(@Param("caregiverId") Long caregiverId, @Param("elderlyId") Long elderlyId);
 }
 

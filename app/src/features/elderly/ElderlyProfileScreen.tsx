@@ -1,20 +1,29 @@
+import {useForm,useWatch} from 'react-hook-form';
+import {profileFields} from '../../core/auth/forms';
+import {isRunningInExpoGo} from 'expo';
+import {useOriginalLabels} from '../../core/localization/original';
+import {useColors,useThemeStore} from '../../core/theme/useTheme';
+import {CareText as Text, CareTouchable as TouchableOpacity} from '../../components/CareText';
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
+    StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Switch,
+    Switch,
   Alert,
   Image,
   TextInput,
   ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
-import { useAuthStore } from '../../core/auth/useAuthStore';
-import { apiClient } from '../../core/api/client';
+import { colors as baseColors, shadows } from '../../core/theme/colors';
+import { useSession } from '../../core/auth/useSession';
+import {careApi} from '../../core/api/careApi';
+import {useFamily} from '../caregiver/queries';
+import {FamilyLinks} from '../caregiver/FamilyLinks';
+import {Notice,LanguageControl} from '../../components/CareUI';
+import {useReminderStatus} from '../../core/notifications/runtime';
+import {useTranslation} from 'react-i18next';
 import { AVATAR_PRESETS, getAvatarSource } from '../../core/theme/avatar';
 import {
   useAccessibilityStore,
@@ -22,31 +31,33 @@ import {
   FontSizeLevel,
 } from '../../core/accessibility/useAccessibilityStore';
 
-interface FamilyMember {
-  relationshipId: number;
-  member: {
-    id: number;
-    fullName: string;
-    username: string;
-  };
-  relationshipType: string;
-}
-
 export const ElderlyProfileScreen: React.FC = () => {
-  const { user, logout, demoLogin, updateUser } = useAuthStore();
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
+
+  const { user, logout, demoLogin, updateUser } = useSession();
   const { fontSizeLevel, setFontSizeLevel, fs } = useAccessibilityStore();
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  const family=useFamily();
+  const familyMembers=family.data?.filter(item=>item.status==='ACCEPTED') ?? [];
+  const {t}=useTranslation();
+  const reminders=useReminderStatus();
   const [currentSubView, setCurrentSubView] = useState<'main' | 'displaySettings' | 'personalInfo' | 'securityPrivacy'>('main');
 
   // Accessibility & Display toggles (Screen 9)
-  const [highContrast, setHighContrast] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const display = useThemeStore();
+  const highContrast=display.highContrast;
+  const darkMode=display.darkMode;
+  const setHighContrast=(value:boolean)=>display.set({highContrast:value});
+  const setDarkMode=(value:boolean)=>display.set({darkMode:value});
 
   // Form: Thông tin cá nhân
-  const [fullName, setFullName] = useState(user?.fullName || 'Nguyễn Văn Ba');
-  const [phone, setPhone] = useState(user?.phone || '0912345678');
-  const [emergencyPhone, setEmergencyPhone] = useState(user?.emergencyContact || '0987654321');
-  const [selectedAvatarId, setSelectedAvatarId] = useState<string>(user?.avatarUrl || 'watering');
+  const form=useForm<{fullName:string;phone:string;emergencyPhone:string;selectedAvatarId:string}>({defaultValues:{fullName:user?.fullName??'',phone:user?.phone??'',emergencyPhone:user?.emergencyContact??'',selectedAvatarId:user?.avatarUrl??'watering'}});
+  const {fullName='',phone='',emergencyPhone='',selectedAvatarId='watering'}=useWatch({control:form.control});
+  const setFullName=(value:string)=>form.setValue('fullName',value);
+  const setPhone=(value:string)=>form.setValue('phone',value);
+  const setEmergencyPhone=(value:string)=>form.setValue('emergencyPhone',value);
+  const setSelectedAvatarId=(value:string)=>form.setValue('selectedAvatarId',value);
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Form: Đổi mật khẩu
@@ -58,30 +69,8 @@ export const ElderlyProfileScreen: React.FC = () => {
   const [showNewPw, setShowNewPw] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
-  // Form: Quên mật khẩu
-  const [forgotIdentifier, setForgotIdentifier] = useState(user?.username || '');
-  const [forgotNewPassword, setForgotNewPassword] = useState('');
-  const [recoveringPassword, setRecoveringPassword] = useState(false);
-
-  useEffect(() => {
-    apiClient<FamilyMember[]>('/api/family/members')
-      .then((res) => {
-        if (res.success && res.data) setFamilyMembers(res.data);
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      setFullName(user.fullName || '');
-      setPhone(user.phone || '');
-      setEmergencyPhone(user.emergencyContact || '');
-      setForgotIdentifier(user.username || user.email || '');
-      if (user.avatarUrl) {
-        setSelectedAvatarId(user.avatarUrl);
-      }
-    }
-  }, [user]);
+  const {reset}=form;
+  useEffect(()=>{if(user)reset({fullName:user.fullName,phone:user.phone??'',emergencyPhone:user.emergencyContact??'',selectedAvatarId:user.avatarUrl??'watering'});},[user,reset]);
 
   const currentFontOption =
     FONT_SIZE_OPTIONS.find((o) => o.id === fontSizeLevel) || FONT_SIZE_OPTIONS[1];
@@ -103,35 +92,21 @@ export const ElderlyProfileScreen: React.FC = () => {
 
   // Handler: Lưu thông tin cá nhân
   const handleSaveProfile = async () => {
-    if (!fullName.trim()) {
-      Alert.alert('Lưu ý', 'Vui lòng nhập họ và tên của cụ.');
+    if (!profileFields.safeParse(form.getValues()).success) {
+      Alert.alert(tr("Lưu ý"), tr("Vui lòng nhập họ và tên của cụ."));
       return;
     }
 
     try {
       setSavingProfile(true);
-      const res = await apiClient<any>('/api/users/me', {
-        method: 'PUT',
-        body: JSON.stringify({
-          fullName: fullName.trim(),
-          phone: phone.trim() || null,
-          emergencyContact: emergencyPhone.trim() || null,
-          avatarUrl: selectedAvatarId,
-        }),
-      });
-
-      if (res.success) {
-        updateUser({
-          fullName: fullName.trim(),
-          phone: phone.trim() || null,
-          emergencyContact: emergencyPhone.trim() || null,
-          avatarUrl: selectedAvatarId,
-        });
-        Alert.alert('Thành công', 'Thông tin cá nhân của cụ đã được lưu lại thành công!');
+      const saved=await careApi.saveProfile({fullName:fullName.trim(),phone:phone.trim(),emergencyContact:emergencyPhone.trim(),avatarUrl:selectedAvatarId});
+      updateUser(saved);
+      {
+        Alert.alert(tr("Thành công"), tr("Thông tin cá nhân của cụ đã được lưu lại thành công!"));
         setCurrentSubView('main');
       }
-    } catch (err: any) {
-      Alert.alert('Lỗi', err.message || 'Không thể lưu thông tin lúc này.');
+    } catch (err: unknown) {
+      Alert.alert(tr("Lỗi"), (err instanceof Error ? err.message : '') || 'Không thể lưu thông tin lúc này.');
     } finally {
       setSavingProfile(false);
     }
@@ -140,72 +115,33 @@ export const ElderlyProfileScreen: React.FC = () => {
   // Handler: Đổi mật khẩu
   const handleChangePassword = async () => {
     if (!currentPassword) {
-      Alert.alert('Lưu ý', 'Vui lòng nhập mật khẩu hiện tại.');
+      Alert.alert(tr("Lưu ý"), tr("Vui lòng nhập mật khẩu hiện tại."));
       return;
     }
     if (!newPassword || newPassword.length < 6) {
-      Alert.alert('Lưu ý', 'Mật khẩu mới phải có ít nhất 6 ký tự.');
+      Alert.alert(tr("Lưu ý"), tr("Mật khẩu mới phải có ít nhất 6 ký tự."));
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Lưu ý', 'Xác nhận mật khẩu mới không khớp.');
+      Alert.alert(tr("Lưu ý"), tr("Xác nhận mật khẩu mới không khớp."));
       return;
     }
 
     try {
       setSavingPassword(true);
-      const res = await apiClient('/api/auth/change-password', {
-        method: 'POST',
-        body: JSON.stringify({
-          currentPassword,
-          newPassword,
-        }),
-      });
-
-      if (res.success) {
-        Alert.alert('Thành công', 'Đổi mật khẩu tài khoản thành công!');
+      await careApi.changePassword(currentPassword,newPassword);
+      await logout();
+      {
+        Alert.alert(tr("Thành công"), tr("Đổi mật khẩu tài khoản thành công!"));
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
         setCurrentSubView('main');
       }
-    } catch (err: any) {
-      Alert.alert('Lỗi', err.message || 'Không thể đổi mật khẩu lúc này.');
+    } catch (err: unknown) {
+      Alert.alert(tr("Lỗi"), (err instanceof Error ? err.message : '') || 'Không thể đổi mật khẩu lúc này.');
     } finally {
       setSavingPassword(false);
-    }
-  };
-
-  // Handler: Quên / Khôi phục mật khẩu
-  const handleForgotPassword = async () => {
-    if (!forgotIdentifier.trim()) {
-      Alert.alert('Lưu ý', 'Vui lòng nhập tên đăng nhập hoặc email.');
-      return;
-    }
-    if (!forgotNewPassword || forgotNewPassword.length < 6) {
-      Alert.alert('Lưu ý', 'Mật khẩu mới phải có ít nhất 6 ký tự.');
-      return;
-    }
-
-    try {
-      setRecoveringPassword(true);
-      const res = await apiClient('/api/auth/forgot-password', {
-        method: 'POST',
-        body: JSON.stringify({
-          usernameOrEmail: forgotIdentifier.trim(),
-          newPassword: forgotNewPassword,
-        }),
-      });
-
-      if (res.success) {
-        Alert.alert('Thành công', 'Khôi phục mật khẩu thành công! Cụ hoặc người thân có thể đăng nhập bằng mật khẩu mới này.');
-        setForgotNewPassword('');
-        setCurrentSubView('main');
-      }
-    } catch (err: any) {
-      Alert.alert('Lỗi', err.message || 'Không thể khôi phục mật khẩu lúc này.');
-    } finally {
-      setRecoveringPassword(false);
     }
   };
 
@@ -227,9 +163,7 @@ export const ElderlyProfileScreen: React.FC = () => {
           >
             <Feather name="chevron-left" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.screenHeaderTitle, { fontSize: fs(19) }]}>
-            Bảo mật & Quyền riêng tư
-          </Text>
+          <Text style={[styles.screenHeaderTitle, { fontSize: fs(20) }]}>{tr("Bảo mật & Quyền riêng tư")}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -246,9 +180,7 @@ export const ElderlyProfileScreen: React.FC = () => {
                 { fontSize: fs(13.5) },
                 securityTab === 'change' && styles.segmentTextActive,
               ]}
-            >
-              Đổi mật khẩu
-            </Text>
+            >{tr("Đổi mật khẩu")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -262,29 +194,26 @@ export const ElderlyProfileScreen: React.FC = () => {
                 { fontSize: fs(13.5) },
                 securityTab === 'forgot' && styles.segmentTextActive,
               ]}
-            >
-              Quên mật khẩu
-            </Text>
+            >{tr("Quên mật khẩu")}</Text>
           </TouchableOpacity>
         </View>
 
         {securityTab === 'change' ? (
           /* TAB 1: ĐỔI MẬT KHẨU */
           <View style={styles.cardBox}>
-            <Text style={[styles.boxTitle, { fontSize: fs(16) }]}>Cập nhật mật khẩu mới</Text>
-            <Text style={[styles.boxSubtitle, { fontSize: fs(12.5) }]}>
-              Đặt mật khẩu an toàn có ít nhất 6 ký tự để bảo vệ tài khoản.
-            </Text>
+            <Text style={[styles.boxTitle, { fontSize: fs(20) }]}>{tr("Cập nhật mật khẩu mới")}</Text>
+            <Text style={[styles.boxSubtitle, { fontSize: fs(12.5) }]}>{tr("Đặt mật khẩu an toàn có ít nhất 6 ký tự để bảo vệ tài khoản.")}</Text>
 
             {/* Mật khẩu hiện tại */}
-            <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>Mật khẩu hiện tại *</Text>
+            <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>{tr("Mật khẩu hiện tại *")}</Text>
             <View style={styles.inputWrap}>
               <Feather name="lock" size={16} color={colors.primary} style={styles.inputPrefixIcon} />
               <TextInput
-                style={[styles.textInput, { fontSize: fs(15) }]}
-                placeholder="Nhập mật khẩu đang dùng"
+                style={[styles.textInput, { fontSize: fs(20) }]}
+                placeholder={tr("Nhập mật khẩu đang dùng")}
                 secureTextEntry={!showCurrentPw}
-                value={currentPassword}
+                accessibilityLabel={tr('Mật khẩu hiện tại *')}
+                  value={currentPassword}
                 onChangeText={setCurrentPassword}
                 placeholderTextColor={colors.textMuted}
               />
@@ -297,14 +226,15 @@ export const ElderlyProfileScreen: React.FC = () => {
             </View>
 
             {/* Mật khẩu mới */}
-            <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>Mật khẩu mới *</Text>
+            <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>{tr("Mật khẩu mới *")}</Text>
             <View style={styles.inputWrap}>
               <Feather name="shield" size={16} color={colors.primary} style={styles.inputPrefixIcon} />
               <TextInput
-                style={[styles.textInput, { fontSize: fs(15) }]}
-                placeholder="Ít nhất 6 ký tự"
+                style={[styles.textInput, { fontSize: fs(20) }]}
+                placeholder={tr("Ít nhất 6 ký tự")}
                 secureTextEntry={!showNewPw}
-                value={newPassword}
+                accessibilityLabel={tr('Mật khẩu mới *')}
+                  value={newPassword}
                 onChangeText={setNewPassword}
                 placeholderTextColor={colors.textMuted}
               />
@@ -317,14 +247,15 @@ export const ElderlyProfileScreen: React.FC = () => {
             </View>
 
             {/* Xác nhận mật khẩu mới */}
-            <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>Xác nhận mật khẩu mới *</Text>
+            <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>{tr("Xác nhận mật khẩu mới *")}</Text>
             <View style={styles.inputWrap}>
               <Feather name="check" size={16} color={colors.primary} style={styles.inputPrefixIcon} />
               <TextInput
-                style={[styles.textInput, { fontSize: fs(15) }]}
-                placeholder="Nhập lại mật khẩu mới"
+                style={[styles.textInput, { fontSize: fs(20) }]}
+                placeholder={tr("Nhập lại mật khẩu mới")}
                 secureTextEntry={!showNewPw}
-                value={confirmPassword}
+                accessibilityLabel={tr('Xác nhận mật khẩu mới *')}
+                  value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 placeholderTextColor={colors.textMuted}
               />
@@ -337,78 +268,23 @@ export const ElderlyProfileScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               {savingPassword ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
+                <ActivityIndicator color={colors.textInverse} size="small" />
               ) : (
-                <Text style={[styles.primaryActionBtnText, { fontSize: fs(15) }]}>
-                  Lưu mật khẩu mới
-                </Text>
+                <Text style={[styles.primaryActionBtnText, { fontSize: fs(20) }]}>{tr("Lưu mật khẩu mới")}</Text>
               )}
             </TouchableOpacity>
           </View>
         ) : (
-          /* TAB 2: QUÊN / KHÔI PHỤC MẬT KHẨU */
-          <View style={styles.cardBox}>
-            <Text style={[styles.boxTitle, { fontSize: fs(16) }]}>Khôi phục tài khoản</Text>
-            <Text style={[styles.boxSubtitle, { fontSize: fs(12.5) }]}>
-              Nếu cụ hoặc người thân quên mật khẩu, có thể đặt lại ngay bên dưới bằng tên đăng nhập hoặc email đã đăng ký.
-            </Text>
-
-            <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>Tên đăng nhập hoặc Email *</Text>
-            <View style={styles.inputWrap}>
-              <Feather name="user" size={16} color={colors.primary} style={styles.inputPrefixIcon} />
-              <TextInput
-                style={[styles.textInput, { fontSize: fs(15) }]}
-                placeholder="Ví dụ: @BaNguyen hoặc email"
-                value={forgotIdentifier}
-                onChangeText={setForgotIdentifier}
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-              />
-            </View>
-
-            <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>Mật khẩu mới mong muốn *</Text>
-            <View style={styles.inputWrap}>
-              <Feather name="key" size={16} color={colors.primary} style={styles.inputPrefixIcon} />
-              <TextInput
-                style={[styles.textInput, { fontSize: fs(15) }]}
-                placeholder="Ít nhất 6 ký tự"
-                secureTextEntry
-                value={forgotNewPassword}
-                onChangeText={setForgotNewPassword}
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={styles.primaryActionBtn}
-              onPress={handleForgotPassword}
-              disabled={recoveringPassword}
-              activeOpacity={0.8}
-            >
-              {recoveringPassword ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={[styles.primaryActionBtnText, { fontSize: fs(15) }]}>
-                  Khôi phục mật khẩu ngay
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          <Notice text={t("recovery")} />
         )}
 
         {/* Security Commitment Box */}
         <View style={styles.securityCommitmentBox}>
           <View style={styles.commitmentHeader}>
             <Feather name="shield" size={18} color={colors.primary} style={{ marginRight: 8 }} />
-            <Text style={[styles.commitmentTitle, { fontSize: fs(14) }]}>
-              Bảo mật cấp y tế Mimamori AI
-            </Text>
+            <Text style={[styles.commitmentTitle, { fontSize: fs(14) }]}>{tr("Bảo mật & Quyền truy cập")}</Text>
           </View>
-          <Text style={[styles.commitmentDesc, { fontSize: fs(12.5) }]}>
-            • Dữ liệu điểm danh, sức khỏe và nhật ký trò chuyện được mã hóa an toàn.{'\n'}
-            • Chỉ người thân được cấp phép liên kết mới xem được thông tin nhắc thuốc và điểm danh của cụ.{'\n'}
-            • Tuyệt đối không chia sẻ dữ liệu cho bên thứ ba.
-          </Text>
+          <Text style={[styles.commitmentDesc, { fontSize: fs(12.5) }]}>{tr("• Lưu ý bảo vệ thông tin sức khỏe và không chia sẻ mật khẩu.")}{'\n'}{tr("• Chỉ người thân được cấp phép liên kết mới xem được thông tin nhắc thuốc và điểm danh của cụ.")}{'\n'}{tr("• Người thân cần được cụ đồng ý liên kết trước khi truy cập dữ liệu.")}</Text>
         </View>
       </ScrollView>
     );
@@ -432,18 +308,14 @@ export const ElderlyProfileScreen: React.FC = () => {
           >
             <Feather name="chevron-left" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.screenHeaderTitle, { fontSize: fs(19) }]}>
-            Thông tin cá nhân
-          </Text>
+          <Text style={[styles.screenHeaderTitle, { fontSize: fs(20) }]}>{tr("Thông tin cá nhân")}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         {/* Avatar Selection Card */}
         <View style={styles.cardBox}>
-          <Text style={[styles.boxTitle, { fontSize: fs(16) }]}>Ảnh đại diện</Text>
-          <Text style={[styles.boxSubtitle, { fontSize: fs(12.5) }]}>
-            Chọn hình đại diện thân thiện, dễ nhận diện:
-          </Text>
+          <Text style={[styles.boxTitle, { fontSize: fs(20) }]}>{tr("Ảnh đại diện")}</Text>
+          <Text style={[styles.boxSubtitle, { fontSize: fs(12.5) }]}>{tr("Chọn hình đại diện thân thiện, dễ nhận diện:")}</Text>
 
           <View style={styles.avatarPickerRow}>
             {AVATAR_PRESETS.map((preset) => {
@@ -452,13 +324,13 @@ export const ElderlyProfileScreen: React.FC = () => {
                 <TouchableOpacity
                   key={preset.id}
                   style={[styles.avatarPickItem, isSelected && styles.avatarPickItemActive]}
-                  onPress={() => setSelectedAvatarId(preset.id as any)}
+                  onPress={() => setSelectedAvatarId(preset.id)}
                   activeOpacity={0.7}
                 >
                   <Image source={preset.source} style={styles.avatarPickImg} resizeMode="cover" />
                   {isSelected && (
                     <View style={styles.avatarCheckBadge}>
-                      <Feather name="check" size={12} color="#FFFFFF" />
+                      <Feather name="check" size={12} color={colors.textInverse} />
                     </View>
                   )}
                   <Text
@@ -478,43 +350,45 @@ export const ElderlyProfileScreen: React.FC = () => {
 
         {/* Personal Details Form */}
         <View style={styles.cardBox}>
-          <Text style={[styles.boxTitle, { fontSize: fs(16) }]}>Hồ sơ người cao tuổi</Text>
+          <Text style={[styles.boxTitle, { fontSize: fs(20) }]}>{tr("Hồ sơ người cao tuổi")}</Text>
 
           {/* Họ và tên */}
-          <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>Họ và tên của cụ *</Text>
+          <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>{tr("Họ và tên của cụ *")}</Text>
           <View style={styles.inputWrap}>
             <Feather name="user" size={16} color={colors.primary} style={styles.inputPrefixIcon} />
             <TextInput
-              style={[styles.textInput, { fontSize: fs(15) }]}
-              placeholder="Ví dụ: Nguyễn Văn Ba"
-              value={fullName}
+              style={[styles.textInput, { fontSize: fs(20) }]}
+              placeholder={tr("Ví dụ: Nguyễn Văn Ba")}
+              accessibilityLabel={tr('Họ và tên *')}
+                  value={fullName}
               onChangeText={setFullName}
               placeholderTextColor={colors.textMuted}
             />
           </View>
 
           {/* Tên đăng nhập (Read only) */}
-          <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>Tên tài khoản</Text>
+          <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>{tr("Tên tài khoản")}</Text>
           <View style={[styles.inputWrap, styles.inputWrapDisabled]}>
             <Feather name="at-sign" size={16} color={colors.textSecondary} style={styles.inputPrefixIcon} />
             <TextInput
-              style={[styles.textInput, { fontSize: fs(15), color: colors.textSecondary }]}
+              style={[styles.textInput, { fontSize: fs(20), color: colors.textSecondary }]}
               value={`@${user?.username || 'BaNguyen'}`}
               editable={false}
             />
             <View style={styles.readonlyBadge}>
-              <Text style={styles.readonlyBadgeText}>Mặc định</Text>
+              <Text style={styles.readonlyBadgeText}>{tr("Mặc định")}</Text>
             </View>
           </View>
 
           {/* Số điện thoại cụ */}
-          <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>Số điện thoại của cụ</Text>
+          <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>{tr("Số điện thoại của cụ")}</Text>
           <View style={styles.inputWrap}>
             <Feather name="phone" size={16} color={colors.primary} style={styles.inputPrefixIcon} />
             <TextInput
-              style={[styles.textInput, { fontSize: fs(15) }]}
-              placeholder="Ví dụ: 0912 345 678"
-              value={phone}
+              style={[styles.textInput, { fontSize: fs(20) }]}
+              placeholder={tr("Ví dụ: 0912 345 678")}
+              accessibilityLabel={tr('Số điện thoại')}
+                  value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
               placeholderTextColor={colors.textMuted}
@@ -522,15 +396,14 @@ export const ElderlyProfileScreen: React.FC = () => {
           </View>
 
           {/* Số điện thoại khẩn cấp (Con cháu/Người thân) */}
-          <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>
-            Số điện thoại khẩn cấp (Con cái / Người thân)
-          </Text>
+          <Text style={[styles.fieldLabel, { fontSize: fs(13.5) }]}>{tr("Số điện thoại khẩn cấp (Con cái / Người thân)")}</Text>
           <View style={styles.inputWrap}>
-            <Feather name="phone-call" size={16} color="#B83232" style={styles.inputPrefixIcon} />
+            <Feather name="phone-call" size={16} color={colors.background === baseColors.background ? "#B83232" : colors.primary} style={styles.inputPrefixIcon} />
             <TextInput
-              style={[styles.textInput, { fontSize: fs(15) }]}
-              placeholder="Ví dụ: 0987 654 321 (Con gái)"
-              value={emergencyPhone}
+              style={[styles.textInput, { fontSize: fs(20) }]}
+              placeholder={tr("Ví dụ: 0987 654 321 (Con gái)")}
+              accessibilityLabel={tr('Số điện thoại khẩn cấp (Con cái / Người thân)')}
+                  value={emergencyPhone}
               onChangeText={setEmergencyPhone}
               keyboardType="phone-pad"
               placeholderTextColor={colors.textMuted}
@@ -539,9 +412,9 @@ export const ElderlyProfileScreen: React.FC = () => {
 
           {/* Vai trò */}
           <View style={styles.roleStaticRow}>
-            <Text style={[styles.roleStaticLabel, { fontSize: fs(13) }]}>Vai trò trong hệ thống:</Text>
+            <Text style={[styles.roleStaticLabel, { fontSize: fs(13) }]}>{tr("Vai trò trong hệ thống:")}</Text>
             <View style={styles.heroRolePill}>
-              <Text style={[styles.heroRoleText, { fontSize: fs(11.5) }]}>Người cao tuổi (ELDERLY)</Text>
+              <Text style={[styles.heroRoleText, { fontSize: fs(11.5) }]}>{tr("Người cao tuổi (ELDERLY)")}</Text>
             </View>
           </View>
 
@@ -553,11 +426,9 @@ export const ElderlyProfileScreen: React.FC = () => {
             activeOpacity={0.8}
           >
             {savingProfile ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
+              <ActivityIndicator color={colors.textInverse} size="small" />
             ) : (
-              <Text style={[styles.primaryActionBtnText, { fontSize: fs(15) }]}>
-                Lưu thông tin cá nhân
-              </Text>
+              <Text style={[styles.primaryActionBtnText, { fontSize: fs(20) }]}>{tr("Lưu thông tin cá nhân")}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -583,27 +454,18 @@ export const ElderlyProfileScreen: React.FC = () => {
           >
             <Feather name="chevron-left" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.screenHeaderTitle, { fontSize: fs(19) }]}>
-            Cài đặt hiển thị
-          </Text>
+          <Text style={[styles.screenHeaderTitle, { fontSize: fs(20) }]}>{tr("Cài đặt hiển thị")}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <View style={styles.displaySectionBlock}>
-          <Text style={[styles.displaySectionHeading, { fontSize: fs(18) }]}>
-            Cỡ chữ hiển thị
-          </Text>
-          <Text style={[styles.displaySectionSub, { fontSize: fs(13.5) }]}>
-            Điều chỉnh cỡ chữ để đọc dễ dàng hơn
-          </Text>
+          <Text style={[styles.displaySectionHeading, { fontSize: fs(20) }]}>{tr("Cỡ chữ hiển thị")}</Text>
+          <Text style={[styles.displaySectionSub, { fontSize: fs(13.5) }]}>{tr("Điều chỉnh cỡ chữ để đọc dễ dàng hơn")}</Text>
 
           {/* Live Preview Card */}
           <View style={styles.livePreviewCard}>
-            <Text style={[styles.previewGreeting, { fontSize: fs(17) }]}>
-              Xin chào ông/bà!{'\n'}Hôm nay ông/bà cảm thấy thế nào?
-            </Text>
-            <Text style={[styles.previewCurrentLabel, { fontSize: fs(12.5) }]}>
-              Cỡ chữ hiện tại: {currentFontOption.label}
+            <Text style={[styles.previewGreeting, { fontSize: fs(20) }]}>{tr("Xin chào ông/bà!")}{'\n'}{tr("Hôm nay ông/bà cảm thấy thế nào?")}</Text>
+            <Text style={[styles.previewCurrentLabel, { fontSize: fs(12.5) }]}>{tr("Cỡ chữ hiện tại: ")}{tr(currentFontOption.label)}
             </Text>
           </View>
 
@@ -637,7 +499,7 @@ export const ElderlyProfileScreen: React.FC = () => {
                         isSelected && styles.sliderStepTextActive,
                       ]}
                     >
-                      {getShortFontLabel(opt.id)}
+                      {tr(getShortFontLabel(opt.id))}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -646,13 +508,13 @@ export const ElderlyProfileScreen: React.FC = () => {
           </View>
         </View>
 
+        <LanguageControl />
         {/* Display Toggles */}
         <View style={styles.menuCard}>
           <View style={styles.toggleRow}>
-            <Text style={[styles.toggleTitle, { fontSize: fs(15) }]}>
-              Tăng độ tương phản
-            </Text>
+            <Text style={[styles.toggleTitle, { fontSize: fs(20) }]}>{tr("Tăng độ tương phản")}</Text>
             <Switch
+              accessibilityLabel={tr("Tăng độ tương phản")}
               value={highContrast}
               onValueChange={setHighContrast}
               trackColor={{ false: '#D1D5DB', true: '#456B58' }}
@@ -661,10 +523,9 @@ export const ElderlyProfileScreen: React.FC = () => {
           </View>
 
           <View style={[styles.toggleRow, { borderBottomWidth: 0 }]}>
-            <Text style={[styles.toggleTitle, { fontSize: fs(15) }]}>
-              Chế độ ban đêm
-            </Text>
+            <Text style={[styles.toggleTitle, { fontSize: fs(20) }]}>{tr("Chế độ ban đêm")}</Text>
             <Switch
+              accessibilityLabel={tr("Chế độ ban đêm")}
               value={darkMode}
               onValueChange={setDarkMode}
               trackColor={{ false: '#D1D5DB', true: '#456B58' }}
@@ -678,9 +539,7 @@ export const ElderlyProfileScreen: React.FC = () => {
           onPress={() => setCurrentSubView('main')}
           activeOpacity={0.8}
         >
-          <Text style={[styles.saveSettingsBtnText, { fontSize: fs(15) }]}>
-            Áp dụng & Quay lại
-          </Text>
+          <Text style={[styles.saveSettingsBtnText, { fontSize: fs(20) }]}>{tr("Áp dụng & Quay lại")}</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -704,7 +563,7 @@ export const ElderlyProfileScreen: React.FC = () => {
         >
           <Feather name="settings" size={22} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={[styles.screenHeaderTitle, { fontSize: fs(20) }]}>Hồ sơ</Text>
+        <Text style={[styles.screenHeaderTitle, { fontSize: fs(20) }]}>{tr("Hồ sơ")}</Text>
         <View style={{ width: 38 }} />
       </View>
 
@@ -726,13 +585,10 @@ export const ElderlyProfileScreen: React.FC = () => {
           <Text style={[styles.heroNameText, { fontSize: fs(20) }]}>
             {user?.fullName || fullName}
           </Text>
-          <Text style={[styles.heroUsernameText, { fontSize: fs(13.5) }]}>
-            @{user?.username || 'BaNguyen'} {user?.phone ? `• ${user.phone}` : ''}
+          <Text style={[styles.heroUsernameText, { fontSize: fs(13.5) }]}>{tr("@")}{user?.username || 'BaNguyen'} {user?.phone ? `• ${user.phone}` : ''}
           </Text>
           <View style={styles.heroRolePill}>
-            <Text style={[styles.heroRoleText, { fontSize: fs(11.5) }]}>
-              Người cao tuổi
-            </Text>
+            <Text style={[styles.heroRoleText, { fontSize: fs(11.5) }]}>{tr("Người cao tuổi")}</Text>
           </View>
         </View>
 
@@ -758,12 +614,8 @@ export const ElderlyProfileScreen: React.FC = () => {
               <Feather name="user" size={18} color={colors.primary} />
             </View>
             <View>
-              <Text style={[styles.menuTitleText, { fontSize: fs(15) }]}>
-                Thông tin cá nhân
-              </Text>
-              <Text style={[styles.menuItemHint, { fontSize: fs(12) }]}>
-                Đổi ảnh đại diện, số điện thoại
-              </Text>
+              <Text style={[styles.menuTitleText, { fontSize: fs(20) }]}>{tr("Thông tin cá nhân")}</Text>
+              <Text style={[styles.menuItemHint, { fontSize: fs(12) }]}>{tr("Đổi ảnh đại diện, số điện thoại")}</Text>
             </View>
           </View>
           <Feather name="chevron-right" size={18} color={colors.textMuted} />
@@ -773,9 +625,9 @@ export const ElderlyProfileScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.menuRowItem}
           onPress={() => {
-            const count = familyMembers.length || 2;
+            const count = familyMembers.length;
             Alert.alert(
-              'Người thân kết nối chăm sóc',
+              tr("Người thân kết nối chăm sóc"),
               `Đang có ${count} người thân liên kết nhận cảnh báo và điểm danh hàng ngày.`
             );
           }}
@@ -785,25 +637,22 @@ export const ElderlyProfileScreen: React.FC = () => {
             <View style={styles.menuIconBox}>
               <Feather name="users" size={18} color={colors.primary} />
             </View>
-            <Text style={[styles.menuTitleText, { fontSize: fs(15) }]}>
-              Người thân kết nối
-            </Text>
+            <Text style={[styles.menuTitleText, { fontSize: fs(20) }]}>{tr("Người thân kết nối")}</Text>
           </View>
           <View style={styles.menuRightRow}>
             <View style={styles.miniAvatarGroup}>
-              <View style={[styles.miniAvatar, { backgroundColor: '#FDE68A' }]}>
-                <Feather name="user" size={11} color="#92400E" />
+              <View style={[styles.miniAvatar, { backgroundColor: colors.background === baseColors.background ? '#FDE68A' : colors.surfaceWarm }]}>
+                <Feather name="user" size={11} color={colors.background === baseColors.background ? "#92400E" : colors.primary} />
               </View>
-              <View style={[styles.miniAvatar, { backgroundColor: '#BFDBFE', marginLeft: -6 }]}>
-                <Feather name="user" size={11} color="#1E40AF" />
+              <View style={[styles.miniAvatar, { backgroundColor: colors.background === baseColors.background ? '#BFDBFE' : colors.surfaceWarm, marginLeft: -6 }]}>
+                <Feather name="user" size={11} color={colors.background === baseColors.background ? "#1E40AF" : colors.primary} />
               </View>
-              <View style={[styles.miniAvatar, { backgroundColor: '#BBF7D0', marginLeft: -6 }]}>
-                <Feather name="user" size={11} color="#166534" />
+              <View style={[styles.miniAvatar, { backgroundColor: colors.background === baseColors.background ? '#BBF7D0' : colors.surfaceWarm, marginLeft: -6 }]}>
+                <Feather name="user" size={11} color={colors.background === baseColors.background ? "#166534" : colors.primary} />
               </View>
             </View>
             <Text style={[styles.menuRightSubtext, { fontSize: fs(13) }]}>
-              {familyMembers.length || 2} người
-            </Text>
+              {familyMembers.length}{tr(" người")}</Text>
             <Feather name="chevron-right" size={18} color={colors.textMuted} style={{ marginLeft: 4 }} />
           </View>
         </TouchableOpacity>
@@ -818,13 +667,10 @@ export const ElderlyProfileScreen: React.FC = () => {
             <View style={styles.menuIconBox}>
               <Feather name="sliders" size={18} color={colors.primary} />
             </View>
-            <Text style={[styles.menuTitleText, { fontSize: fs(15) }]}>
-              Cài đặt hiển thị
-            </Text>
+            <Text style={[styles.menuTitleText, { fontSize: fs(20) }]}>{tr("Cài đặt hiển thị")}</Text>
           </View>
           <View style={styles.menuRightRow}>
-            <Text style={[styles.menuRightSubtext, { fontSize: fs(13) }]}>
-              Cỡ chữ: {getShortFontLabel(fontSizeLevel)}
+            <Text style={[styles.menuRightSubtext, { fontSize: fs(13) }]}>{tr("Cỡ chữ: ")}{tr(getShortFontLabel(fontSizeLevel))}
             </Text>
             <Feather name="chevron-right" size={18} color={colors.textMuted} style={{ marginLeft: 4 }} />
           </View>
@@ -833,21 +679,14 @@ export const ElderlyProfileScreen: React.FC = () => {
         {/* Item 4: Thông báo */}
         <TouchableOpacity
           style={styles.menuRowItem}
-          onPress={() => {
-            Alert.alert(
-              'Thông báo',
-              'Đang bật chuông thông báo nhắc nhở uống thuốc và đồng bộ điểm danh.'
-            );
-          }}
+          onPress={() => {void reminders.enable();}}
           activeOpacity={0.7}
         >
           <View style={styles.menuLeftCol}>
             <View style={styles.menuIconBox}>
               <Feather name="bell" size={18} color={colors.primary} />
             </View>
-            <Text style={[styles.menuTitleText, { fontSize: fs(15) }]}>
-              Thông báo
-            </Text>
+            <Text style={[styles.menuTitleText, { fontSize: fs(20) }]}>{tr("Thông báo")}</Text>
           </View>
           <Feather name="chevron-right" size={18} color={colors.textMuted} />
         </TouchableOpacity>
@@ -863,12 +702,8 @@ export const ElderlyProfileScreen: React.FC = () => {
               <Feather name="shield" size={18} color={colors.primary} />
             </View>
             <View>
-              <Text style={[styles.menuTitleText, { fontSize: fs(15) }]}>
-                Bảo mật & Quyền riêng tư
-              </Text>
-              <Text style={[styles.menuItemHint, { fontSize: fs(12) }]}>
-                Đổi mật khẩu, khôi phục tài khoản
-              </Text>
+              <Text style={[styles.menuTitleText, { fontSize: fs(20) }]}>{tr("Bảo mật & Quyền riêng tư")}</Text>
+              <Text style={[styles.menuItemHint, { fontSize: fs(12) }]}>{tr("Đổi mật khẩu, khôi phục tài khoản")}</Text>
             </View>
           </View>
           <Feather name="chevron-right" size={18} color={colors.textMuted} />
@@ -879,8 +714,8 @@ export const ElderlyProfileScreen: React.FC = () => {
           style={[styles.menuRowItem, { borderBottomWidth: 0 }]}
           onPress={() => {
             Alert.alert(
-              'Trợ giúp & Hỗ trợ',
-              'Nếu cụ cần hỗ trợ sử dụng ứng dụng hoặc khẩn cấp, vui lòng nhấn nút SOS hoặc liên hệ người thân.'
+              tr("Trợ giúp & Hỗ trợ"),
+              tr("Nếu cụ cần hỗ trợ sử dụng ứng dụng hoặc khẩn cấp, vui lòng nhấn nút SOS hoặc liên hệ người thân.")
             );
           }}
           activeOpacity={0.7}
@@ -889,9 +724,7 @@ export const ElderlyProfileScreen: React.FC = () => {
             <View style={styles.menuIconBox}>
               <Feather name="help-circle" size={18} color={colors.primary} />
             </View>
-            <Text style={[styles.menuTitleText, { fontSize: fs(15) }]}>
-              Trợ giúp
-            </Text>
+            <Text style={[styles.menuTitleText, { fontSize: fs(20) }]}>{tr("Trợ giúp")}</Text>
           </View>
           <Feather name="chevron-right" size={18} color={colors.textMuted} />
         </TouchableOpacity>
@@ -901,42 +734,38 @@ export const ElderlyProfileScreen: React.FC = () => {
       <TouchableOpacity
         style={styles.screen8LogoutBtn}
         onPress={() => {
-          Alert.alert('Đăng xuất', 'Cụ có chắc chắn muốn đăng xuất tài khoản không?', [
-            { text: 'Hủy bỏ', style: 'cancel' },
-            { text: 'Đăng xuất', style: 'destructive', onPress: () => logout() },
+          Alert.alert(tr("Đăng xuất"), tr("Cụ có chắc chắn muốn đăng xuất tài khoản không?"), [
+            { text: tr("Hủy bỏ"), style: 'cancel' },
+            { text: tr("Đăng xuất"), style: 'destructive', onPress: () => logout() },
           ]);
         }}
         activeOpacity={0.8}
       >
-        <Text style={[styles.screen8LogoutBtnText, { fontSize: fs(15) }]}>
-          Đăng xuất
-        </Text>
+        <Text style={[styles.screen8LogoutBtnText, { fontSize: fs(20) }]}>{tr("Đăng xuất")}</Text>
       </TouchableOpacity>
 
+      <FamilyLinks />
+      <Notice text={t(isRunningInExpoGo() ? 'previewNotifications' : reminders.status === "ready" ? "notificationsReady" : reminders.status === "limited" ? "notificationsLimited" : "notificationsOff")} />
       {/* Discreet Demo Switcher */}
-      <View style={styles.demoSectionCard}>
-        <Text style={styles.demoSectionBadge}>DÀNH CHO HỘI ĐỒNG BẢO VỆ / THỬ NGHIỆM</Text>
-        <Text style={[styles.demoSectionTitle, { fontSize: fs(13.5) }]}>
-          Chuyển sang giao diện Người chăm sóc
-        </Text>
+      {process.env.EXPO_PUBLIC_DEMO_MODE === 'true' && <View style={styles.demoSectionCard}>
+        <Text style={styles.demoSectionBadge}>{tr("DÀNH CHO HỘI ĐỒNG BẢO VỆ / THỬ NGHIỆM")}</Text>
+        <Text style={[styles.demoSectionTitle, { fontSize: fs(13.5) }]}>{tr("Chuyển sang giao diện Người chăm sóc")}</Text>
         <TouchableOpacity
           style={styles.switchRoleBtn}
           onPress={() => demoLogin('CAREGIVER')}
           activeOpacity={0.8}
         >
-          <Feather name="repeat" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
-          <Text style={[styles.switchRoleBtnText, { fontSize: fs(13) }]}>
-            Chuyển vai trò: Người chăm sóc
-          </Text>
+          <Feather name="repeat" size={15} color={colors.textInverse} style={{ marginRight: 6 }} />
+          <Text style={[styles.switchRoleBtnText, { fontSize: fs(13) }]}>{tr("Chuyển vai trò: Người chăm sóc")}</Text>
         </TouchableOpacity>
-      </View>
+      </View>}
 
       <View style={{ height: 30 }} />
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -955,14 +784,14 @@ const styles = StyleSheet.create({
   },
   gearBtn: {
     width: 38,
-    height: 38,
+    minHeight: 56,
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backBtnCircle: {
     width: 38,
-    height: 38,
+    minHeight: 56,
     borderRadius: 19,
     backgroundColor: colors.surface,
     alignItems: 'center',
@@ -991,9 +820,9 @@ const styles = StyleSheet.create({
     height: 68,
     borderRadius: 34,
     overflow: 'hidden',
-    backgroundColor: '#E6EEE7',
+    backgroundColor: colors.background === baseColors.background ? '#E6EEE7' : colors.surfaceWarm,
     borderWidth: 2,
-    borderColor: '#456B58',
+    borderColor: colors.background === baseColors.background ? '#456B58' : colors.border,
     marginRight: 14,
   },
   seniorPhotoImg: {
@@ -1013,7 +842,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heroRolePill: {
-    backgroundColor: '#E6EEE7',
+    backgroundColor: colors.background === baseColors.background ? '#E6EEE7' : colors.surfaceWarm,
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 10,
@@ -1021,13 +850,13 @@ const styles = StyleSheet.create({
   },
   heroRoleText: {
     fontWeight: '700',
-    color: '#456B58',
+    color: colors.background === baseColors.background ? '#456B58' : colors.textPrimary,
   },
   editHeroPencil: {
     width: 32,
-    height: 32,
+    minHeight: 56,
     borderRadius: 16,
-    backgroundColor: '#F3F6F4',
+    backgroundColor: colors.background === baseColors.background ? '#F3F6F4' : colors.surfaceWarm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1058,9 +887,9 @@ const styles = StyleSheet.create({
   },
   menuIconBox: {
     width: 32,
-    height: 32,
+    minHeight: 56,
     borderRadius: 16,
-    backgroundColor: '#F3F6F4',
+    backgroundColor: colors.background === baseColors.background ? '#F3F6F4' : colors.surfaceWarm,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -1091,14 +920,14 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#FFFFFF',
+    borderColor: colors.background === baseColors.background ? '#FFFFFF' : colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   // Screen 8 Logout Button
   screen8LogoutBtn: {
-    backgroundColor: '#FDE8E8',
+    backgroundColor: colors.background === baseColors.background ? '#FDE8E8' : colors.surfaceWarm,
     borderRadius: 20,
     paddingVertical: 14,
     alignItems: 'center',
@@ -1107,7 +936,7 @@ const styles = StyleSheet.create({
   },
   screen8LogoutBtnText: {
     fontWeight: '800',
-    color: '#C53030',
+    color: colors.background === baseColors.background ? '#C53030' : colors.textPrimary,
   },
 
   // Form / Card Boxes
@@ -1145,8 +974,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   inputWrapDisabled: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#E5E7EB',
+    backgroundColor: colors.background === baseColors.background ? '#F3F4F6' : colors.surfaceWarm,
+    borderColor: colors.background === baseColors.background ? '#E5E7EB' : colors.border,
   },
   inputPrefixIcon: {
     marginRight: 10,
@@ -1160,7 +989,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   readonlyBadge: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: colors.background === baseColors.background ? '#E5E7EB' : colors.surfaceWarm,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -1184,7 +1013,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   primaryActionBtn: {
-    backgroundColor: '#456B58',
+    backgroundColor: colors.background === baseColors.background ? '#456B58' : colors.surfaceWarm,
     borderRadius: 18,
     paddingVertical: 14,
     alignItems: 'center',
@@ -1193,7 +1022,7 @@ const styles = StyleSheet.create({
     ...shadows.subtle,
   },
   primaryActionBtnText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '800',
   },
 
@@ -1212,8 +1041,8 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatarPickItemActive: {
-    borderColor: '#456B58',
-    backgroundColor: '#E6EEE7',
+    borderColor: colors.background === baseColors.background ? '#456B58' : colors.border,
+    backgroundColor: colors.background === baseColors.background ? '#E6EEE7' : colors.surfaceWarm,
   },
   avatarPickImg: {
     width: 64,
@@ -1228,7 +1057,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#456B58',
+    backgroundColor: colors.background === baseColors.background ? '#456B58' : colors.surfaceWarm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1237,7 +1066,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   avatarPickLabelActive: {
-    color: '#456B58',
+    color: colors.background === baseColors.background ? '#456B58' : colors.textPrimary,
     fontWeight: '800',
   },
 
@@ -1266,17 +1095,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   segmentTextActive: {
-    color: '#456B58',
+    color: colors.background === baseColors.background ? '#456B58' : colors.textPrimary,
     fontWeight: '800',
   },
 
   // Security Commitment
   securityCommitmentBox: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: colors.background === baseColors.background ? '#F0FDF4' : colors.surfaceWarm,
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: colors.background === baseColors.background ? '#BBF7D0' : colors.border,
     marginBottom: 16,
   },
   commitmentHeader: {
@@ -1286,11 +1115,11 @@ const styles = StyleSheet.create({
   },
   commitmentTitle: {
     fontWeight: '800',
-    color: '#166534',
+    color: colors.background === baseColors.background ? '#166534' : colors.textPrimary,
   },
   commitmentDesc: {
-    color: '#15803D',
-    lineHeight: 20,
+    color: colors.background === baseColors.background ? '#15803D' : colors.textPrimary,
+
   },
 
   // Screen 9 Elements
@@ -1307,18 +1136,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   livePreviewCard: {
-    backgroundColor: '#FFFBF4',
+    backgroundColor: colors.background === baseColors.background ? '#FFFBF4' : colors.surfaceWarm,
     borderRadius: 18,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#EFE8D8',
+    borderColor: colors.background === baseColors.background ? '#EFE8D8' : colors.border,
     ...shadows.subtle,
   },
   previewGreeting: {
     color: colors.textPrimary,
     fontWeight: '700',
-    lineHeight: 26,
+
     marginBottom: 12,
   },
   previewCurrentLabel: {
@@ -1342,7 +1171,7 @@ const styles = StyleSheet.create({
     left: '12%',
     right: '12%',
     height: 2.5,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.background === baseColors.background ? '#D1D5DB' : colors.surfaceWarm,
   },
   sliderStepsRow: {
     flexDirection: 'row',
@@ -1360,13 +1189,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
   },
   sliderDotInactive: {
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#9CA3AF',
+    backgroundColor: colors.background === baseColors.background ? '#9CA3AF' : colors.surfaceWarm,
     marginTop: 5,
     marginBottom: 13,
   },
@@ -1374,20 +1203,20 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#456B58',
+    backgroundColor: colors.background === baseColors.background ? '#456B58' : colors.surfaceWarm,
   },
   sliderDotInner: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
   },
   sliderStepText: {
     color: colors.textSecondary,
     fontWeight: '600',
   },
   sliderStepTextActive: {
-    color: '#456B58',
+    color: colors.background === baseColors.background ? '#456B58' : colors.textPrimary,
     fontWeight: '800',
   },
   toggleRow: {
@@ -1403,7 +1232,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   saveSettingsBtn: {
-    backgroundColor: '#456B58',
+    backgroundColor: colors.background === baseColors.background ? '#456B58' : colors.surfaceWarm,
     borderRadius: 20,
     paddingVertical: 14,
     alignItems: 'center',
@@ -1412,22 +1241,22 @@ const styles = StyleSheet.create({
     ...shadows.subtle,
   },
   saveSettingsBtnText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '800',
   },
 
   // Demo Box
   demoSectionCard: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: colors.background === baseColors.background ? '#F5F3FF' : colors.surfaceWarm,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: colors.background === baseColors.background ? '#DDD6FE' : colors.border,
   },
   demoSectionBadge: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#7C3AED',
+    color: colors.background === baseColors.background ? '#7C3AED' : colors.textPrimary,
     letterSpacing: 0.5,
     marginBottom: 4,
   },
@@ -1440,12 +1269,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7C3AED',
+    backgroundColor: colors.background === baseColors.background ? '#7C3AED' : colors.surfaceWarm,
     borderRadius: 12,
     paddingVertical: 10,
   },
   switchRoleBtnText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '700',
   },
 });

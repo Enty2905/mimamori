@@ -12,7 +12,7 @@ public class DashboardOverviewDto {
     private String careStatus; // NORMAL, NEEDS_ATTENTION, WARNING
     private DailyCheckInDto todayCheckIn;
     private List<MedicationLogDto> todayMedications;
-    private double medicationAdherence;
+    private Double medicationAdherence;
     private List<CareAlertDto> activeAlerts;
     private DailySummaryDto recentSummary;
 
@@ -24,8 +24,8 @@ public class DashboardOverviewDto {
     public void setTodayCheckIn(DailyCheckInDto todayCheckIn) { this.todayCheckIn = todayCheckIn; }
     public List<MedicationLogDto> getTodayMedications() { return todayMedications; }
     public void setTodayMedications(List<MedicationLogDto> todayMedications) { this.todayMedications = todayMedications; }
-    public double getMedicationAdherence() { return medicationAdherence; }
-    public void setMedicationAdherence(double medicationAdherence) { this.medicationAdherence = medicationAdherence; }
+    public Double getMedicationAdherence() { return medicationAdherence; }
+    public void setMedicationAdherence(Double medicationAdherence) { this.medicationAdherence = medicationAdherence; }
     public List<CareAlertDto> getActiveAlerts() { return activeAlerts; }
     public void setActiveAlerts(List<CareAlertDto> activeAlerts) { this.activeAlerts = activeAlerts; }
     public DailySummaryDto getRecentSummary() { return recentSummary; }

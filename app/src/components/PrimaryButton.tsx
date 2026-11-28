@@ -1,13 +1,14 @@
+import {useOriginalLabels} from '../core/localization/original';
+import {useColors} from '../core/theme/useTheme';
+import {CareText as Text, CareTouchable as TouchableOpacity} from './CareText';
 import React from 'react';
 import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
+      StyleSheet,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { colors } from '../core/theme/colors';
+import { colors as baseColors } from '../core/theme/colors';
 import { useAccessibilityStore } from '../core/accessibility/useAccessibilityStore';
 
 interface Props {
@@ -31,6 +32,10 @@ export const PrimaryButton: React.FC<Props> = ({
   icon,
   variant = 'primary',
 }) => {
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
+
   const { fs } = useAccessibilityStore();
 
   const getBgColor = () => {
@@ -58,18 +63,18 @@ export const PrimaryButton: React.FC<Props> = ({
       accessibilityRole="button"
     >
       {loading ? (
-        <ActivityIndicator color="#FFFFFF" size="small" />
+        <ActivityIndicator color={colors.textInverse} size="small" />
       ) : (
         <>
           {icon}
-          <Text style={[styles.text, { fontSize: fs(16) }, textStyle]}>{title}</Text>
+          <Text style={[styles.text, { fontSize: fs(20) }, textStyle]}>{tr(title)}</Text>
         </>
       )}
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   button: {
     minHeight: 52,
     borderRadius: 16,
@@ -84,7 +89,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   text: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '700',
     letterSpacing: 0.3,
   },

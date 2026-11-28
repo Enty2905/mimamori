@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 public class MedicationDto {
     private Long id;
+    private String timeZone;
     private Long elderlyId;
     private String name;
     private String dosage;
@@ -23,6 +24,7 @@ public class MedicationDto {
         if (med == null) return null;
         MedicationDto dto = new MedicationDto();
         dto.setId(med.getId());
+        dto.timeZone = med.getTimeZone();
         dto.setElderlyId(med.getElderly().getId());
         dto.setName(med.getName());
         dto.setDosage(med.getDosage());
@@ -32,7 +34,7 @@ public class MedicationDto {
         dto.setIsActive(med.getIsActive());
         dto.setCreatedAt(med.getCreatedAt());
         if (med.getSchedules() != null) {
-            dto.setSchedules(med.getSchedules().stream()
+            dto.setSchedules(med.getSchedules().stream().filter(schedule -> schedule.isActive())
                     .map(MedicationScheduleDto::fromEntity)
                     .collect(Collectors.toList()));
         }
@@ -40,6 +42,7 @@ public class MedicationDto {
     }
 
     public Long getId() { return id; }
+    public String getTimeZone() { return timeZone; }
     public void setId(Long id) { this.id = id; }
     public Long getElderlyId() { return elderlyId; }
     public void setElderlyId(Long elderlyId) { this.elderlyId = elderlyId; }

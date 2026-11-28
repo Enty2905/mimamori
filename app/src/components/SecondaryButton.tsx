@@ -1,13 +1,14 @@
+import {useOriginalLabels} from '../core/localization/original';
+import {useColors} from '../core/theme/useTheme';
+import {CareText as Text, CareTouchable as TouchableOpacity} from './CareText';
 import React from 'react';
 import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
+      StyleSheet,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { colors } from '../core/theme/colors';
+import { colors as baseColors } from '../core/theme/colors';
 import { useAccessibilityStore } from '../core/accessibility/useAccessibilityStore';
 
 interface Props {
@@ -29,6 +30,10 @@ export const SecondaryButton: React.FC<Props> = ({
   textStyle,
   icon,
 }) => {
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
+
   const { fs } = useAccessibilityStore();
 
   return (
@@ -56,7 +61,7 @@ export const SecondaryButton: React.FC<Props> = ({
               textStyle,
             ]}
           >
-            {title}
+            {tr(title)}
           </Text>
         </>
       )}
@@ -64,7 +69,7 @@ export const SecondaryButton: React.FC<Props> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   button: {
     minHeight: 50,
     borderRadius: 16,

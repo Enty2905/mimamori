@@ -1,166 +1,91 @@
-import { create } from 'zustand';
-import { apiClient, tokenStorage } from '../api/client';
-
-export type UserRole = 'ELDERLY' | 'CAREGIVER';
-
-export interface User {
-  id: number;
-  username: string;
-  fullName: string;
-  email: string;
-  role: UserRole;
-  phone?: string | null;
-  avatarUrl?: string | null;
-  emergencyContact?: string | null;
-}
-
+import { create } from "zustand";
+import {
+  requestData,
+  apiClient,
+  onSessionExpired,
+  ApiError,
+} from "../api/client";
+import { authSchema } from "../api/contracts";
+import { sessionTokens } from "../storage/sessionTokens";
+import { queryClient } from "../api/queryClient";
+export type UserRole = "ELDERLY" | "CAREGIVER";
+export type { User } from "../api/contracts";
 interface AuthState {
-  user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  error: string | null;
-
-  login: (username: string, password: string) => Promise<boolean>;
-  register: (userData: {
+  userId: number | null;
+  role: UserRole | null;
+  ready: boolean;
+  restore: () => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
+  register: (values: {
     username: string;
-    password: string;
-    fullName: string;
     email: string;
+    fullName: string;
+    password: string;
     role: UserRole;
-    phoneNumber?: string;
-  }) => Promise<boolean>;
+    phone?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
-  checkAuth: () => Promise<void>;
-  demoLogin: (role: UserRole) => Promise<boolean>;
-  clearError: () => void;
-  updateUser: (updatedUser: Partial<User>) => void;
 }
-
-export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  token: null,
-  isAuthenticated: false,
-  isLoading: true,
-  error: null,
-
-  clearError: () => set({ error: null }),
-
-  login: async (username, password) => {
-    set({ isLoading: true, error: null });
+async function accept(result: ReturnType<typeof authSchema.parse>) {
+  await sessionTokens.save({
+    accessToken: result.token,
+    refreshToken: result.refreshToken,
+    userId: result.user.id,
+    role: result.user.role,
+  });
+  if ((await sessionTokens.read())?.accessToken !== result.token)
+    throw new ApiError(401, "SESSION_CHANGED");
+  queryClient.clear();
+  queryClient.setQueryData(["profile", result.user.id], result.user);
+  useAuthStore.setState({
+    userId: result.user.id,
+    role: result.user.role,
+    ready: true,
+  });
+}
+export const useAuthStore = create<AuthState>((set) => ({
+  userId: null,
+  role: null,
+  ready: false,
+  restore: async () => {
     try {
-      const trimmedIdentifier = username.trim();
-      const res = await apiClient<{ token: string; user: User }>('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          usernameOrEmail: trimmedIdentifier,
-          username: trimmedIdentifier,
-          password: password,
-        }),
+      const session = await sessionTokens.read();
+      set({
+        userId: session?.userId ?? null,
+        role: session?.role ?? null,
+        ready: true,
       });
-
-      if (res.success && res.data) {
-        await tokenStorage.setToken(res.data.token);
-        set({
-          user: res.data.user,
-          token: res.data.token,
-          isAuthenticated: true,
-          isLoading: false,
-          error: null,
-        });
-        return true;
-      }
-      set({ isLoading: false, error: res.message || 'Đăng nhập không thành công' });
-      return false;
-    } catch (err: any) {
-      set({ isLoading: false, error: err.message || 'Lỗi kết nối máy chủ' });
-      return false;
-    }
-  },
-
-  register: async (userData) => {
-    set({ isLoading: true, error: null });
-    try {
-      const res = await apiClient<{ token: string; user: User }>('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          ...userData,
-          username: userData.username.trim(),
-          email: userData.email.trim(),
-          fullName: userData.fullName.trim(),
-        }),
-      });
-
-      if (res.success && res.data) {
-        await tokenStorage.setToken(res.data.token);
-        set({
-          user: res.data.user,
-          token: res.data.token,
-          isAuthenticated: true,
-          isLoading: false,
-          error: null,
-        });
-        return true;
-      }
-      set({ isLoading: false, error: res.message || 'Đăng ký không thành công' });
-      return false;
-    } catch (err: any) {
-      set({ isLoading: false, error: err.message || 'Lỗi đăng ký' });
-      return false;
-    }
-  },
-
-  demoLogin: async (role: UserRole) => {
-    if (role === 'ELDERLY') {
-      return get().login('ong_ba', 'Password123!');
-    } else {
-      return get().login('con_gai', 'Password123!');
-    }
-  },
-
-  logout: async () => {
-    await tokenStorage.clearToken();
-    set({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-    });
-  },
-
-  updateUser: (updatedUser: Partial<User>) => {
-    const current = get().user;
-    if (current) {
-      set({ user: { ...current, ...updatedUser } });
-    }
-  },
-
-  checkAuth: async () => {
-    set({ isLoading: true });
-    try {
-      const token = await tokenStorage.getToken();
-      if (!token) {
-        set({ user: null, token: null, isAuthenticated: false, isLoading: false });
-        return;
-      }
-
-      const res = await apiClient<User>('/api/auth/me');
-      if (res.success && res.data) {
-        set({
-          user: res.data,
-          token,
-          isAuthenticated: true,
-          isLoading: false,
-        });
-      } else {
-        await tokenStorage.clearToken();
-        set({ user: null, token: null, isAuthenticated: false, isLoading: false });
-      }
     } catch {
-      await tokenStorage.clearToken();
-      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+      set({ ready: true });
+    }
+  },
+  login: async (identifier, password) =>
+    accept(
+      await requestData("/api/auth/login", authSchema, {
+        method: "POST",
+        body: JSON.stringify({ usernameOrEmail: identifier.trim(), password }),
+      }),
+    ),
+  register: async (values) =>
+    accept(
+      await requestData("/api/auth/register", authSchema, {
+        method: "POST",
+        body: JSON.stringify(values),
+      }),
+    ),
+  logout: async () => {
+    try {
+      await apiClient("/api/auth/logout", { method: "POST" });
+    } catch {
+      /* Local logout still completes offline. */
+    } finally {
+      await sessionTokens.clear();
+      queryClient.clear();
+      set({ userId: null, role: null, ready: true });
     }
   },
 }));
-
+onSessionExpired(() => {
+  queryClient.clear();
+  useAuthStore.setState({ userId: null, role: null, ready: true });
+});

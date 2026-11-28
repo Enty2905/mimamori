@@ -1,0 +1,683 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Mimamori AI Service",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health/live": {
+      "get": {
+        "summary": "Live",
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Content Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Ready",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Content Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/internal/v1/ingestions/{source_key}": {
+      "post": {
+        "summary": "Ingest",
+        "operationId": "ingest_internal_v1_ingestions__source_key__post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,79}$",
+              "title": "Source Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Purge",
+        "operationId": "purge_internal_v1_ingestions__source_key__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,79}$",
+              "title": "Source Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/internal/v1/retrievals": {
+      "post": {
+        "summary": "Retrieve",
+        "operationId": "retrieve_internal_v1_retrievals_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetrievalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrievalResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Content Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "timestamp"
+        ],
+        "title": "ApiError"
+      },
+      "IngestionResult": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "collection": {
+            "type": "string",
+            "title": "Collection"
+          },
+          "pipeline_id": {
+            "type": "string",
+            "title": "Pipeline Id"
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count"
+          },
+          "source_sha256": {
+            "type": "string",
+            "title": "Source Sha256"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "source_id",
+          "collection",
+          "pipeline_id",
+          "chunk_count",
+          "source_sha256"
+        ],
+        "title": "IngestionResult"
+      },
+      "RetrievalRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Query"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ja",
+              "vi"
+            ],
+            "title": "Language"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 3
+          },
+          "max_context_tokens": {
+            "type": "integer",
+            "maximum": 1024.0,
+            "minimum": 32.0,
+            "title": "Max Context Tokens",
+            "default": 384
+          },
+          "source_ids": {
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,79}$"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Source Ids"
+          },
+          "document_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Document Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "query",
+          "language"
+        ],
+        "title": "RetrievalRequest"
+      },
+      "RetrievalResponse": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version",
+            "default": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "context",
+              "no_context"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "NO_MATCH",
+              "LOW_CONFIDENCE",
+              "UNAVAILABLE",
+              "BUSY",
+              "QUERY_TOO_LONG",
+              "INVALID_INDEX",
+              "BUDGET_EXHAUSTED"
+            ],
+            "title": "Reason"
+          },
+          "pipeline_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Pipeline Id"
+          },
+          "context_tokens": {
+            "type": "integer",
+            "maximum": 1024.0,
+            "minimum": 0.0,
+            "title": "Context Tokens"
+          },
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievedChunk"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Chunks"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "reason",
+          "pipeline_id",
+          "context_tokens"
+        ],
+        "title": "RetrievalResponse"
+      },
+      "RetrievedChunk": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Chunk Id"
+          },
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Document Id"
+          },
+          "source_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,79}$",
+            "title": "Source Id"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Source"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "section": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Section"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ja",
+              "vi"
+            ],
+            "title": "Language"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Version"
+          },
+          "ingestion_timestamp": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Ingestion Timestamp"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 16384,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "score": {
+            "type": "number",
+            "maximum": 1.001,
+            "minimum": -1.001,
+            "title": "Score"
+          },
+          "token_count": {
+            "type": "integer",
+            "maximum": 4096.0,
+            "minimum": 1.0,
+            "title": "Token Count"
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Source Sha256"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "document_id",
+          "source_id",
+          "source",
+          "title",
+          "section",
+          "language",
+          "version",
+          "ingestion_timestamp",
+          "text",
+          "score",
+          "token_count",
+          "source_sha256"
+        ],
+        "title": "RetrievedChunk"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Internal-Token"
+      }
+    }
+  }
+}

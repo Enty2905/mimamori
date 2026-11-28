@@ -11,6 +11,7 @@ import java.util.List;
 public class CreateMedicationRequest {
 
     private Long elderlyId; // Optional if called by elderly themselves
+    private String timeZone = "Asia/Ho_Chi_Minh";
 
     @NotBlank(message = "Medication name is required")
     private String name;
@@ -29,6 +30,8 @@ public class CreateMedicationRequest {
     private List<LocalTime> reminderTimes;
 
     public Long getElderlyId() { return elderlyId; }
+    public String getTimeZone() { return timeZone; }
+    public void setTimeZone(String value) { timeZone = value; }
     public void setElderlyId(Long elderlyId) { this.elderlyId = elderlyId; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

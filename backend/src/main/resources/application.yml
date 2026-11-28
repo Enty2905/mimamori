@@ -4,46 +4,84 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/mimamori?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC}
     username: ${SPRING_DATASOURCE_USERNAME:mimamori}
-    password: ${SPRING_DATASOURCE_PASSWORD:mimamori_password}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      data-source-properties:
+        connectionTimeZone: UTC
+        forceConnectionTimeZoneToSession: true
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
+      connect-timeout: 250ms
+      timeout: 500ms
   jpa:
     hibernate:
       ddl-auto: validate
-    open-in-view: true
+    open-in-view: false
     properties:
-      hibernate:
-        format_sql: false
-        dialect: org.hibernate.dialect.MySQLDialect
+      hibernate.jdbc.time_zone: UTC
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: true
+    baseline-on-migrate: false
   quartz:
-    job-store-type: memory
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
+    properties:
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.jobStore.isClustered: true
+      org.quartz.jobStore.useProperties: true
+      org.quartz.threadPool.threadCount: 3
     auto-startup: true
   ai:
+    chat:
+      client:
+        enabled: false
+    model:
+      chat: ${SPRING_AI_MODEL_CHAT:none}
+      embedding: none
     openai:
-      api-key: ${SPRING_AI_OPENAI_API_KEY:dummy-key}
-      base-url: ${SPRING_AI_OPENAI_BASE_URL:https://api.groq.com/openai/v1}
+      api-key: ${GROQ_API_KEY:}
+      base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}
+      timeout: 4s
+      max-retries: 1
       chat:
         options:
-          model: ${SPRING_AI_OPENAI_CHAT_MODEL:llama-3.3-70b-versatile}
+          model: ${GROQ_MODEL:}
+    retry:
+      max-attempts: 2
+      backoff:
+        initial-interval: 250ms
+        multiplier: 2
+        max-interval: 1s
+      on-http-codes: 429,500,502,503,504
 
 mimamori:
   jwt:
-    secret: ${JWT_SECRET:mimamori-super-secret-key-for-jwt-tokens-graduation-project-2026-secure-at-least-256-bits!}
-    expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours
+    secret: ${JWT_SECRET}
+    expiration-ms: ${JWT_EXPIRATION_MS:900000}
+  push:
+    enabled: ${FCM_ENABLED:false}
+  queue:
+    redis-enabled: ${REDIS_QUEUE_ENABLED:true}
   ai-service:
     url: ${AI_SERVICE_URL:http://localhost:8000}
-  groq:
-    api-key: ${GROQ_API_KEY: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}
-    base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}
-    model: ${GROQ_MODEL:openai/gpt-oss-120b}
-    fallback-model: ${GROQ_FALLBACK_MODEL:openai/gpt-oss-20b}
+  rag:
+    enabled: ${RAG_ENABLED:false}
+    base-url: ${AI_SERVICE_URL:http://127.0.0.1:8000}
+    internal-token: ${RAG_INTERNAL_TOKEN:}
+    timeout: 1500ms
+    connect-timeout: 500ms
 
 server:
   port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+
+management:
+  endpoint:
+    health:
+      show-details: never

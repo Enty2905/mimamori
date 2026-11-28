@@ -1,6 +1,6 @@
 package com.mimamori;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.mimamori.common.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +36,21 @@ class JwtServiceTest {
         String token = jwtService.generateToken(1L, "elderly_user", "ELDERLY");
         String tampered = token.substring(0, token.length() - 5) + "abcde";
         assertFalse(jwtService.validateToken(tampered));
+    }
+
+    @Test
+    void rejectsWeakOrMissingSecrets() {
+        assertThrows(IllegalArgumentException.class, () -> new JwtService("", 1000, new ObjectMapper()));
+        assertThrows(IllegalArgumentException.class, () -> new JwtService("short", 1000, new ObjectMapper()));
+        assertThrows(IllegalArgumentException.class, () -> new JwtService(null, 1000, new ObjectMapper()));
+    }
+
+    @Test
+    void rejectsMalformedAndExpiredTokens() {
+        assertFalse(jwtService.validateToken(null));
+        assertFalse(jwtService.validateToken("not.a.token"));
+        JwtService expired = new JwtService("synthetic-secret-that-is-at-least-32-bytes-long", -1000, new ObjectMapper());
+        assertFalse(expired.validateToken(expired.generateToken(1L, "user", "ELDERLY")));
     }
 }
 

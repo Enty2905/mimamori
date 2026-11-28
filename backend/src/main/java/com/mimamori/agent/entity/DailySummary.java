@@ -23,7 +23,7 @@ public class DailySummary {
     private LocalDate summaryDate;
 
     @Column(name = "medication_adherence_rate")
-    private Double medicationAdherenceRate = 1.0;
+    private Double medicationAdherenceRate;
 
     @Column(name = "checkin_summary", columnDefinition = "TEXT")
     private String checkinSummary;

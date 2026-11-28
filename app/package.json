@@ -1,6 +1,6 @@
 {
   "name": "mimamori-app",
-  "main": "expo-router/entry",
+  "main": "./index.ts",
   "version": "0.1.0",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -8,20 +8,23 @@
     "@react-native-firebase/crashlytics": "^26.2.0",
     "@react-native-firebase/messaging": "^26.2.0",
     "@tanstack/react-query": "^5.101.4",
-    "expo": "^58.0.0",
+    "expo": "~58.0.25",
+    "expo-build-properties": "~58.0.12",
     "expo-constants": "~58.0.15",
-    "expo-dev-client": "~58.0.18",
+    "expo-crypto": "~58.0.8",
+    "expo-dev-client": "~58.0.20",
     "expo-device": "~58.0.5",
-    "expo-linking": "~58.0.16",
+    "expo-font": "~58.0.11",
+    "expo-linking": "~58.0.17",
     "expo-localization": "~58.0.5",
-    "expo-notifications": "~58.1.8",
-    "expo-router": "~58.0.30",
-    "expo-secure-store": "~58.0.2",
-    "expo-speech": "~58.0.3",
-    "expo-splash-screen": "~58.0.13",
-    "expo-sqlite": "~58.0.15",
-    "expo-status-bar": "~58.0.4",
-    "expo-symbols": "~58.0.4",
+    "expo-notifications": "~58.1.9",
+    "expo-router": "~58.0.31",
+    "expo-secure-store": "~58.0.3",
+    "expo-speech": "~58.0.4",
+    "expo-splash-screen": "~58.0.14",
+    "expo-sqlite": "~58.0.17",
+    "expo-status-bar": "~58.0.5",
+    "expo-symbols": "~58.0.5",
     "expo-system-ui": "~58.0.7",
     "i18next": "^26.3.6",
     "react": "19.3.0",
@@ -39,7 +42,8 @@
   },
   "devDependencies": {
     "@testing-library/react-native": "^14.0.1",
-    "@types/jest": "29.5.14",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.6",
     "@types/react": "~19.3.0",
     "eslint": "^9.39.5",
     "eslint-config-expo": "~58.0.4",
@@ -54,13 +58,25 @@
     "prebuild": "expo prebuild",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "jest --passWithNoTests"
+    "test": "jest",
+    "start:go": "expo start --go",
+    "test:compiler": "jest --config jest.compiler.config.cjs --runInBand",
+    "check:native-text": "node ../scripts/check_native_text.cjs"
   },
   "private": true,
   "engines": {
     "node": ">=22.13.0"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.ts"
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.7"
   }
 }

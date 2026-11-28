@@ -17,9 +17,11 @@ import java.util.Collections;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final com.mimamori.userprofile.repository.UserRepository users;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, com.mimamori.userprofile.repository.UserRepository users) {
         this.jwtService = jwtService;
+        this.users = users;
     }
 
     @Override
@@ -30,9 +32,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             if (jwtService.validateToken(token)) {
-                String username = jwtService.getUsernameFromToken(token);
-                String role = jwtService.getRoleFromToken(token);
                 Long userId = jwtService.getUserIdFromToken(token);
+                var user = users.findById(userId).orElse(null);
+                Object version = jwtService.getClaims(token).get("version");
+                if (user == null || !(version instanceof Number number) || number.longValue() != user.getSessionVersion()) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                String role = user.getRole().name();
 
                 SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
@@ -42,6 +49,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 );
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                // Keep authentication on this request's SSE/error redispatch; never create an HTTP session.
+                new org.springframework.security.web.context.RequestAttributeSecurityContextRepository()
+                        .saveContext(SecurityContextHolder.getContext(), request, response);
             }
         }
 

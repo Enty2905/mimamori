@@ -1,10 +1,13 @@
+import {useForm,useWatch} from 'react-hook-form';
+import {registrationFields,loginFields} from '../../core/auth/forms';
+import {useOriginalLabels} from '../../core/localization/original';
+import {useColors} from '../../core/theme/useTheme';
+import {CareText as Text, CareTouchable as TouchableOpacity} from '../../components/CareText';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
+    TextInput,
+    StyleSheet,
   ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
@@ -12,30 +15,36 @@ import {
   Image,
   Modal,
 } from 'react-native';
-import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
-import { useAuthStore, UserRole } from '../../core/auth/useAuthStore';
+import { Feather } from '@expo/vector-icons';
+import { colors as baseColors, shadows } from '../../core/theme/colors';
+import { UserRole } from '../../core/auth/useAuthStore';
+import { useSession } from '../../core/auth/useSession';
 import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
 
 export const AuthScreen: React.FC = () => {
-  const { login, register, demoLogin, isLoading, error, clearError } = useAuthStore();
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
+
+  const { login, register, demoLogin, isLoading, error, clearError } = useSession();
   const { fs } = useAccessibilityStore();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isRegisterMode, setIsRegisterMode] = useState(false);
 
-  // Form states
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<UserRole>('ELDERLY');
-  const [phone, setPhone] = useState('');
+  const form=useForm<{username:string;password:string;fullName:string;email:string;role:UserRole;phone:string}>({defaultValues:{username:'',password:'',fullName:'',email:'',role:'ELDERLY',phone:''}});
+  const {username='',password='',fullName='',email='',role='ELDERLY',phone=''}=useWatch({control:form.control});
+  const setUsername=(value:string)=>form.setValue('username',value);
+  const setPassword=(value:string)=>form.setValue('password',value);
+  const setFullName=(value:string)=>form.setValue('fullName',value);
+  const setEmail=(value:string)=>form.setValue('email',value);
+  const setRole=(value:UserRole)=>form.setValue('role',value);
+  const setPhone=(value:string)=>form.setValue('phone',value);
 
   const handleSubmit = async () => {
     clearError();
     if (isRegisterMode) {
-      if (!username || !password || !fullName || !email) {
-        alert('Vui lòng điền đầy đủ các thông tin bắt buộc (*)');
+      if (!registrationFields.safeParse(form.getValues()).success) {
+        alert(tr("Vui lòng điền đầy đủ các thông tin bắt buộc (*)"));
         return;
       }
       await register({
@@ -47,8 +56,8 @@ export const AuthScreen: React.FC = () => {
         phoneNumber: phone.trim() || undefined,
       });
     } else {
-      if (!username || !password) {
-        alert('Vui lòng nhập tên đăng nhập và mật khẩu');
+      if (!loginFields.safeParse(form.getValues()).success) {
+        alert(tr("Vui lòng nhập tên đăng nhập và mật khẩu"));
         return;
       }
       await login(username.trim(), password);
@@ -68,18 +77,15 @@ export const AuthScreen: React.FC = () => {
             style={styles.brandLeafLogo}
             resizeMode="contain"
           />
-          <Text style={[styles.brandTitle, { fontSize: fs(24) }]}>Mimamori AI</Text>
+          <Text style={[styles.brandTitle, { fontSize: fs(24) }]}>{tr("Mimamori AI")}</Text>
         </View>
 
         {/* 2. Headline & Subtitle */}
         <View style={styles.headlineBlock}>
-          <Text style={[styles.heroHeadline, { fontSize: fs(28) }]}>
-            Chăm sóc kết nối.{'\n'}
-            <Text style={styles.heroHeadlineGreen}>Điểm tựa yêu thương.</Text>
+          <Text style={[styles.heroHeadline, { fontSize: fs(28) }]}>{tr("Chăm sóc kết nối.")}{'\n'}
+            <Text style={styles.heroHeadlineGreen}>{tr("Điểm tựa yêu thương.")}</Text>
           </Text>
-          <Text style={[styles.heroSubhead, { fontSize: fs(14) }]}>
-            Người bạn đồng hành AI chu đáo và thấu cảm dành cho người cao tuổi cùng gia đình thân yêu.
-          </Text>
+          <Text style={[styles.heroSubhead, { fontSize: fs(14) }]}>{tr("Người bạn đồng hành AI chu đáo và thấu cảm dành cho người cao tuổi cùng gia đình thân yêu.")}</Text>
         </View>
 
         {/* 3. Hero Portrait Card - Using User's Gardening Grandmother Photo */}
@@ -91,34 +97,7 @@ export const AuthScreen: React.FC = () => {
           />
           <View style={styles.heroBadgeOverlay}>
             <Feather name="sun" size={14} color={colors.primaryDark} style={{ marginRight: 6 }} />
-            <Text style={styles.heroBadgeText}>Sống an vui mỗi ngày</Text>
-          </View>
-        </View>
-
-        {/* 4. Three Eldora Value Pillars with Vector Icons */}
-        <View style={styles.valuePillarsRow}>
-          <View style={styles.valueCard}>
-            <View style={styles.valueIconCircle}>
-              <Feather name="heart" size={18} color={colors.primary} />
-            </View>
-            <Text style={[styles.valueTitle, { fontSize: fs(13) }]}>Thấu cảm</Text>
-            <Text style={[styles.valueSub, { fontSize: fs(11) }]}>Hỗ trợ sức khỏe & tinh thần</Text>
-          </View>
-
-          <View style={styles.valueCard}>
-            <View style={styles.valueIconCircle}>
-              <Feather name="users" size={18} color={colors.primary} />
-            </View>
-            <Text style={[styles.valueTitle, { fontSize: fs(13) }]}>Kết nối</Text>
-            <Text style={[styles.valueSub, { fontSize: fs(11) }]}>Gắn kết gia đình yêu thương</Text>
-          </View>
-
-          <View style={styles.valueCard}>
-            <View style={styles.valueIconCircle}>
-              <Feather name="shield" size={18} color={colors.primary} />
-            </View>
-            <Text style={[styles.valueTitle, { fontSize: fs(13) }]}>Tự chủ</Text>
-            <Text style={[styles.valueSub, { fontSize: fs(11) }]}>Duy trì nếp sống an vui</Text>
+            <Text style={styles.heroBadgeText}>{tr("Sống an vui mỗi ngày")}</Text>
           </View>
         </View>
 
@@ -131,9 +110,9 @@ export const AuthScreen: React.FC = () => {
           }}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityLabel="Bắt đầu trải nghiệm Mimamori"
+          accessibilityLabel={tr("Bắt đầu trải nghiệm Mimamori")}
         >
-          <Text style={[styles.getStartedButtonText, { fontSize: fs(17) }]}>Bắt đầu trải nghiệm</Text>
+          <Text style={[styles.getStartedButtonText, { fontSize: fs(20) }]}>{tr("Bắt đầu trải nghiệm")}</Text>
         </TouchableOpacity>
 
         {/* 6. Secondary Quick Login Link */}
@@ -146,18 +125,44 @@ export const AuthScreen: React.FC = () => {
           }}
           activeOpacity={0.7}
         >
-          <Text style={[styles.signInLinkText, { fontSize: fs(14) }]}>
-            Đã có tài khoản? <Text style={styles.boldGreen}>Đăng nhập ngay</Text>
+          <Text style={[styles.signInLinkText, { fontSize: fs(14) }]}>{tr("Đã có tài khoản? ")}<Text style={styles.boldGreen}>{tr("Đăng nhập ngay")}</Text>
           </Text>
         </TouchableOpacity>
+
+        {/* 4. Three Eldora Value Pillars with Vector Icons */}
+        <View style={styles.valuePillarsRow}>
+          <View style={styles.valueCard}>
+            <View style={styles.valueIconCircle}>
+              <Feather name="heart" size={18} color={colors.primary} />
+            </View>
+            <Text style={[styles.valueTitle, { fontSize: fs(13) }]}>{tr("Thấu cảm")}</Text>
+            <Text style={[styles.valueSub, { fontSize: fs(11) }]}>{tr("Hỗ trợ sức khỏe & tinh thần")}</Text>
+          </View>
+
+          <View style={styles.valueCard}>
+            <View style={styles.valueIconCircle}>
+              <Feather name="users" size={18} color={colors.primary} />
+            </View>
+            <Text style={[styles.valueTitle, { fontSize: fs(13) }]}>{tr("Kết nối")}</Text>
+            <Text style={[styles.valueSub, { fontSize: fs(11) }]}>{tr("Gắn kết gia đình yêu thương")}</Text>
+          </View>
+
+          <View style={styles.valueCard}>
+            <View style={styles.valueIconCircle}>
+              <Feather name="shield" size={18} color={colors.primary} />
+            </View>
+            <Text style={[styles.valueTitle, { fontSize: fs(13) }]}>{tr("Tự chủ")}</Text>
+            <Text style={[styles.valueSub, { fontSize: fs(11) }]}>{tr("Duy trì nếp sống an vui")}</Text>
+          </View>
+        </View>
 
         <View style={{ height: 20 }} />
       </ScrollView>
 
       {/* Auth Bottom Sheet Modal */}
-      <Modal visible={showAuthModal} animationType="slide" transparent>
+      <Modal visible={showAuthModal} onRequestClose={() => setShowAuthModal(false)} animationType="slide" transparent>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalBackdrop}
         >
           <View style={styles.modalCard}>
@@ -172,14 +177,165 @@ export const AuthScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
               {/* Demo 1-Tap Login Section */}
+              {/* Form Tabs */}
+              <View style={styles.tabToggleRow}>
+                <TouchableOpacity
+                  style={[styles.tabButton, !isRegisterMode && styles.tabButtonActive]}
+                  onPress={() => {
+                    setIsRegisterMode(false);
+                    clearError();
+                  }}
+                >
+                  <Text style={[styles.tabText, { fontSize: fs(14) }, !isRegisterMode && styles.tabTextActive]}>{tr("Đăng nhập")}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.tabButton, isRegisterMode && styles.tabButtonActive]}
+                  onPress={() => {
+                    setIsRegisterMode(true);
+                    clearError();
+                  }}
+                >
+                  <Text style={[styles.tabText, { fontSize: fs(14) }, isRegisterMode && styles.tabTextActive]}>{tr("Tạo tài khoản")}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {error ? (
+                <View style={styles.errorBox}>
+                  <Feather name="alert-circle" size={16} color={colors.dangerText} style={{ marginRight: 6 }} />
+                  <Text style={[styles.errorText, { fontSize: fs(13) }]}>{error}</Text>
+                </View>
+              ) : null}
+
+              {/* Registration Extra Fields */}
+              {isRegisterMode && (
+                <>
+                  <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>{tr("Họ và tên *")}</Text>
+                  <View style={styles.inputContainer}>
+                    <Feather name="user" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.inputField, { fontSize: fs(20) }]}
+                      placeholder={tr("Ví dụ: Nguyễn Văn Ba")}
+                      placeholderTextColor={colors.textMuted}
+                      accessibilityLabel={tr('Họ và tên *')}
+                  value={fullName}
+                      onChangeText={setFullName}
+                    />
+                  </View>
+
+                  <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>{tr("Email *")}</Text>
+                  <View style={styles.inputContainer}>
+                    <Feather name="mail" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.inputField, { fontSize: fs(20) }]}
+                      placeholder="email@example.com"
+                      placeholderTextColor={colors.textMuted}
+                      accessibilityLabel={tr('Email *')}
+                  value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  </View>
+
+                  <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>{tr("Số điện thoại")}</Text>
+                  <View style={styles.inputContainer}>
+                    <Feather name="phone" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.inputField, { fontSize: fs(20) }]}
+                      placeholder="0912 345 678"
+                      placeholderTextColor={colors.textMuted}
+                      accessibilityLabel={tr('Số điện thoại')}
+                  value={phone}
+                      onChangeText={setPhone}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+
+                  <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>{tr("Vai trò sử dụng *")}</Text>
+                  <View style={styles.roleRow}>
+                    <TouchableOpacity
+                      style={[styles.roleBtn, role === 'ELDERLY' && styles.roleBtnActive]}
+                      onPress={() => setRole('ELDERLY')}
+                    >
+                      <Feather
+                        name="user"
+                        size={16}
+                        color={role === 'ELDERLY' ? colors.primary : colors.textSecondary}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={[styles.roleBtnText, role === 'ELDERLY' && styles.roleBtnTextActive]}>{tr("Người cao tuổi")}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.roleBtn, role === 'CAREGIVER' && styles.roleBtnActive]}
+                      onPress={() => setRole('CAREGIVER')}
+                    >
+                      <Feather
+                        name="users"
+                        size={16}
+                        color={role === 'CAREGIVER' ? colors.primary : colors.textSecondary}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={[styles.roleBtnText, role === 'CAREGIVER' && styles.roleBtnTextActive]}>{tr("Người chăm sóc")}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
+              {/* Standard Credentials Fields */}
+              <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>
+                {isRegisterMode ? tr("Tên đăng nhập *") : tr("Tên đăng nhập hoặc Email *")}
+              </Text>
+              <View style={styles.inputContainer}>
+                <Feather name="at-sign" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.inputField, { fontSize: fs(20) }]}
+                  placeholder={tr("Nhập tên đăng nhập")}
+                  placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={tr('Tên đăng nhập *')}
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>{tr("Mật khẩu *")}</Text>
+              <View style={styles.inputContainer}>
+                <Feather name="lock" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.inputField, { fontSize: fs(20) }]}
+                  placeholder={tr("Nhập mật khẩu")}
+                  placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={tr('Mật khẩu *')}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.submitButton}
+                testID="auth-submit"
+                onPress={handleSubmit}
+                disabled={isLoading}
+                activeOpacity={0.8}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color={colors.textInverse} />
+                ) : (
+                  <Text style={[styles.submitButtonText, { fontSize: fs(20) }]}>
+                    {isRegisterMode ? tr("Đăng ký tài khoản") : tr("Đăng nhập ngay")}
+                  </Text>
+                )}
+              </TouchableOpacity>
+              {process.env.EXPO_PUBLIC_DEMO_MODE === 'true' && <>
               <View style={styles.demoBox}>
                 <View style={styles.demoKickerRow}>
                   <Feather name="zap" size={12} color={colors.primary} style={{ marginRight: 4 }} />
-                  <Text style={[styles.demoKicker, { fontSize: fs(11) }]}>
-                    TRẢI NGHIỆM NHANH (1-CHẠM)
-                  </Text>
+                  <Text style={[styles.demoKicker, { fontSize: fs(11) }]}>{tr("TRẢI NGHIỆM NHANH (1-CHẠM)")}</Text>
                 </View>
 
                 <View style={styles.demoCardGrid}>
@@ -196,8 +352,8 @@ export const AuthScreen: React.FC = () => {
                       <Feather name="user" size={18} color={colors.primary} />
                     </View>
                     <View style={styles.demoCardTextCol}>
-                      <Text style={[styles.demoCardTitle, { fontSize: fs(13.5) }]}>Người cao tuổi</Text>
-                      <Text style={[styles.demoCardSub, { fontSize: fs(11.5) }]}>Cụ Ông Nguyễn Văn Ba</Text>
+                      <Text style={[styles.demoCardTitle, { fontSize: fs(13.5) }]}>{tr("Người cao tuổi")}</Text>
+                      <Text style={[styles.demoCardSub, { fontSize: fs(11.5) }]}>{tr("Cụ Ông Nguyễn Văn Ba")}</Text>
                     </View>
                   </TouchableOpacity>
 
@@ -214,174 +370,14 @@ export const AuthScreen: React.FC = () => {
                       <Feather name="users" size={18} color={colors.primaryDark} />
                     </View>
                     <View style={styles.demoCardTextCol}>
-                      <Text style={[styles.demoCardTitle, { fontSize: fs(13.5) }]}>Người chăm sóc</Text>
-                      <Text style={[styles.demoCardSub, { fontSize: fs(11.5) }]}>Chị Nguyễn Thị Hoa</Text>
+                      <Text style={[styles.demoCardTitle, { fontSize: fs(13.5) }]}>{tr("Người chăm sóc")}</Text>
+                      <Text style={[styles.demoCardSub, { fontSize: fs(11.5) }]}>{tr("Chị Nguyễn Thị Hoa")}</Text>
                     </View>
                   </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Divider */}
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={[styles.dividerText, { fontSize: fs(12) }]}>hoặc tài khoản cá nhân</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              {/* Form Tabs */}
-              <View style={styles.tabToggleRow}>
-                <TouchableOpacity
-                  style={[styles.tabButton, !isRegisterMode && styles.tabButtonActive]}
-                  onPress={() => {
-                    setIsRegisterMode(false);
-                    clearError();
-                  }}
-                >
-                  <Text style={[styles.tabText, { fontSize: fs(14) }, !isRegisterMode && styles.tabTextActive]}>
-                    Đăng nhập
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.tabButton, isRegisterMode && styles.tabButtonActive]}
-                  onPress={() => {
-                    setIsRegisterMode(true);
-                    clearError();
-                  }}
-                >
-                  <Text style={[styles.tabText, { fontSize: fs(14) }, isRegisterMode && styles.tabTextActive]}>
-                    Tạo tài khoản
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {error ? (
-                <View style={styles.errorBox}>
-                  <Feather name="alert-circle" size={16} color={colors.dangerText} style={{ marginRight: 6 }} />
-                  <Text style={[styles.errorText, { fontSize: fs(13) }]}>{error}</Text>
-                </View>
-              ) : null}
-
-              {/* Registration Extra Fields */}
-              {isRegisterMode && (
-                <>
-                  <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>Họ và tên *</Text>
-                  <View style={styles.inputContainer}>
-                    <Feather name="user" size={18} color={colors.textSecondary} style={styles.inputIcon} />
-                    <TextInput
-                      style={[styles.inputField, { fontSize: fs(15) }]}
-                      placeholder="Ví dụ: Nguyễn Văn Ba"
-                      placeholderTextColor={colors.textMuted}
-                      value={fullName}
-                      onChangeText={setFullName}
-                    />
-                  </View>
-
-                  <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>Email *</Text>
-                  <View style={styles.inputContainer}>
-                    <Feather name="mail" size={18} color={colors.textSecondary} style={styles.inputIcon} />
-                    <TextInput
-                      style={[styles.inputField, { fontSize: fs(15) }]}
-                      placeholder="email@example.com"
-                      placeholderTextColor={colors.textMuted}
-                      value={email}
-                      onChangeText={setEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                    />
-                  </View>
-
-                  <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>Số điện thoại</Text>
-                  <View style={styles.inputContainer}>
-                    <Feather name="phone" size={18} color={colors.textSecondary} style={styles.inputIcon} />
-                    <TextInput
-                      style={[styles.inputField, { fontSize: fs(15) }]}
-                      placeholder="0912 345 678"
-                      placeholderTextColor={colors.textMuted}
-                      value={phone}
-                      onChangeText={setPhone}
-                      keyboardType="phone-pad"
-                    />
-                  </View>
-
-                  <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>Vai trò sử dụng *</Text>
-                  <View style={styles.roleRow}>
-                    <TouchableOpacity
-                      style={[styles.roleBtn, role === 'ELDERLY' && styles.roleBtnActive]}
-                      onPress={() => setRole('ELDERLY')}
-                    >
-                      <Feather
-                        name="user"
-                        size={16}
-                        color={role === 'ELDERLY' ? colors.primary : colors.textSecondary}
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text style={[styles.roleBtnText, role === 'ELDERLY' && styles.roleBtnTextActive]}>
-                        Người cao tuổi
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[styles.roleBtn, role === 'CAREGIVER' && styles.roleBtnActive]}
-                      onPress={() => setRole('CAREGIVER')}
-                    >
-                      <Feather
-                        name="users"
-                        size={16}
-                        color={role === 'CAREGIVER' ? colors.primary : colors.textSecondary}
-                        style={{ marginRight: 6 }}
-                      />
-                      <Text style={[styles.roleBtnText, role === 'CAREGIVER' && styles.roleBtnTextActive]}>
-                        Người chăm sóc
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              )}
-
-              {/* Standard Credentials Fields */}
-              <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>
-                {isRegisterMode ? 'Tên đăng nhập *' : 'Tên đăng nhập hoặc Email *'}
-              </Text>
-              <View style={styles.inputContainer}>
-                <Feather name="at-sign" size={18} color={colors.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.inputField, { fontSize: fs(15) }]}
-                  placeholder="Nhập tên đăng nhập"
-                  placeholderTextColor={colors.textMuted}
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <Text style={[styles.inputLabel, { fontSize: fs(13) }]}>Mật khẩu *</Text>
-              <View style={styles.inputContainer}>
-                <Feather name="lock" size={18} color={colors.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.inputField, { fontSize: fs(15) }]}
-                  placeholder="Nhập mật khẩu"
-                  placeholderTextColor={colors.textMuted}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
-              </View>
-
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleSubmit}
-                disabled={isLoading}
-                activeOpacity={0.8}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={[styles.submitButtonText, { fontSize: fs(16) }]}>
-                    {isRegisterMode ? 'Đăng ký tài khoản' : 'Đăng nhập ngay'}
-                  </Text>
-                )}
-              </TouchableOpacity>
+</>}
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -390,7 +386,7 @@ export const AuthScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: colors.background,
@@ -407,12 +403,12 @@ const styles = StyleSheet.create({
   },
   brandLeafLogo: {
     width: 38,
-    height: 38,
+    minHeight: 56,
     marginRight: 10,
   },
   brandLogoCircle: {
     width: 36,
-    height: 36,
+    minHeight: 56,
     borderRadius: 18,
     backgroundColor: colors.primaryLight,
     borderWidth: 1.5,
@@ -432,7 +428,7 @@ const styles = StyleSheet.create({
   heroHeadline: {
     fontWeight: '900',
     color: colors.textPrimary,
-    lineHeight: 36,
+
     letterSpacing: -0.5,
     marginBottom: 8,
   },
@@ -441,7 +437,7 @@ const styles = StyleSheet.create({
   },
   heroSubhead: {
     color: colors.textSecondary,
-    lineHeight: 22,
+
   },
   heroImageCard: {
     width: '100%',
@@ -495,7 +491,7 @@ const styles = StyleSheet.create({
   },
   valueIconCircle: {
     width: 36,
-    height: 36,
+    minHeight: 56,
     borderRadius: 18,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
@@ -510,7 +506,7 @@ const styles = StyleSheet.create({
   valueSub: {
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 14,
+
   },
   getStartedButton: {
     backgroundColor: colors.primary,
@@ -527,7 +523,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   getStartedButtonText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '800',
     letterSpacing: 0.3,
   },
@@ -573,7 +569,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: -4,
     width: 32,
-    height: 32,
+    minHeight: 56,
     borderRadius: 16,
     backgroundColor: colors.surfaceWarm,
     alignItems: 'center',
@@ -610,7 +606,7 @@ const styles = StyleSheet.create({
   },
   demoIconCircle: {
     width: 32,
-    height: 32,
+    minHeight: 56,
     borderRadius: 16,
     backgroundColor: colors.surface,
     alignItems: 'center',
@@ -746,7 +742,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '800',
   },
 });

@@ -24,24 +24,31 @@ public class CheckInService {
     private final UserRepository userRepository;
     private final FamilyRelationshipRepository relationshipRepository;
     private final GroqService groqService;
+    private final com.mimamori.notification.service.AlertService alerts;
 
     public CheckInService(
             DailyCheckInRepository checkInRepository,
             UserRepository userRepository,
             FamilyRelationshipRepository relationshipRepository,
-            GroqService groqService) {
+            GroqService groqService, com.mimamori.notification.service.AlertService alerts) {
         this.checkInRepository = checkInRepository;
         this.userRepository = userRepository;
         this.relationshipRepository = relationshipRepository;
         this.groqService = groqService;
+        this.alerts = alerts;
     }
 
     @Transactional
     public DailyCheckInDto submitCheckIn(Long elderlyId, DailyCheckInRequest request) {
-        User elderly = userRepository.findById(elderlyId)
+        User elderly = userRepository.findLockedById(elderlyId)
                 .orElseThrow(() -> new ApiException(404, "User not found"));
+        if (elderly.getRole() != com.mimamori.userprofile.entity.UserRole.ELDERLY) throw new ApiException(403, "Only elderly users can submit their check-in");
+        request.setMood(com.mimamori.conversation.dto.CheckInSignals.normalize(request.getMood(), "mood"));
+        request.setPhysicalHealth(com.mimamori.conversation.dto.CheckInSignals.normalize(request.getPhysicalHealth(), "physicalHealth"));
+        request.setSleepQuality(com.mimamori.conversation.dto.CheckInSignals.normalize(request.getSleepQuality(), "sleepQuality"));
+        request.setAppetite(com.mimamori.conversation.dto.CheckInSignals.normalize(request.getAppetite(), "appetite"));
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(java.time.ZoneId.of(elderly.getTimeZone()));
         DailyCheckIn checkIn = checkInRepository.findByElderlyIdAndCheckinDate(elderlyId, today)
                 .orElse(new DailyCheckIn());
 
@@ -59,26 +66,25 @@ public class CheckInService {
                 "PAIN".equalsIgnoreCase(request.getPhysicalHealth()) ||
                 "DIZZY".equalsIgnoreCase(request.getPhysicalHealth()) ||
                 "INSOMNIA".equalsIgnoreCase(request.getSleepQuality()) ||
+                "POOR".equalsIgnoreCase(request.getSleepQuality()) ||
                 "POOR".equalsIgnoreCase(request.getAppetite());
 
         checkIn.setConcerningFlag(isConcerning);
 
-        String aiAnalysis = groqService.analyzeCheckIn(
-                request.getMood(),
-                request.getPhysicalHealth(),
-                request.getSleepQuality(),
-                request.getAppetite(),
-                request.getNotes()
-        );
+        String aiAnalysis = isConcerning
+                ? ("ja".equals(elderly.getLanguagePreference()) ? "気になる体調の変化があります。ご家族や医療機関に相談してください。" : "Cụ ghi nhận dấu hiệu cần lưu ý. Cụ hãy liên hệ người thân hoặc nhân viên y tế để được hỗ trợ.")
+                : ("ja".equals(elderly.getLanguagePreference()) ? "本日の体調を記録しました。" : "Đã ghi nhận tình trạng hôm nay của cụ.");
         checkIn.setAiAnalysisSummary(aiAnalysis);
 
         checkIn = checkInRepository.save(checkIn);
+        if (isConcerning) alerts.createAlert(elderlyId, com.mimamori.notification.entity.AlertType.CHECKIN_CONCERN,
+                com.mimamori.notification.entity.AlertSeverity.HIGH, "Check-in ghi nhận dấu hiệu cần lưu ý. Vui lòng liên hệ người thân.", "CHECKIN:" + today);
         return DailyCheckInDto.fromEntity(checkIn);
     }
 
     public DailyCheckInDto getTodayCheckIn(Long currentUserId, Long targetElderlyId) {
         Long elderlyId = resolveElderlyId(currentUserId, targetElderlyId);
-        return checkInRepository.findByElderlyIdAndCheckinDate(elderlyId, LocalDate.now())
+        return checkInRepository.findByElderlyIdAndCheckinDate(elderlyId, LocalDate.now(java.time.ZoneId.of(userRepository.findById(elderlyId).orElseThrow().getTimeZone())))
                 .map(DailyCheckInDto::fromEntity)
                 .orElse(null);
     }
@@ -106,6 +112,7 @@ public class CheckInService {
         }
         return relationshipRepository.findByCaregiverId(currentUserId)
                 .stream()
+                .filter(link -> link.getStatus() == com.mimamori.userprofile.entity.RelationshipStatus.ACCEPTED)
                 .findFirst()
                 .map(rel -> rel.getElderly().getId())
                 .orElse(currentUserId);

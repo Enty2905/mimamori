@@ -1,88 +1,85 @@
-import React, { useState } from 'react';
+import {useOriginalLabels} from '../core/localization/original';
+import {useColors} from '../core/theme/useTheme';
+import {CareText as Text, CareTouchable as TouchableOpacity} from './CareText';
+import React, { useState, useRef } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
+    StyleSheet,
+    Modal,
   ActivityIndicator,
   Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, shadows } from '../core/theme/colors';
-import { apiClient } from '../core/api/client';
+import { colors as baseColors, shadows } from '../core/theme/colors';
+import { careApi } from '../core/api/careApi';
+import * as Crypto from 'expo-crypto';
+import {useTranslation} from 'react-i18next';
+import {Notice} from './CareUI';
 import { useAccessibilityStore } from '../core/accessibility/useAccessibilityStore';
 
 interface Props {
   emergencyContactName?: string;
 }
 
-export const SOSButton: React.FC<Props> = ({ emergencyContactName = 'Con gái (Nguyễn Thị Hoa)' }) => {
+export const SOSButton: React.FC<Props> = () => {
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
+
+  const {t} = useTranslation();
+  const requestId = useRef<string | null>(null);
+  const flight = useRef(false);
+  const [failed,setFailed] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [sending, setSending] = useState(false);
-  const { fs } = useAccessibilityStore();
+  const { fs,fontScale } = useAccessibilityStore();
 
   const handleConfirmSOS = async () => {
+    if(flight.current) return;
+    flight.current=true;setSending(true);setFailed(false);
+    requestId.current ??= Crypto.randomUUID();
     try {
-      setSending(true);
-      await apiClient('/api/notifications', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: '🚨 TÍN HIỆU KHẨN CẤP TỪ NGƯỜI CAO TUỔI',
-          message: `Người cao tuổi vừa nhấn nút SOS khẩn cấp trên ứng dụng Mimamori AI! Vui lòng liên hệ kiểm tra ngay!`,
-          type: 'EMERGENCY',
-        }),
-      }).catch(() => {});
-
+      const result=await careApi.emergency(requestId.current);
       setModalVisible(false);
-      Alert.alert(
-        'Đã phát tín hiệu khẩn cấp',
-        `Thông báo khẩn cấp đã được gửi trực tiếp đến ${emergencyContactName} và hệ thống theo dõi gia đình.`,
-        [{ text: 'Tôi đã hiểu', style: 'default' }]
-      );
-    } catch {
-      setModalVisible(false);
-      Alert.alert('Đã gửi thông báo', `Đã liên lạc đến người thân của cụ.`);
-    } finally {
-      setSending(false);
-    }
+      Alert.alert(t('sosConfirm'),t('sosRecorded',{count:result.recipientCount}));
+      requestId.current=null;
+    } catch { setFailed(true); }
+    finally {flight.current=false;setSending(false);}
   };
 
   return (
     <>
       <TouchableOpacity
         style={styles.sosPill}
-        onPress={() => setModalVisible(true)}
+        onPress={() => {setFailed(false);requestId.current=null;setModalVisible(true);}}
         activeOpacity={0.85}
-        accessibilityLabel="Nút gọi khẩn cấp SOS"
+        accessibilityLabel={t('sos')}
         accessibilityRole="button"
       >
         <View style={styles.sosIconContainer}>
-          <Feather name="alert-triangle" size={18} color="#FFFFFF" />
+          <Feather name="alert-triangle" size={18} color={colors.textInverse} />
         </View>
         <View style={styles.sosTextCol}>
-          <Text style={[styles.sosTitle, { fontSize: fs(15) }]}>Cần trợ giúp khẩn cấp?</Text>
-          <Text style={[styles.sosSubtitle, { fontSize: fs(12) }]}>Bấm để báo ngay cho người thân</Text>
+          <Text style={[styles.sosTitle, { fontSize: fs(15) }]}>{t('sos')}</Text>
+          {fontScale <= 1.2 && <Text style={[styles.sosSubtitle, { fontSize: fs(12) }]}>{t('sosHelp')}</Text>}
         </View>
       </TouchableOpacity>
 
       {/* Confirmation Modal */}
-      <Modal visible={modalVisible} transparent animationType="fade">
+      <Modal visible={modalVisible} onRequestClose={() => {if(!sending)setModalVisible(false);}} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalIconBox}>
               <Feather name="alert-triangle" size={32} color={colors.dangerText} />
             </View>
 
-            <Text style={[styles.modalTitle, { fontSize: fs(20) }]}>Xác nhận gọi khẩn cấp</Text>
+            <Text style={[styles.modalTitle, { fontSize: fs(20) }]}>{t('sosConfirm')}</Text>
             <Text style={[styles.modalDesc, { fontSize: fs(14) }]}>
-              Hệ thống sẽ gửi ngay cảnh báo đỏ đến điện thoại của{' '}
-              <Text style={styles.boldContact}>{emergencyContactName}</Text>.
+              {t("sosExplanation")}
             </Text>
-            <Text style={[styles.modalSubDesc, { fontSize: fs(13) }]}>
-              Cụ có chắc chắn muốn phát tín hiệu khẩn cấp không?
-            </Text>
+            <Text style={[styles.modalSubDesc, { fontSize: fs(13) }]}>{tr("Cụ có chắc chắn muốn phát tín hiệu khẩn cấp không?")}</Text>
 
+            {failed && <Notice tone="danger" text={t("sosFailed")} />}
             <View style={styles.modalButtonStack}>
               <TouchableOpacity
                 style={styles.confirmButton}
@@ -91,10 +88,10 @@ export const SOSButton: React.FC<Props> = ({ emergencyContactName = 'Con gái (N
                 activeOpacity={0.8}
               >
                 {sending ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color={colors.textInverse} />
                 ) : (
                   <Text style={[styles.confirmButtonText, { fontSize: fs(15) }]}>
-                    Phát tín hiệu khẩn cấp ngay
+                    {t(failed ? 'sosRetry' : 'sosSend')}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -105,7 +102,7 @@ export const SOSButton: React.FC<Props> = ({ emergencyContactName = 'Con gái (N
                 disabled={sending}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.cancelButtonText, { fontSize: fs(14) }]}>Hủy bỏ, tôi bấm nhầm</Text>
+                <Text style={[styles.cancelButtonText, { fontSize: fs(14) }]}>{tr("Hủy bỏ, tôi bấm nhầm")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -115,7 +112,7 @@ export const SOSButton: React.FC<Props> = ({ emergencyContactName = 'Con gái (N
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   sosPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -129,7 +126,7 @@ const styles = StyleSheet.create({
   },
   sosIconContainer: {
     width: 38,
-    height: 38,
+    minHeight: 56,
     borderRadius: 19,
     backgroundColor: colors.dangerText,
     alignItems: 'center',
@@ -137,7 +134,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   sosBadgeText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '900',
     fontSize: 12,
     letterSpacing: 0.5,
@@ -190,7 +187,7 @@ const styles = StyleSheet.create({
   modalDesc: {
     color: colors.textPrimary,
     textAlign: 'center',
-    lineHeight: 22,
+
     marginBottom: 6,
   },
   boldContact: {
@@ -216,7 +213,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   confirmButtonText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '800',
   },
   cancelButton: {

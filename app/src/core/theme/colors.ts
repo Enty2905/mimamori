@@ -18,8 +18,8 @@ export const colors = {
   accentLight: '#FDF7EB',
 
   textPrimary: '#26332D',     // Dark Charcoal - High contrast & warm readability
-  textSecondary: '#727C75',   // Muted sage-gray metadata
-  textMuted: '#9BA39D',       // Soft caption / hint text
+  textSecondary: '#566258',   // Muted sage-gray metadata
+  textMuted: '#626E67',       // Soft caption / hint text
   textInverse: '#FFFFFF',
 
   border: '#E3DDD2',          // Subtle warm cream border

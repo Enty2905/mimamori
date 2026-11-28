@@ -2,6 +2,8 @@ package com.mimamori.userprofile.controller;
 
 import com.mimamori.common.ApiResponse;
 import com.mimamori.userprofile.dto.UserDto;
+import com.mimamori.userprofile.dto.UpdateProfileRequest;
+import jakarta.validation.Valid;
 import com.mimamori.userprofile.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,8 +31,8 @@ public class UserController {
     @Operation(summary = "Update current user profile")
     public ApiResponse<UserDto> updateProfile(
             @AuthenticationPrincipal Long userId,
-            @RequestBody UserDto updateDto) {
-        return ApiResponse.ok("Thông tin cá nhân đã được cập nhật thành công", userService.updateProfile(userId, updateDto));
+            @Valid @RequestBody UpdateProfileRequest request) {
+        return ApiResponse.ok("Thông tin cá nhân đã được cập nhật thành công", userService.updateProfile(userId, request.toDto()));
     }
 }
 

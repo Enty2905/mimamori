@@ -3,6 +3,11 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 tests/
-datasets/
+datasets/*
+!datasets/approved/
 training/
+models/
+artifacts/
+outputs/
 *.pyc
+.env*

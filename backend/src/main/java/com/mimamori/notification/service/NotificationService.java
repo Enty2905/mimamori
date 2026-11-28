@@ -17,10 +17,12 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final org.springframework.context.ApplicationEventPublisher events;
 
-    public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository) {
+    public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository, org.springframework.context.ApplicationEventPublisher events) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.events = events;
     }
 
     @Transactional
@@ -37,7 +39,21 @@ public class NotificationService {
         notif.setIsRead(false);
 
         notif = notificationRepository.save(notif);
+        events.publishEvent(new NotificationQueued(notif.getId()));
         return NotificationDto.fromEntity(notif);
+    }
+
+    @Transactional
+    public void sendOnce(Long userId, String type, Long referenceId, String eventKey) {
+        String key = userId + ":" + eventKey;
+        if (notificationRepository.findByEventKey(key).isPresent()) return;
+        Notification notification = new Notification();
+        notification.setUser(userRepository.findById(userId).orElseThrow());
+        notification.setTitle("Mimamori");
+        notification.setBody("Mở Mimamori để xem thông báo.");
+        notification.setType(type); notification.setReferenceId(referenceId); notification.setEventKey(key);
+        notificationRepository.save(notification);
+        events.publishEvent(new NotificationQueued(notification.getId()));
     }
 
     public List<NotificationDto> getNotifications(Long userId) {

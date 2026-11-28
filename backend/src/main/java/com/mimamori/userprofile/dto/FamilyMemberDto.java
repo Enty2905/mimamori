@@ -17,6 +17,12 @@ public class FamilyMemberDto {
         FamilyMemberDto dto = new FamilyMemberDto();
         dto.setRelationshipId(rel.getId());
         dto.setMember(UserDto.fromEntity(rel.getElderly()));
+        if (rel.getStatus() != RelationshipStatus.ACCEPTED) {
+            UserDto identity = new UserDto();
+            identity.setId(rel.getElderly().getId()); identity.setUsername(rel.getElderly().getUsername());
+            identity.setFullName(rel.getElderly().getUsername()); identity.setEmail(""); identity.setRole(rel.getElderly().getRole());
+            dto.setMember(identity);
+        }
         dto.setRelationshipType(rel.getRelationshipType());
         dto.setStatus(rel.getStatus());
         dto.setCanViewConversations(rel.getCanViewConversations());

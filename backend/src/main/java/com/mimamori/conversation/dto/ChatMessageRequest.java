@@ -8,6 +8,7 @@ public class ChatMessageRequest {
     private String content;
 
     private String message;
+    private java.util.UUID requestId;
 
     public ChatMessageRequest() {}
 
@@ -32,6 +33,8 @@ public class ChatMessageRequest {
     public String getMessage() {
         return message;
     }
+    public java.util.UUID getRequestId() { return requestId; }
+    public void setRequestId(java.util.UUID value) { requestId = value; }
 
     public void setMessage(String message) {
         this.message = message;

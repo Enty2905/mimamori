@@ -13,6 +13,9 @@ public class CareAlert {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "event_key", length = 180, unique = true)
+    private String eventKey;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "elderly_id", nullable = false)
     private User elderly;
@@ -47,6 +50,8 @@ public class CareAlert {
     public CareAlert() {}
 
     public Long getId() { return id; }
+    public String getEventKey() { return eventKey; }
+    public void setEventKey(String eventKey) { this.eventKey = eventKey; }
     public void setId(Long id) { this.id = id; }
     public User getElderly() { return elderly; }
     public void setElderly(User elderly) { this.elderly = elderly; }

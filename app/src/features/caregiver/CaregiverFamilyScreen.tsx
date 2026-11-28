@@ -1,85 +1,57 @@
-import React, { useEffect, useState } from 'react';
+import {useOriginalLabels} from '../../core/localization/original';
+import {useColors} from '../../core/theme/useTheme';
+import {CareText as Text, CareTouchable as TouchableOpacity} from '../../components/CareText';
+import React, { useState } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
+    StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Modal,
+    Modal,
   TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
-import { useAuthStore } from '../../core/auth/useAuthStore';
-import { apiClient } from '../../core/api/client';
-
-interface FamilyMember {
-  relationshipId: number;
-  member: {
-    id: number;
-    fullName: string;
-    username: string;
-    email: string;
-    role: string;
-  };
-  relationshipType: string;
-  status: string;
-  canViewConversations: boolean;
-}
+import { colors as baseColors, shadows } from '../../core/theme/colors';
+import { useSession } from '../../core/auth/useSession';
+import {careApi} from '../../core/api/careApi';
+import {useFamily} from './queries';
+import {FamilyLinks} from './FamilyLinks';
+import {Notice,Button} from '../../components/CareUI';
 
 export const CaregiverFamilyScreen: React.FC = () => {
-  const { user, logout, demoLogin } = useAuthStore();
-  const [members, setMembers] = useState<FamilyMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
+
+  const { user, logout, demoLogin } = useSession();
+  const family=useFamily();
+  const members=family.data ?? [];
+  const loading=family.isPending;
   const [modalVisible, setModalVisible] = useState(false);
   const [elderlyUsername, setElderlyUsername] = useState('');
   const [relationship, setRelationship] = useState('Bố');
   const [linking, setLinking] = useState(false);
 
-  const fetchMembers = async () => {
-    try {
-      setLoading(true);
-      const res = await apiClient<FamilyMember[]>('/api/family/members');
-      if (res.success && res.data) {
-        setMembers(res.data);
-      }
-    } catch {
-      // Ignored
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMembers();
-  }, []);
+  const fetchMembers=()=>family.refetch();
 
   const handleLink = async () => {
     if (!elderlyUsername.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên đăng nhập của người cao tuổi');
+      Alert.alert(tr("Thiếu thông tin"), tr("Vui lòng nhập tên đăng nhập của người cao tuổi"));
       return;
     }
 
     try {
       setLinking(true);
-      const res = await apiClient('/api/family/link', {
-        method: 'POST',
-        body: JSON.stringify({
-          elderlyUsername: elderlyUsername.trim(),
-          relationship,
-        }),
-      });
-
-      if (res.success) {
-        Alert.alert('Thành công', 'Đã liên kết thành công với người cao tuổi!');
+      await careApi.link(elderlyUsername.trim());
+      {
+        Alert.alert(tr("Đã gửi lời mời"), tr("Người cao tuổi cần đồng ý trong mục Người thân trên hồ sơ."));
         setModalVisible(false);
         setElderlyUsername('');
         fetchMembers();
       }
-    } catch (err: any) {
-      Alert.alert('Lỗi', err.message || 'Không thể liên kết tài khoản');
+    } catch (err: unknown) {
+      Alert.alert(tr("Lỗi"), (err instanceof Error ? err.message : '') || 'Không thể liên kết tài khoản');
     } finally {
       setLinking(false);
     }
@@ -92,24 +64,25 @@ export const CaregiverFamilyScreen: React.FC = () => {
         <View style={styles.avatarCircle}>
           <Feather name="users" size={26} color={colors.primary} />
         </View>
-        <Text style={styles.userName}>{user?.fullName || 'Người chăm sóc'}</Text>
-        <Text style={styles.userUsername}>@{user?.username}</Text>
+        <Text style={styles.userName}>{user?.fullName || tr("Người chăm sóc")}</Text>
+        <Text style={styles.userUsername}>{tr("@")}{user?.username}</Text>
         <View style={styles.roleBadge}>
           <Feather name="shield" size={12} color={colors.primary} style={{ marginRight: 4 }} />
-          <Text style={styles.roleBadgeText}>VAI TRÒ: NGƯỜI CHĂM SÓC / GIA ĐÌNH</Text>
+          <Text style={styles.roleBadgeText}>{tr("VAI TRÒ: NGƯỜI CHĂM SÓC / GIA ĐÌNH")}</Text>
         </View>
       </View>
 
+      {family.isError && <><Notice tone="danger" text={tr("Không thể tải liên kết.")} /><Button title={tr("Thử lại")} onPress={()=>{void fetchMembers();}} /></>}
       {/* Linked Elderly Members */}
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Feather name="user-check" size={18} color={colors.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.sectionTitle}>Người thân đang giám sát</Text>
+            <Text style={styles.sectionTitle}>{tr("Người thân đang giám sát")}</Text>
           </View>
           <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)} activeOpacity={0.8}>
-            <Feather name="plus" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
-            <Text style={styles.addBtnText}>Thêm liên kết</Text>
+            <Feather name="plus" size={14} color={colors.textInverse} style={{ marginRight: 4 }} />
+            <Text style={styles.addBtnText}>{tr("Thêm liên kết")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -118,7 +91,7 @@ export const CaregiverFamilyScreen: React.FC = () => {
         ) : members.length === 0 ? (
           <View style={styles.emptyBox}>
             <Feather name="users" size={24} color={colors.textMuted} style={{ marginBottom: 6 }} />
-            <Text style={styles.emptyText}>Chưa liên kết với người cao tuổi nào.</Text>
+            <Text style={styles.emptyText}>{tr("Chưa liên kết với người cao tuổi nào.")}</Text>
           </View>
         ) : (
           members.map((item) => (
@@ -128,12 +101,11 @@ export const CaregiverFamilyScreen: React.FC = () => {
               </View>
               <View style={styles.memberInfo}>
                 <Text style={styles.memberName}>{item.member.fullName}</Text>
-                <Text style={styles.memberSub}>
-                  @{item.member.username} • Quan hệ: {item.relationshipType}
+                <Text style={styles.memberSub}>{tr("@")}{item.member.username}{tr(" • Quan hệ: ")}{item.relationshipType}
                 </Text>
                 <View style={styles.connectedTag}>
                   <Feather name="check" size={12} color={colors.successText} style={{ marginRight: 4 }} />
-                  <Text style={styles.connectedText}>Đã kết nối an toàn</Text>
+                  <Text style={styles.connectedText}>{item.status==='ACCEPTED' ? tr("Đã đồng ý liên kết") : tr("Đang chờ người thân đồng ý")}</Text>
                 </View>
               </View>
             </View>
@@ -141,38 +113,38 @@ export const CaregiverFamilyScreen: React.FC = () => {
         )}
       </View>
 
+      <FamilyLinks />
       {/* Demo Role Switcher */}
-      <View style={styles.sectionCard}>
+      {process.env.EXPO_PUBLIC_DEMO_MODE === 'true' && <View style={styles.sectionCard}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
           <Feather name="repeat" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-          <Text style={styles.sectionTitle}>Chuyển đổi vai trò trải nghiệm</Text>
+          <Text style={styles.sectionTitle}>{tr("Chuyển đổi vai trò trải nghiệm")}</Text>
         </View>
-        <Text style={styles.sectionDesc}>
-          Nhấn nút bên dưới để chuyển sang giao diện Người cao tuổi (Elderly App):
-        </Text>
+        <Text style={styles.sectionDesc}>{tr("Nhấn nút bên dưới để chuyển sang giao diện Người cao tuổi (Elderly App):")}</Text>
         <TouchableOpacity
           style={styles.switchRoleBtn}
           onPress={() => demoLogin('ELDERLY')}
           activeOpacity={0.8}
         >
-          <Feather name="user" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-          <Text style={styles.switchRoleText}>Chuyển sang vai trò: Người cao tuổi</Text>
+          <Feather name="user" size={16} color={colors.textInverse} style={{ marginRight: 6 }} />
+          <Text style={styles.switchRoleText}>{tr("Chuyển sang vai trò: Người cao tuổi")}</Text>
         </TouchableOpacity>
       </View>
 
+      }
       {/* Logout */}
       <TouchableOpacity
         style={styles.logoutBtn}
         onPress={() => {
-          Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất?', [
-            { text: 'Hủy', style: 'cancel' },
-            { text: 'Đăng xuất', style: 'destructive', onPress: () => logout() },
+          Alert.alert(tr("Đăng xuất"), tr("Bạn có chắc chắn muốn đăng xuất?"), [
+            { text: tr("Hủy"), style: 'cancel' },
+            { text: tr("Đăng xuất"), style: 'destructive', onPress: () => logout() },
           ]);
         }}
         activeOpacity={0.8}
       >
         <Feather name="log-out" size={16} color={colors.dangerText} style={{ marginRight: 6 }} />
-        <Text style={styles.logoutText}>Đăng xuất khỏi tài khoản</Text>
+        <Text style={styles.logoutText}>{tr("Đăng xuất khỏi tài khoản")}</Text>
       </TouchableOpacity>
 
       {/* Modal Link Elderly */}
@@ -180,18 +152,18 @@ export const CaregiverFamilyScreen: React.FC = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Liên kết người cao tuổi mới</Text>
+              <Text style={styles.modalTitle}>{tr("Liên kết người cao tuổi mới")}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} activeOpacity={0.7}>
                 <Feather name="x" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalLabel}>Tên đăng nhập của cụ *</Text>
+            <Text style={styles.modalLabel}>{tr("Tên đăng nhập của cụ *")}</Text>
             <View style={styles.modalInputWrap}>
               <Feather name="at-sign" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
               <TextInput
                 style={styles.modalInput}
-                placeholder="Ví dụ: ong_ba hoặc Huyn"
+                placeholder={tr("Ví dụ: ong_ba hoặc Huyn")}
                 value={elderlyUsername}
                 onChangeText={setElderlyUsername}
                 autoCapitalize="none"
@@ -199,12 +171,12 @@ export const CaregiverFamilyScreen: React.FC = () => {
               />
             </View>
 
-            <Text style={styles.modalLabel}>Mối quan hệ *</Text>
+            <Text style={styles.modalLabel}>{tr("Mối quan hệ *")}</Text>
             <View style={styles.modalInputWrap}>
               <Feather name="heart" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
               <TextInput
                 style={styles.modalInput}
-                placeholder="Ví dụ: Bố, Mẹ, Ông, Bà..."
+                placeholder={tr("Ví dụ: Bố, Mẹ, Ông, Bà...")}
                 value={relationship}
                 onChangeText={setRelationship}
                 placeholderTextColor={colors.textMuted}
@@ -217,7 +189,7 @@ export const CaregiverFamilyScreen: React.FC = () => {
                 onPress={() => setModalVisible(false)}
                 disabled={linking}
               >
-                <Text style={styles.cancelBtnText}>Hủy</Text>
+                <Text style={styles.cancelBtnText}>{tr("Hủy")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -226,9 +198,9 @@ export const CaregiverFamilyScreen: React.FC = () => {
                 disabled={linking}
               >
                 {linking ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
+                  <ActivityIndicator color={colors.textInverse} size="small" />
                 ) : (
-                  <Text style={styles.saveBtnText}>Tạo kết nối</Text>
+                  <Text style={styles.saveBtnText}>{tr("Tạo kết nối")}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -239,7 +211,7 @@ export const CaregiverFamilyScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -303,6 +275,8 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 14,
@@ -316,9 +290,10 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: colors.textSecondary,
     marginVertical: 8,
-    lineHeight: 18,
+
   },
   addBtn: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
@@ -329,7 +304,7 @@ const styles = StyleSheet.create({
   addBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.textInverse,
   },
   emptyBox: {
     paddingVertical: 20,
@@ -351,7 +326,7 @@ const styles = StyleSheet.create({
   },
   memberAvatar: {
     width: 44,
-    height: 44,
+    minHeight: 56,
     borderRadius: 22,
     backgroundColor: colors.surface,
     alignItems: 'center',
@@ -398,7 +373,7 @@ const styles = StyleSheet.create({
   switchRoleText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: colors.textInverse,
   },
   logoutBtn: {
     flexDirection: 'row',
@@ -488,6 +463,6 @@ const styles = StyleSheet.create({
   saveBtnText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: colors.textInverse,
   },
 });

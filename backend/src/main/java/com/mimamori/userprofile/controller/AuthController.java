@@ -20,9 +20,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.mimamori.userprofile.service.SessionService sessions;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, com.mimamori.userprofile.service.SessionService sessions) {
         this.authService = authService;
+        this.sessions = sessions;
     }
 
     @PostMapping("/register")
@@ -35,6 +37,19 @@ public class AuthController {
     @Operation(summary = "Authenticate user and retrieve JWT token")
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.ok("Login successful", authService.login(request));
+    }
+
+    public record RefreshRequest(@jakarta.validation.constraints.NotBlank String refreshToken) {}
+
+    @PostMapping("/refresh")
+    public ApiResponse<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ApiResponse.ok(sessions.refresh(request.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@AuthenticationPrincipal Long userId) {
+        sessions.revoke(userId);
+        return ApiResponse.ok(null);
     }
 
     @GetMapping("/me")

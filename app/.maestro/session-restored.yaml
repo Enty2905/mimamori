@@ -1,0 +1,35 @@
+appId: com.mimamori.app
+name: Restore the native session after process restart
+---
+# Stop the app in roles-and-restore, then reopen with AndroidDeviceManager.
+- extendedWaitUntil:
+    visible: "Thuốc"
+    timeout: 20000
+- tapOn: "Thuốc"
+- assertVisible: "Sức khỏe & Thuốc"
+- scrollUntilVisible:
+    element:
+      text: ".*Thêm lịch uống thuốc mới"
+    direction: DOWN
+- tapOn: ".*Thêm lịch uống thuốc mới"
+- assertVisible: "Tên thuốc"
+- takeScreenshot: medication-form-native
+- scrollUntilVisible:
+    element:
+      text: "Hủy"
+    direction: DOWN
+- tapOn: "Hủy"
+- assertVisible: "Sức khỏe & Thuốc"
+- tapOn: "Điểm danh"
+- tapOn: "Bình thường, an yên"
+- scrollUntilVisible:
+    element:
+      text: "Tiếp theo"
+    direction: DOWN
+- tapOn: "Tiếp theo"
+- assertVisible: "Thể trạng trong người cụ ra sao?"
+- takeScreenshot: checkin-next-native
+- tapOn:
+    text: "Trang chủ"
+    index: 0
+- takeScreenshot: session-restored-native

@@ -6,13 +6,24 @@ readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "fastapi",
+    "filelock",
     "httpx",
     "pydantic",
     "pydantic-settings",
     "qdrant-client",
     "sentence-transformers",
+    "torch==2.13.0",
     "uvicorn[standard]",
 ]
+
+# Keep Linux/Docker inference CPU-only; Windows/macOS PyPI wheels are CPU builds.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 
 [dependency-groups]
 dev = [
@@ -24,6 +35,10 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "integration: requires an explicitly configured real Qdrant server",
+    "model: downloads/loads the pinned real multilingual embedding model",
+]
 
 [tool.ruff]
 target-version = "py313"

@@ -1,0 +1,113 @@
+{
+  "version": "spec006-engineering-v1",
+  "created_at": "2026-09-12",
+  "review": "Authored synthetic project questions; frozen before first baseline run. No clinical content or real user conversations.",
+  "cases": [
+    {
+      "id": "vi-access",
+      "language": "vi",
+      "query": "Người thân chưa liên kết có xem được lịch không?",
+      "relevant_sections": [
+        "Lịch và quyền truy cập"
+      ]
+    },
+    {
+      "id": "vi-confirm",
+      "language": "vi",
+      "query": "Thông báo xuất hiện có nghĩa là đã uống thuốc chưa?",
+      "relevant_sections": [
+        "Thông báo và xác nhận"
+      ]
+    },
+    {
+      "id": "vi-offline",
+      "language": "vi",
+      "query": "Xác nhận khi mất mạng được đồng bộ như thế nào?",
+      "relevant_sections": [
+        "Khi mất kết nối"
+      ]
+    },
+    {
+      "id": "vi-ai",
+      "language": "vi",
+      "query": "Trợ lý AI có tự đổi liều thuốc không?",
+      "relevant_sections": [
+        "Giới hạn của trợ lý"
+      ]
+    },
+    {
+      "id": "vi-multi",
+      "language": "vi",
+      "query": "Ai quản lý lịch và khi nào việc uống thuốc được ghi nhận?",
+      "relevant_sections": [
+        "Lịch và quyền truy cập",
+        "Thông báo và xác nhận"
+      ]
+    },
+    {
+      "id": "vi-negative-space",
+      "language": "vi",
+      "query": "Sao Mộc có bao nhiêu vệ tinh tự nhiên?",
+      "relevant_sections": []
+    },
+    {
+      "id": "vi-negative-cooking",
+      "language": "vi",
+      "query": "Cách nướng bánh mì bằng lò than?",
+      "relevant_sections": []
+    },
+    {
+      "id": "ja-access",
+      "language": "ja",
+      "query": "連携していない家族は予定を見ることができますか？",
+      "relevant_sections": [
+        "予定とアクセス"
+      ]
+    },
+    {
+      "id": "ja-confirm",
+      "language": "ja",
+      "query": "通知が出ると服薬済みになりますか？",
+      "relevant_sections": [
+        "お知らせと確認"
+      ]
+    },
+    {
+      "id": "ja-offline",
+      "language": "ja",
+      "query": "ネット接続がないときの確認はどうなりますか？",
+      "relevant_sections": [
+        "接続がないとき"
+      ]
+    },
+    {
+      "id": "ja-ai",
+      "language": "ja",
+      "query": "AIは薬の量を自分で変更しますか？",
+      "relevant_sections": [
+        "支援の範囲"
+      ]
+    },
+    {
+      "id": "ja-multi",
+      "language": "ja",
+      "query": "家族は予定を管理できますか？飲んだ記録はいつ変わりますか？",
+      "relevant_sections": [
+        "予定とアクセス",
+        "お知らせと確認"
+      ]
+    },
+    {
+      "id": "ja-negative-space",
+      "language": "ja",
+      "query": "木星には衛星がいくつありますか？",
+      "relevant_sections": []
+    },
+    {
+      "id": "ja-negative-cooking",
+      "language": "ja",
+      "query": "炭火でパンを焼く方法は？",
+      "relevant_sections": []
+    }
+  ]
+}

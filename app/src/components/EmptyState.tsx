@@ -1,7 +1,10 @@
+import {useOriginalLabels} from '../core/localization/original';
+import {useColors} from '../core/theme/useTheme';
+import {CareText as Text} from './CareText';
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors } from '../core/theme/colors';
+import { colors as baseColors } from '../core/theme/colors';
 import { PrimaryButton } from './PrimaryButton';
 import { useAccessibilityStore } from '../core/accessibility/useAccessibilityStore';
 
@@ -22,6 +25,10 @@ export const EmptyState: React.FC<Props> = ({
   actionText,
   onAction,
 }) => {
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
+
   const { fs } = useAccessibilityStore();
 
   return (
@@ -33,11 +40,11 @@ export const EmptyState: React.FC<Props> = ({
           <Text style={styles.icon}>{icon}</Text>
         )}
       </View>
-      <Text style={[styles.title, { fontSize: fs(18) }]}>{title}</Text>
-      <Text style={[styles.description, { fontSize: fs(13.5) }]}>{description}</Text>
+      <Text style={[styles.title, { fontSize: fs(20) }]}>{tr(title)}</Text>
+      <Text style={[styles.description, { fontSize: fs(13.5) }]}>{tr(description)}</Text>
       {actionText && onAction && (
         <PrimaryButton
-          title={actionText}
+          title={tr(actionText)}
           onPress={onAction}
           style={styles.actionBtn}
         />
@@ -46,7 +53,7 @@ export const EmptyState: React.FC<Props> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   container: {
     backgroundColor: colors.surface,
     borderRadius: 24,
@@ -78,7 +85,7 @@ const styles = StyleSheet.create({
   description: {
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+
     marginBottom: 18,
   },
   actionBtn: {

@@ -1,157 +1,63 @@
-import React, { useEffect, useState } from 'react';
+import {useOriginalLabels,signalLabel} from '../../core/localization/original';
+import {useColors} from '../../core/theme/useTheme';
+import {CareText as Text, CareTouchable as TouchableOpacity} from '../../components/CareText';
+import React from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
+    StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
+    ActivityIndicator,
   RefreshControl,
-  Alert,
   Image,
+  useWindowDimensions,
 } from 'react-native';
-import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
-import { useAuthStore } from '../../core/auth/useAuthStore';
-import { apiClient } from '../../core/api/client';
-
-interface FamilyMember {
-  relationshipId: number;
-  member: {
-    id: number;
-    fullName: string;
-    username: string;
-    role: string;
-    phoneNumber?: string;
-  };
-  relationshipType: string;
-  status: string;
-}
-
-interface DashboardOverview {
-  elderly: {
-    id: number;
-    fullName: string;
-    username: string;
-    phoneNumber?: string;
-  };
-  careStatus: 'NORMAL' | 'REMINDER_REQUIRED' | 'NEEDS_ATTENTION' | 'CRITICAL';
-  medicationAdherence: number;
-  todayCheckIn?: {
-    id: number;
-    mood: string;
-    physicalHealth: string;
-    sleepQuality: string;
-    appetite: string;
-    notes?: string;
-    aiAnalysis?: string;
-  };
-  todayMedications: Array<{
-    id: number;
-    medicationName: string;
-    dosage: string;
-    scheduledTime: string;
-    status: 'PENDING' | 'TAKEN' | 'MISSED' | 'SKIPPED';
-  }>;
-  activeAlerts: Array<{
-    id: number;
-    alertType: string;
-    title: string;
-    description: string;
-    severity: string;
-    createdAt: string;
-  }>;
-  recentSummary?: {
-    summaryDate: string;
-    checkinSummary: string;
-    medicationAdherenceRate: number;
-    aiHealthNote: string;
-  };
-}
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { colors as baseColors, shadows } from '../../core/theme/colors';
+import { useSession } from '../../core/auth/useSession';
+import {careApi} from '../../core/api/careApi';
+import {useQuery} from '@tanstack/react-query';
+import {useSelectedElderly} from './queries';
+import {doseTime} from '../../core/config/time';
+import {Notice,Button} from '../../components/CareUI';
 
 interface Props {
   onNavigateTab: (tab: 'dashboard' | 'alerts' | 'family' | 'medication') => void;
 }
 
 export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => {
-  const { user } = useAuthStore();
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
-  const [selectedElderlyId, setSelectedElderlyId] = useState<number | null>(null);
-  const [data, setData] = useState<DashboardOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const {width}=useWindowDimensions();
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
 
-  // 1. Fetch linked family members
-  const fetchFamilyMembers = async () => {
-    try {
-      const res = await apiClient<FamilyMember[]>('/api/family/members');
-      if (res.success && res.data && res.data.length > 0) {
-        setFamilyMembers(res.data);
-        if (!selectedElderlyId) {
-          setSelectedElderlyId(res.data[0].member.id);
-        }
-      }
-    } catch {
-      // Handled
-    }
-  };
-
-  // 2. Fetch overview for selected elderly
-  const fetchOverview = async (targetId?: number | null) => {
-    try {
-      const idToFetch = targetId !== undefined ? targetId : selectedElderlyId;
-      const url = idToFetch ? `/api/dashboard/overview?elderlyId=${idToFetch}` : '/api/dashboard/overview';
-      const res = await apiClient<DashboardOverview>(url);
-      if (res.success && res.data) {
-        setData(res.data);
-        if (!selectedElderlyId && res.data.elderly?.id) {
-          setSelectedElderlyId(res.data.elderly.id);
-        }
-      }
-    } catch {
-      // Handled
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchFamilyMembers();
-  }, []);
-
-  useEffect(() => {
-    if (selectedElderlyId) {
-      setLoading(true);
-      fetchOverview(selectedElderlyId);
-    } else {
-      fetchOverview();
-    }
-  }, [selectedElderlyId]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchFamilyMembers();
-    fetchOverview(selectedElderlyId);
-  };
-
+  const { user } = useSession();
+  const selected=useSelectedElderly();
+  const familyMembers=selected.family.data?.filter(item=>item.status==='ACCEPTED') ?? [];
+  const selectedElderlyId=selected.id;
+  const setSelectedElderlyId=selected.select;
+  const overview=useQuery({queryKey:['overview',user?.id,selectedElderlyId],enabled:!!selectedElderlyId,queryFn:()=>careApi.overview(selectedElderlyId)});
+  const data=overview.data;
+  const loading=!!selectedElderlyId && overview.isPending;
+  const refreshing=overview.isRefetching || selected.family.isRefetching;
+  const onRefresh=()=>{void selected.family.refetch();if(selectedElderlyId)void overview.refetch();};
   const getStatusVisuals = (status?: string) => {
     switch (status) {
       case 'NORMAL':
         return { label: 'BÌNH THƯỜNG', color: colors.successText, bg: colors.success, iconName: 'check-circle' as const };
       case 'REMINDER_REQUIRED':
-        return { label: 'CẦN NHẮC NHỞ', color: '#995C17', bg: '#FEF6EC', iconName: 'bell' as const };
+        return { label: 'CẦN NHẮC NHỞ', color: colors.background === baseColors.background ? '#995C17' : colors.textPrimary, bg: colors.background === baseColors.background ? '#FEF6EC' : colors.surfaceWarm, iconName: 'bell' as const };
       case 'NEEDS_ATTENTION':
-        return { label: 'CẦN LƯU Ý', color: '#C2410C', bg: '#FFEDD5', iconName: 'alert-triangle' as const };
+        return { label: 'CẦN LƯU Ý', color: colors.background === baseColors.background ? '#C2410C' : colors.textPrimary, bg: colors.background === baseColors.background ? '#FFEDD5' : colors.surfaceWarm, iconName: 'alert-triangle' as const };
       case 'CRITICAL':
         return { label: 'CẢNH BÁO KHẨN', color: colors.dangerText, bg: colors.danger, iconName: 'alert-octagon' as const };
       default:
-        return { label: 'BÌNH THƯỜNG', color: colors.successText, bg: colors.success, iconName: 'check-circle' as const };
+        return { label: 'CHƯA ĐỦ DỮ LIỆU', color: colors.textSecondary, bg: colors.surfaceWarm, iconName: 'help-circle' as const };
     }
   };
 
+  if(overview.isError || selected.family.isError) return <View style={styles.container}><Notice tone="danger" text={tr('Không thể tải dữ liệu người thân.')} /><Button title={tr('Thử lại')} onPress={onRefresh} /></View>;
   const statusVisual = getStatusVisuals(data?.careStatus);
-  const adherencePercent = Math.round((data?.medicationAdherence ?? 1.0) * 100);
+  const adherencePercent = data?.medicationAdherence == null ? null : Math.round(data.medicationAdherence * 100);
 
   return (
     <ScrollView
@@ -162,47 +68,46 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
     >
       {/* Caregiver Welcome Bar */}
       <View style={styles.topHeader}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 210 }}>
           <Image
             source={require('../../../assets/images/mimamori-leaf-icon.png')}
-            style={{ width: 34, height: 34, marginRight: 10 }}
+            style={{ width: 34, minHeight: 56, marginRight: 10 }}
             resizeMode="contain"
           />
-          <View>
-            <Text style={styles.caregiverRole}>GIÁM SÁT TỪ XA • MIMAMORI</Text>
-            <Text style={styles.caregiverName}>Chào {user?.fullName || 'Người chăm sóc'}</Text>
+          <View style={{flex: 1, minWidth: 0}}>
+            <Text style={styles.caregiverRole}>{tr("GIÁM SÁT TỪ XA • MIMAMORI")}</Text>
+            <Text style={styles.caregiverName}>{tr("Chào ")}{user?.fullName || tr("Người chăm sóc")}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.refreshPill} onPress={onRefresh} activeOpacity={0.7}>
           <Feather name="refresh-cw" size={13} color={colors.primary} style={{ marginRight: 5 }} />
-          <Text style={styles.refreshText}>Cập nhật</Text>
+          <Text style={styles.refreshText}>{tr("Cập nhật")}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Linked Elderly Selector Pills (Synchronized with Family Relationships) */}
       {familyMembers.length > 0 && (
         <View style={styles.selectorWrap}>
-          <Text style={styles.selectorLabel}>CHỌN NGƯỜI THÂN ĐANG THEO DÕI:</Text>
+          <Text style={styles.selectorLabel}>{tr("CHỌN NGƯỜI THÂN ĐANG THEO DÕI:")}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.selectorRow}>
             {familyMembers.map((fm) => {
               const isSelected = selectedElderlyId === fm.member.id;
               return (
                 <TouchableOpacity
                   key={fm.member.id}
-                  style={[styles.memberPill, isSelected && styles.memberPillActive]}
+                  style={[styles.memberPill, {maxWidth: width-32}, isSelected && styles.memberPillActive]}
                   onPress={() => setSelectedElderlyId(fm.member.id)}
                   activeOpacity={0.75}
                 >
                   <View style={[styles.pillAvatar, isSelected && styles.pillAvatarActive]}>
                     <Feather name="user" size={14} color={isSelected ? colors.primary : colors.textSecondary} />
                   </View>
-                  <View>
+                  <View style={{flexShrink:1,minWidth:0}}>
                     <Text style={[styles.pillName, isSelected && styles.pillNameActive]}>
                       {fm.member.fullName}
                     </Text>
                     <Text style={[styles.pillRelation, isSelected && styles.pillRelationActive]}>
-                      {fm.relationshipType || 'Người thân'} (@{fm.member.username})
-                    </Text>
+                      {fm.relationshipType || tr("Người thân")}{tr(" (@")}{fm.member.username}{tr(")")}</Text>
                   </View>
                   {isSelected && (
                     <Feather name="check" size={14} color={colors.primary} style={{ marginLeft: 6 }} />
@@ -214,22 +119,23 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
         </View>
       )}
 
+      {(overview.isError || selected.family.isError) && <><Notice tone="danger" text={tr("Không thể tải dữ liệu người thân.")} /><Button title={tr("Thử lại")} onPress={onRefresh} /></>}
+      {!selectedElderlyId && <Notice text={tr("Chưa có người thân đã đồng ý liên kết. Vui lòng kiểm tra mục Gia đình.")} />}
       {/* Monitored Elderly Banner */}
       <View style={styles.elderlyCard}>
         <View style={styles.elderlyAvatar}>
           <Feather name="user" size={24} color={colors.primary} />
         </View>
         <View style={styles.elderlyInfoCol}>
-          <Text style={styles.elderlyName}>{data?.elderly?.fullName || 'Người cao tuổi'}</Text>
-          <Text style={styles.elderlyRelation}>
-            Tài khoản: @{data?.elderly?.username || 'nguoi_cao_tuoi'}
-            {data?.elderly?.phoneNumber ? ` • SĐT: ${data.elderly.phoneNumber}` : ''}
+          <Text style={styles.elderlyName}>{data?.elderly?.fullName || tr("Người cao tuổi")}</Text>
+          <Text style={styles.elderlyRelation}>{tr("Tài khoản: @")}{data?.elderly?.username || '—'}
+            {data?.elderly?.phone ? ` • SĐT: ${data.elderly.phone}` : ''}
           </Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: statusVisual.bg }]}>
           <Feather name={statusVisual.iconName} size={13} color={statusVisual.color} style={{ marginRight: 4 }} />
           <Text style={[styles.statusBadgeText, { color: statusVisual.color }]}>
-            {statusVisual.label}
+            {tr(statusVisual.label)}
           </Text>
         </View>
       </View>
@@ -237,7 +143,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
       {loading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Đang đồng bộ dữ liệu người cao tuổi...</Text>
+          <Text style={styles.loadingText}>{tr("Đang đồng bộ dữ liệu người cao tuổi...")}</Text>
         </View>
       ) : (
         <>
@@ -247,48 +153,43 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
             <View style={styles.metricCard}>
               <View style={styles.metricHeaderRow}>
                 <MaterialCommunityIcons name="pill" size={18} color={colors.primary} />
-                <Text style={styles.metricLabel}>Uống thuốc</Text>
+                <Text style={styles.metricLabel}>{tr("Uống thuốc")}</Text>
               </View>
-              <Text style={[styles.metricValue, { color: adherencePercent >= 80 ? colors.successText : '#C2410C' }]}>
-                {adherencePercent}%
+              <Text style={[styles.metricValue, { color: (adherencePercent ?? 0) >= 80 ? colors.successText : '#C2410C' }]}>
+                {adherencePercent === null ? '—' : `${adherencePercent ?? 0}%`}
               </Text>
               <View style={styles.progressBarBg}>
                 <View
                   style={[
                     styles.progressBarFill,
                     {
-                      width: `${adherencePercent}%`,
-                      backgroundColor: adherencePercent >= 80 ? colors.primary : '#F97316',
+                      width: `${adherencePercent === null ? '—' : `${adherencePercent ?? 0}%`}`,
+                      backgroundColor: (adherencePercent ?? 0) >= 80 ? colors.primary : '#F97316',
                     },
                   ]}
                 />
               </View>
-              <Text style={styles.metricSub}>
-                Hôm nay: {data?.todayMedications?.filter((m) => m.status === 'TAKEN').length || 0}/
-                {data?.todayMedications?.length || 0} cữ đã uống
-              </Text>
+              <Text style={styles.metricSub}>{tr("Hôm nay: ")}{data?.todayMedications?.filter((m) => m.status === 'TAKEN').length || 0}{tr("/")}{data?.todayMedications?.length || 0}{tr(" cữ đã uống")}</Text>
             </View>
 
             {/* Check-in Status */}
             <View style={styles.metricCard}>
               <View style={styles.metricHeaderRow}>
                 <Feather name="check-circle" size={16} color={data?.todayCheckIn ? colors.primary : '#D97706'} />
-                <Text style={styles.metricLabel}>Điểm danh</Text>
+                <Text style={styles.metricLabel}>{tr("Điểm danh")}</Text>
               </View>
               {data?.todayCheckIn ? (
                 <>
-                  <Text style={[styles.metricValue, { color: colors.successText }]}>Đã xong</Text>
-                  <Text style={styles.checkInDetailText} numberOfLines={1}>
-                    Tâm trạng: {data.todayCheckIn.mood}
+                  <Text style={[styles.metricValue, { color: colors.successText }]}>{tr("Đã xong")}</Text>
+                  <Text style={styles.checkInDetailText} numberOfLines={1}>{tr("Tâm trạng: ")}{data.todayCheckIn.mood}
                   </Text>
-                  <Text style={styles.checkInDetailText} numberOfLines={1}>
-                    Thể trạng: {data.todayCheckIn.physicalHealth}
+                  <Text style={styles.checkInDetailText} numberOfLines={1}>{tr("Thể trạng: ")}{data.todayCheckIn.physicalHealth}
                   </Text>
                 </>
               ) : (
                 <>
-                  <Text style={[styles.metricValue, { color: '#D97706' }]}>Chưa gửi</Text>
-                  <Text style={styles.metricSub}>Cụ chưa gửi thông tin thăm hỏi hôm nay</Text>
+                  <Text style={[styles.metricValue, { color: colors.background === baseColors.background ? '#D97706' : colors.textPrimary }]}>{tr("Chưa gửi")}</Text>
+                  <Text style={styles.metricSub}>{tr("Cụ chưa gửi thông tin thăm hỏi hôm nay")}</Text>
                 </>
               )}
             </View>
@@ -299,17 +200,17 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
             <View style={styles.sectionHeaderRow}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <MaterialCommunityIcons name="pill" size={18} color={colors.primary} style={{ marginRight: 6 }} />
-                <Text style={styles.sectionTitle}>Lịch thuốc của cụ hôm nay</Text>
+                <Text style={styles.sectionTitle}>{tr("Lịch thuốc của cụ hôm nay")}</Text>
               </View>
               <TouchableOpacity onPress={() => onNavigateTab('medication')}>
-                <Text style={styles.seeAllText}>Quản lý ›</Text>
+                <Text style={styles.seeAllText}>{tr("Quản lý ›")}</Text>
               </TouchableOpacity>
             </View>
 
             {(!data?.todayMedications || data.todayMedications.length === 0) ? (
               <View style={styles.emptyInlineBox}>
                 <Feather name="calendar" size={24} color={colors.textMuted} style={{ marginBottom: 6 }} />
-                <Text style={styles.emptyInlineText}>Hôm nay cụ chưa có lịch uống thuốc nào.</Text>
+                <Text style={styles.emptyInlineText}>{tr("Hôm nay cụ chưa có lịch uống thuốc nào.")}</Text>
               </View>
             ) : (
               data.todayMedications.map((med) => {
@@ -321,13 +222,12 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                     </View>
                     <View style={styles.medInfoCol}>
                       <Text style={styles.medNameText}>{med.medicationName}</Text>
-                      <Text style={styles.medDoseText}>
-                        Liều: {med.dosage} • Giờ: {med.scheduledTime ? med.scheduledTime.slice(0, 5) : '08:00'}
+                      <Text style={styles.medDoseText}>{tr("Liều: ")}{med.dosage}{tr(" • Giờ: ")}{med.scheduledTime ? doseTime(med.scheduledAt, med.timeZone) : '08:00'}
                       </Text>
                     </View>
                     <View style={[styles.medBadge, { backgroundColor: isTaken ? colors.success : colors.surfaceWarm }]}>
                       <Text style={[styles.medBadgeText, { color: isTaken ? colors.successText : colors.textSecondary }]}>
-                        {isTaken ? 'Đã uống' : med.status === 'MISSED' ? 'Trễ giờ' : 'Chờ uống'}
+                        {isTaken ? tr("Đã uống") : med.status === 'MISSED' ? tr("Trễ giờ") : tr("Chờ uống")}
                       </Text>
                     </View>
                   </View>
@@ -341,10 +241,10 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
             <View style={styles.sectionHeaderRow}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Feather name="alert-triangle" size={18} color={colors.dangerText} style={{ marginRight: 6 }} />
-                <Text style={styles.sectionTitle}>Cảnh báo cần chú ý</Text>
+                <Text style={styles.sectionTitle}>{tr("Cảnh báo cần chú ý")}</Text>
               </View>
               <TouchableOpacity onPress={() => onNavigateTab('alerts')}>
-                <Text style={styles.seeAllText}>Xem tất cả ({data?.activeAlerts?.length || 0}) ›</Text>
+                <Text style={styles.seeAllText}>{tr("Xem tất cả (")}{data?.activeAlerts?.length || 0}{tr(") ›")}</Text>
               </TouchableOpacity>
             </View>
 
@@ -353,8 +253,8 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                 <View style={styles.shieldIconWrap}>
                   <Feather name="shield" size={26} color={colors.successText} />
                 </View>
-                <Text style={styles.emptyAlertsText}>Không có cảnh báo khẩn cấp nào</Text>
-                <Text style={styles.emptyAlertsSub}>Người cao tuổi đang sinh hoạt trong điều kiện ổn định.</Text>
+                <Text style={styles.emptyAlertsText}>{tr("Không có cảnh báo khẩn cấp nào")}</Text>
+                <Text style={styles.emptyAlertsSub}>{tr("Người cao tuổi đang sinh hoạt trong điều kiện ổn định.")}</Text>
               </View>
             ) : (
               data.activeAlerts.slice(0, 2).map((alert) => (
@@ -376,18 +276,18 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
                 <Feather name="cpu" size={20} color={colors.primary} />
               </View>
               <View>
-                <Text style={styles.summaryTitle}>Báo cáo thông minh từ Care Agent</Text>
-                <Text style={styles.summarySub}>Tổng hợp tự động hoạt động và sức khỏe</Text>
+                <Text style={styles.summaryTitle}>{tr("Báo cáo thông minh từ Care Agent")}</Text>
+                <Text style={styles.summarySub}>{tr("Tổng hợp tự động hoạt động và sức khỏe")}</Text>
               </View>
             </View>
             <View style={styles.summaryContent}>
               <Text style={styles.summaryText}>
-                <Text style={{ fontWeight: '700' }}>Điểm danh: </Text>
-                {data?.recentSummary?.checkinSummary || (data?.todayCheckIn ? `Hôm nay tâm trạng ${data.todayCheckIn.mood}, thể trạng ${data.todayCheckIn.physicalHealth}, giấc ngủ ${data.todayCheckIn.sleepQuality}.` : 'Chưa hoàn thành điểm danh hôm nay.')}
+                <Text style={{ fontWeight: '700' }}>{tr("Điểm danh: ")}</Text>
+                {data?.recentSummary?.checkinSummary || (data?.todayCheckIn ? `Hôm nay tâm trạng ${signalLabel(data.todayCheckIn.mood)}, thể trạng ${signalLabel(data.todayCheckIn.physicalHealth)}, giấc ngủ ${signalLabel(data.todayCheckIn.sleepQuality)}.` : tr("Chưa hoàn thành điểm danh hôm nay."))}
               </Text>
               <Text style={[styles.summaryText, { marginTop: 8 }]}>
-                <Text style={{ fontWeight: '700' }}>Ghi chú AI: </Text>
-                {data?.recentSummary?.aiHealthNote || 'Gia đình hãy nhắc cụ uống đủ nước ấm và giữ ấm cơ thể trong ngày hôm nay.'}
+                <Text style={{ fontWeight: '700' }}>{tr("Ghi chú AI: ")}</Text>
+                {data?.recentSummary?.aiHealthNote || tr("Gia đình hãy nhắc cụ uống đủ nước ấm và giữ ấm cơ thể trong ngày hôm nay.")}
               </Text>
             </View>
           </View>
@@ -399,7 +299,7 @@ export const CaregiverDashboardScreen: React.FC<Props> = ({ onNavigateTab }) => 
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -409,6 +309,8 @@ const styles = StyleSheet.create({
   },
   topHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 14,
@@ -498,6 +400,8 @@ const styles = StyleSheet.create({
   },
   elderlyCard: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
     alignItems: 'center',
     backgroundColor: colors.surface,
     padding: 16,
@@ -509,7 +413,7 @@ const styles = StyleSheet.create({
   },
   elderlyAvatar: {
     width: 48,
-    height: 48,
+    minHeight: 56,
     borderRadius: 24,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
@@ -518,6 +422,8 @@ const styles = StyleSheet.create({
   },
   elderlyInfoCol: {
     flex: 1,
+    flexBasis: 180,
+    minWidth: 160,
   },
   elderlyName: {
     fontSize: 17,
@@ -530,6 +436,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statusBadge: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
@@ -676,7 +583,7 @@ const styles = StyleSheet.create({
   },
   shieldIconWrap: {
     width: 48,
-    height: 48,
+    minHeight: 56,
     borderRadius: 24,
     backgroundColor: colors.success,
     alignItems: 'center',
@@ -719,7 +626,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textPrimary,
     marginTop: 2,
-    lineHeight: 16,
+
   },
   summaryCard: {
     backgroundColor: colors.surface,
@@ -736,7 +643,7 @@ const styles = StyleSheet.create({
   },
   summaryIconWrap: {
     width: 36,
-    height: 36,
+    minHeight: 56,
     borderRadius: 18,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
@@ -760,6 +667,6 @@ const styles = StyleSheet.create({
   summaryText: {
     fontSize: 13,
     color: colors.textPrimary,
-    lineHeight: 20,
+
   },
 });

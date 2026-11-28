@@ -11,6 +11,11 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "session_version", nullable = false)
+    private long sessionVersion;
+    @Column(name = "time_zone", nullable = false, length = 64)
+    private String timeZone = "Asia/Ho_Chi_Minh";
+
     @Column(nullable = false, unique = true, length = 50)
     private String username;
 
@@ -61,6 +66,10 @@ public class User {
     }
 
     public Long getId() { return id; }
+    public long getSessionVersion() { return sessionVersion; }
+    public String getTimeZone() { return timeZone; }
+    public void setTimeZone(String value) { timeZone = java.time.ZoneId.of(value).getId(); }
+    public void revokeSessions() { sessionVersion++; }
     public void setId(Long id) { this.id = id; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }

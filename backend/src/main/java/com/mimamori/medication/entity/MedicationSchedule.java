@@ -11,6 +11,8 @@ public class MedicationSchedule {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false)
+    private boolean active = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "medication_id", nullable = false)
@@ -37,6 +39,8 @@ public class MedicationSchedule {
     }
 
     public Long getId() { return id; }
+    public boolean isActive() { return active; }
+    public void setActive(boolean value) { active = value; }
     public void setId(Long id) { this.id = id; }
     public Medication getMedication() { return medication; }
     public void setMedication(Medication medication) { this.medication = medication; }

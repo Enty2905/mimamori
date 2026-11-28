@@ -1,0 +1,39 @@
+appId: com.mimamori.app
+name: Switch demo roles in the installed app
+---
+# Start in the installed app using Expo's AndroidDeviceManager.
+- tapOn: "Hồ sơ"
+- scrollUntilVisible:
+    element:
+      text: "Chuyển vai trò: Người chăm sóc"
+    direction: DOWN
+- tapOn: "Chuyển vai trò: Người chăm sóc"
+- extendedWaitUntil:
+    visible: "Giám sát"
+    timeout: 20000
+- tapOn: "Lịch thuốc"
+- assertVisible: "Sức khỏe & Thuốc"
+- tapOn: "Cảnh báo"
+- assertVisible: "Cảnh báo an toàn người thân"
+- takeScreenshot: alerts-native
+- tapOn: "Gia đình"
+- assertVisible: "Người thân đang giám sát"
+- takeScreenshot: family-native
+- tapOn: "Giám sát"
+- takeScreenshot: dashboard-native
+- tapOn: "Gia đình"
+- scrollUntilVisible:
+    element:
+      text: "Chuyển sang vai trò: Người cao tuổi"
+    direction: DOWN
+- tapOn: "Chuyển sang vai trò: Người cao tuổi"
+- extendedWaitUntil:
+    visible: "Trang chủ"
+    timeout: 20000
+- tapOn: "Thuốc"
+- assertVisible: "Sức khỏe & Thuốc"
+- tapOn:
+    text: "Trang chủ"
+    index: 0
+- takeScreenshot: roles-return-elderly-native
+- stopApp

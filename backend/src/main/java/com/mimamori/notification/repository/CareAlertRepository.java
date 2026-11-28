@@ -8,6 +8,7 @@ import java.util.List;
 
 @Repository
 public interface CareAlertRepository extends JpaRepository<CareAlert, Long> {
+    java.util.Optional<CareAlert> findByEventKey(String eventKey);
     List<CareAlert> findByElderlyIdOrderByCreatedAtDesc(Long elderlyId);
     List<CareAlert> findByCaregiverIdOrderByCreatedAtDesc(Long caregiverId);
     List<CareAlert> findByCaregiverIdAndIsReadFalse(Long caregiverId);

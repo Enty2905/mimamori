@@ -14,6 +14,8 @@ public class Medication {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(name = "time_zone", nullable = false, length = 64)
+    private String timeZone = "Asia/Ho_Chi_Minh";
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "elderly_id", nullable = false)
@@ -54,6 +56,8 @@ public class Medication {
     }
 
     public Long getId() { return id; }
+    public String getTimeZone() { return timeZone; }
+    public void setTimeZone(String value) { timeZone = value; }
     public void setId(Long id) { this.id = id; }
     public User getElderly() { return elderly; }
     public void setElderly(User elderly) { this.elderly = elderly; }

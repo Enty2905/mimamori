@@ -69,13 +69,14 @@ public class DashboardService {
                 // Default to first linked elderly
                 elderlyId = relationshipRepository.findByCaregiverId(currentUserId)
                         .stream()
+                        .filter(link -> link.getStatus() == com.mimamori.userprofile.entity.RelationshipStatus.ACCEPTED)
                         .findFirst()
                         .map(rel -> rel.getElderly().getId())
                         .orElse(null);
 
                 if (elderlyId == null) {
                     DashboardOverviewDto empty = new DashboardOverviewDto();
-                    empty.setCareStatus("NORMAL");
+                    empty.setCareStatus("UNKNOWN");
                     return empty;
                 }
             }
@@ -92,7 +93,7 @@ public class DashboardService {
         dto.setCareStatus(careStatus);
 
         // Checkin
-        checkInRepository.findByElderlyIdAndCheckinDate(elderlyId, LocalDate.now())
+        checkInRepository.findByElderlyIdAndCheckinDate(elderlyId, LocalDate.now(java.time.ZoneId.of(elderly.getTimeZone())))
                 .ifPresent(c -> dto.setTodayCheckIn(DailyCheckInDto.fromEntity(c)));
 
         // Medications
@@ -100,8 +101,7 @@ public class DashboardService {
         dto.setTodayMedications(todayMeds);
 
         long takenCount = todayMeds.stream().filter(m -> "TAKEN".equalsIgnoreCase(m.getStatus().name())).count();
-        double adherence = todayMeds.isEmpty() ? 1.0 : (double) takenCount / todayMeds.size();
-        dto.setMedicationAdherence(Math.round(adherence * 100.0) / 100.0);
+        dto.setMedicationAdherence(todayMeds.isEmpty() ? null : Math.round((double) takenCount / todayMeds.size() * 100.0) / 100.0);
 
         // Alerts
         List<CareAlertDto> alerts = alertService.getAlerts(currentUserId).stream()
@@ -111,7 +111,7 @@ public class DashboardService {
         dto.setActiveAlerts(alerts);
 
         // Summary
-        summaryRepository.findByElderlyIdAndSummaryDate(elderlyId, LocalDate.now())
+        summaryRepository.findByElderlyIdAndSummaryDate(elderlyId, LocalDate.now(java.time.ZoneId.of(elderly.getTimeZone())))
                 .ifPresent(s -> dto.setRecentSummary(DailySummaryDto.fromEntity(s)));
 
         return dto;

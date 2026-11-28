@@ -7,6 +7,12 @@ import java.time.LocalDateTime;
 
 public class MedicationLogDto {
     private Long id;
+    private String occurrenceId;
+    private java.time.Instant scheduledAt;
+    private java.time.Instant confirmedAt;
+    private String timeZone;
+    private boolean canceled;
+    private String instructions;
     private Long scheduleId;
     private Long medicationId;
     private String medicationName;
@@ -20,6 +26,12 @@ public class MedicationLogDto {
         if (log == null) return null;
         MedicationLogDto dto = new MedicationLogDto();
         dto.setId(log.getId());
+        dto.occurrenceId = log.getOccurrenceId();
+        dto.scheduledAt = log.getScheduledAt();
+        dto.confirmedAt = log.getConfirmedAt();
+        dto.canceled = log.isCanceled();
+        dto.timeZone = log.getMedication().getTimeZone();
+        dto.instructions = log.getMedication().getInstructions();
         if (log.getSchedule() != null) dto.setScheduleId(log.getSchedule().getId());
         dto.setMedicationId(log.getMedication().getId());
         dto.setMedicationName(log.getMedication().getName());
@@ -32,6 +44,12 @@ public class MedicationLogDto {
     }
 
     public Long getId() { return id; }
+    public String getOccurrenceId() { return occurrenceId; }
+    public java.time.Instant getScheduledAt() { return scheduledAt; }
+    public java.time.Instant getConfirmedAt() { return confirmedAt; }
+    public String getTimeZone() { return timeZone; }
+    public boolean isCanceled() { return canceled; }
+    public String getInstructions() { return instructions; }
     public void setId(Long id) { this.id = id; }
     public Long getScheduleId() { return scheduleId; }
     public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }

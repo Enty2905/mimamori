@@ -7,6 +7,7 @@ import java.time.Instant;
 
 public class UserDto {
     private Long id;
+    private String timeZone;
     private String username;
     private String email;
     private String fullName;
@@ -21,6 +22,7 @@ public class UserDto {
         if (user == null) return null;
         UserDto dto = new UserDto();
         dto.setId(user.getId());
+        dto.timeZone = user.getTimeZone();
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
         dto.setFullName(user.getFullName());
@@ -34,6 +36,8 @@ public class UserDto {
     }
 
     public Long getId() { return id; }
+    public String getTimeZone() { return timeZone; }
+    public void setTimeZone(String value) { timeZone = value; }
     public void setId(Long id) { this.id = id; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }

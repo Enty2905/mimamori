@@ -8,6 +8,15 @@ permissions:
   contents: read
 
 jobs:
+  source-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python scripts/check_secrets.py
+
   backend:
     runs-on: ubuntu-latest
     defaults:
@@ -25,6 +34,11 @@ jobs:
 
   ai:
     runs-on: ubuntu-latest
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.18.3
+        ports:
+          - 6333:6333
     defaults:
       run:
         working-directory: ai
@@ -36,9 +50,11 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv sync --locked || uv sync
-      - run: uv run ruff check src tests || true
-      - run: uv run pytest
+      - run: uv sync --locked
+      - run: uv run ruff check src tests
+      - run: uv run python -m pytest -m 'not model'
+        env:
+          RAG_TEST_QDRANT_URL: http://localhost:6333
 
   mobile:
     runs-on: ubuntu-latest
@@ -53,6 +69,10 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
+      - run: npx expo install --check
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm test -- --passWithNoTests
+      - run: npm test -- --runInBand
+      - run: npm run test:compiler
+      - run: npm run check:native-text
+      - run: npm audit --audit-level=high

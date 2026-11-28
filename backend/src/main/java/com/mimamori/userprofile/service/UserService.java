@@ -32,6 +32,10 @@ public class UserService {
         if (updateDto.getEmergencyContact() != null) user.setEmergencyContact(updateDto.getEmergencyContact());
         if (updateDto.getAvatarUrl() != null) user.setAvatarUrl(updateDto.getAvatarUrl());
         if (updateDto.getLanguagePreference() != null) user.setLanguagePreference(updateDto.getLanguagePreference());
+        if (updateDto.getTimeZone() != null) {
+            try { user.setTimeZone(updateDto.getTimeZone()); }
+            catch (java.time.DateTimeException error) { throw new ApiException(400, "Invalid time zone"); }
+        }
 
         user = userRepository.save(user);
         return UserDto.fromEntity(user);

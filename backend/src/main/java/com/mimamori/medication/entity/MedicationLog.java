@@ -12,6 +12,16 @@ public class MedicationLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(name = "occurrence_id", nullable = false, unique = true, length = 64)
+    private String occurrenceId;
+    @Column(name = "scheduled_at", nullable = false)
+    private Instant scheduledAt;
+    @Column(name = "confirmed_at")
+    private Instant confirmedAt;
+    @Column(nullable = false)
+    private boolean canceled;
+    @Column(name = "reminder_sent", nullable = false)
+    private boolean reminderSent;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id")
@@ -44,6 +54,16 @@ public class MedicationLog {
     public MedicationLog() {}
 
     public Long getId() { return id; }
+    public String getOccurrenceId() { return occurrenceId; }
+    public void setOccurrenceId(String value) { occurrenceId = value; }
+    public Instant getScheduledAt() { return scheduledAt; }
+    public void setScheduledAt(Instant value) { scheduledAt = value; }
+    public Instant getConfirmedAt() { return confirmedAt; }
+    public void setConfirmedAt(Instant value) { confirmedAt = value; }
+    public boolean isCanceled() { return canceled; }
+    public void setCanceled(boolean value) { canceled = value; }
+    public boolean isReminderSent() { return reminderSent; }
+    public void setReminderSent(boolean value) { reminderSent = value; }
     public void setId(Long id) { this.id = id; }
     public MedicationSchedule getSchedule() { return schedule; }
     public void setSchedule(MedicationSchedule schedule) { this.schedule = schedule; }

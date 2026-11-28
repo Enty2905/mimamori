@@ -1,27 +1,27 @@
-import React, { useState } from 'react';
+import {useOriginalLabels,signalLabel} from '../../core/localization/original';
+import {useColors} from '../../core/theme/useTheme';
+import {CareText as Text, CareTouchable as TouchableOpacity} from '../../components/CareText';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
+    StyleSheet,
+    TextInput,
   ActivityIndicator,
   Alert,
   ScrollView,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
+import { colors as baseColors, shadows } from '../../core/theme/colors';
 import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
-import { apiClient } from '../../core/api/client';
-import { PrimaryButton } from '../../components/PrimaryButton';
-import { SecondaryButton } from '../../components/SecondaryButton';
+import { submitCheckin } from '../checkin/api';
+import { CheckIn } from '../../core/api/contracts';
 
 interface CheckInOption {
   id: string;
   label: string;
   desc: string;
   iconType: 'feather' | 'ionicons';
-  iconName: any;
+  iconName: React.ComponentProps<typeof Feather>['name'] | React.ComponentProps<typeof Ionicons>['name'];
   iconBg: string;
   iconColor: string;
   iconBorder: string;
@@ -45,7 +45,7 @@ const QUESTIONS: Question[] = [
     category: 'TÂM TRẠNG',
     options: [
       {
-        id: 'Vui vẻ',
+        id: 'GOOD',
         label: 'Vui vẻ, phấn khởi',
         desc: 'Tinh thần thoải mái, vui tươi tràn đầy',
         iconType: 'feather',
@@ -57,7 +57,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#FFF1F2',
       },
       {
-        id: 'Bình thường',
+        id: 'NORMAL',
         label: 'Bình thường, an yên',
         desc: 'Một ngày yên bình, tâm an ổn định',
         iconType: 'feather',
@@ -69,7 +69,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#FFFBEB',
       },
       {
-        id: 'Hơi mệt',
+        id: 'TIRED',
         label: 'Hơi mệt, uể oải',
         desc: 'Cần nghỉ ngơi, thả lỏng nhiều hơn',
         iconType: 'feather',
@@ -81,7 +81,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#FFF7ED',
       },
       {
-        id: 'Buồn bã',
+        id: 'POOR',
         label: 'Buồn bã, lo lắng',
         desc: 'Có chuyện bận lòng muốn tâm sự cùng con cháu',
         iconType: 'ionicons',
@@ -101,7 +101,7 @@ const QUESTIONS: Question[] = [
     category: 'THỂ TRẠNG',
     options: [
       {
-        id: 'Rất khỏe',
+        id: 'GOOD',
         label: 'Rất khỏe mạnh',
         desc: 'Đi lại, vận động nhẹ nhàng tốt',
         iconType: 'ionicons',
@@ -113,7 +113,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#F0FDF4',
       },
       {
-        id: 'Bình thường',
+        id: 'NORMAL',
         label: 'Bình thường, ổn định',
         desc: 'Không có vấn đề gì đáng ngại',
         iconType: 'feather',
@@ -125,7 +125,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#F0F9FF',
       },
       {
-        id: 'Đau nhức',
+        id: 'PAIN',
         label: 'Đau nhức cơ khớp',
         desc: 'Mỏi lưng, đau khớp hoặc nhức đầu nhẹ',
         iconType: 'ionicons',
@@ -137,7 +137,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#FFF7ED',
       },
       {
-        id: 'Chóng mặt',
+        id: 'DIZZY',
         label: 'Chóng mặt, choáng váng',
         desc: 'Cần ngồi nghỉ ngơi, theo dõi thêm',
         iconType: 'feather',
@@ -157,7 +157,7 @@ const QUESTIONS: Question[] = [
     category: 'GIẤC NGỦ',
     options: [
       {
-        id: 'Ngủ rất ngon',
+        id: 'GOOD',
         label: 'Ngủ sâu, ngon giấc',
         desc: 'Ngủ đủ giấc, sáng dậy khoan khoái tỉnh táo',
         iconType: 'feather',
@@ -169,7 +169,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#F5F7FF',
       },
       {
-        id: 'Đủ giấc',
+        id: 'NORMAL',
         label: 'Ngủ đủ giấc, ổn định',
         desc: 'Giấc ngủ êm đềm, không bị gián đoạn',
         iconType: 'feather',
@@ -181,7 +181,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#F0FDFA',
       },
       {
-        id: 'Chập chờn',
+        id: 'POOR',
         label: 'Ngủ chập chờn',
         desc: 'Dễ thức giấc nửa đêm, khó ngủ lại',
         iconType: 'ionicons',
@@ -193,7 +193,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#FFFBEB',
       },
       {
-        id: 'Mất ngủ',
+        id: 'INSOMNIA',
         label: 'Khó ngủ, mất ngủ',
         desc: 'Trằn trọc nhiều tiếng đồng hồ trong đêm',
         iconType: 'feather',
@@ -213,7 +213,7 @@ const QUESTIONS: Question[] = [
     category: 'ĂN UỐNG',
     options: [
       {
-        id: 'Ngon miệng',
+        id: 'GOOD',
         label: 'Ăn uống rất ngon miệng',
         desc: 'Ăn hết khẩu phần cơm, tiêu hóa êm',
         iconType: 'ionicons',
@@ -225,7 +225,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#F0FDF4',
       },
       {
-        id: 'Bình thường',
+        id: 'NORMAL',
         label: 'Ăn vừa phải, no đủ',
         desc: 'Ăn uống lượng vừa đủ với cơ thể',
         iconType: 'feather',
@@ -237,7 +237,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#FEFCE8',
       },
       {
-        id: 'Ăn ít',
+        id: 'POOR',
         label: 'Ăn ít hơn ngày thường',
         desc: 'Ăn nửa bát, cảm thấy nhanh no',
         iconType: 'ionicons',
@@ -249,7 +249,7 @@ const QUESTIONS: Question[] = [
         cardActiveBg: '#FFF7ED',
       },
       {
-        id: 'Chán ăn',
+        id: 'POOR',
         label: 'Chán ăn, mệt mỏi',
         desc: 'Không thấy đói, chỉ ăn qua loa vài thìa',
         iconType: 'feather',
@@ -269,15 +269,23 @@ interface Props {
 }
 
 export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
+
   const { fs } = useAccessibilityStore();
   const [currentStep, setCurrentStep] = useState(1);
-  const [mood, setMood] = useState('Bình thường');
-  const [physicalHealth, setPhysicalHealth] = useState('Bình thường');
-  const [sleepQuality, setSleepQuality] = useState('Ngủ rất ngon');
-  const [appetite, setAppetite] = useState('Bình thường');
+  const questionScroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  useEffect(() => {
+    questionScroll.current?.scrollTo({ y: 0, animated: false });
+  }, [currentStep]);
+  const [mood, setMood] = useState('NORMAL');
+  const [physicalHealth, setPhysicalHealth] = useState('NORMAL');
+  const [sleepQuality, setSleepQuality] = useState('GOOD');
+  const [appetite, setAppetite] = useState('NORMAL');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [completedResult, setCompletedResult] = useState<any>(null);
+  const [completedResult, setCompletedResult] = useState<CheckIn | null>(null);
 
   const totalSteps = 4;
   const currentQuestion = QUESTIONS[currentStep - 1];
@@ -331,22 +339,19 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
-      const res = await apiClient('/api/checkins', {
-        method: 'POST',
-        body: JSON.stringify({
+      const res = await submitCheckin({
           mood,
           physicalHealth,
           sleepQuality,
           appetite,
           notes: notes.trim() || undefined,
-        }),
-      });
+        });
 
       if (res.success && res.data) {
         setCompletedResult(res.data);
       }
-    } catch (err: any) {
-      Alert.alert('Lỗi gửi điểm danh', err.message || 'Không thể gửi điểm danh lúc này.');
+    } catch (err: unknown) {
+      Alert.alert(tr("Lỗi gửi điểm danh"), (err instanceof Error ? err.message : '') || 'Không thể gửi điểm danh lúc này.');
     } finally {
       setSubmitting(false);
     }
@@ -367,7 +372,7 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
             <Feather name="chevron-left" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <View style={styles.headerTagPill}>
-            <Text style={styles.headerTagText}>Hoàn thành điểm danh</Text>
+            <Text style={styles.headerTagText}>{tr("Hoàn thành điểm danh")}</Text>
           </View>
           <View style={{ width: 40 }} />
         </View>
@@ -384,51 +389,39 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
 
           {/* Big Green Circle with Checkmark */}
           <View style={styles.celebrationCircle}>
-            <Feather name="check" size={56} color="#FFFFFF" />
+            <Feather name="check" size={56} color={colors.textInverse} />
           </View>
         </View>
 
         {/* Headline & Subtitle */}
-        <Text style={[styles.completedHeadline, { fontSize: fs(24) }]}>
-          Đã ghi nhận{'\n'}thông tin sức khỏe!
-        </Text>
-        <Text style={[styles.completedSubhead, { fontSize: fs(14.5) }]}>
-          Cảm ơn ông/bà đã chia sẻ.{'\n'}Gia đình sẽ nhận được cập nhật.
-        </Text>
+        <Text style={[styles.completedHeadline, { fontSize: fs(24) }]}>{tr("Đã ghi nhận")}{'\n'}{tr("thông tin sức khỏe!")}</Text>
+        <Text style={[styles.completedSubhead, { fontSize: fs(14.5) }]}>{tr("Cảm ơn ông/bà đã chia sẻ.")}{'\n'}{tr("Gia đình sẽ nhận được cập nhật.")}</Text>
 
         {/* Summary Card (Soft Green) */}
         <View style={styles.screen7SummaryCard}>
-          <Text style={[styles.screen7SummaryTitle, { fontSize: fs(16) }]}>
-            Tóm tắt hôm nay:
+          <Text style={[styles.screen7SummaryTitle, { fontSize: fs(20) }]}>{tr("Tóm tắt hôm nay:")}</Text>
+          <Text style={[styles.screen7SummaryItem, { fontSize: fs(14.5) }]}>{tr("• Tâm trạng: ")}<Text style={styles.screen7SummaryVal}>{signalLabel(completedResult.mood || mood)}</Text>
           </Text>
-          <Text style={[styles.screen7SummaryItem, { fontSize: fs(14.5) }]}>
-            • Tâm trạng: <Text style={styles.screen7SummaryVal}>{completedResult.mood || mood}</Text>
-          </Text>
-          <Text style={[styles.screen7SummaryItem, { fontSize: fs(14.5) }]}>
-            • Thể trạng: <Text style={styles.screen7SummaryVal}>{completedResult.physicalHealth || physicalHealth}</Text>
+          <Text style={[styles.screen7SummaryItem, { fontSize: fs(14.5) }]}>{tr("• Thể trạng: ")}<Text style={styles.screen7SummaryVal}>{signalLabel(completedResult.physicalHealth || physicalHealth)}</Text>
           </Text>
           {completedResult.sleepQuality ? (
-            <Text style={[styles.screen7SummaryItem, { fontSize: fs(14.5) }]}>
-              • Giấc ngủ: <Text style={styles.screen7SummaryVal}>{completedResult.sleepQuality}</Text>
+            <Text style={[styles.screen7SummaryItem, { fontSize: fs(14.5) }]}>{tr("• Giấc ngủ: ")}<Text style={styles.screen7SummaryVal}>{signalLabel(completedResult.sleepQuality)}</Text>
             </Text>
           ) : null}
           {completedResult.appetite ? (
-            <Text style={[styles.screen7SummaryItem, { fontSize: fs(14.5) }]}>
-              • Ăn uống: <Text style={styles.screen7SummaryVal}>{completedResult.appetite}</Text>
+            <Text style={[styles.screen7SummaryItem, { fontSize: fs(14.5) }]}>{tr("• Ăn uống: ")}<Text style={styles.screen7SummaryVal}>{signalLabel(completedResult.appetite)}</Text>
             </Text>
           ) : null}
         </View>
 
-        {completedResult.aiAnalysis ? (
+        {completedResult.aiAnalysisSummary ? (
           <View style={styles.aiFeedbackBox}>
             <View style={styles.aiFeedbackHeader}>
               <Feather name="smile" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-              <Text style={[styles.aiFeedbackTitle, { fontSize: fs(13) }]}>
-                Lời nhắn từ Trợ lý AI
-              </Text>
+              <Text style={[styles.aiFeedbackTitle, { fontSize: fs(13) }]}>{tr("Lời nhắn từ Trợ lý AI")}</Text>
             </View>
             <Text style={[styles.aiFeedbackText, { fontSize: fs(13.5) }]}>
-              {completedResult.aiAnalysis}
+              {completedResult.aiAnalysisSummary}
             </Text>
           </View>
         ) : null}
@@ -441,9 +434,7 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
           }}
           activeOpacity={0.8}
         >
-          <Text style={[styles.screen7DoneBtnText, { fontSize: fs(15.5) }]}>
-            Về trang chủ
-          </Text>
+          <Text style={[styles.screen7DoneBtnText, { fontSize: fs(15.5) }]}>{tr("Về trang chủ")}</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -452,19 +443,19 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
   const selectedValue = getSelectedValue();
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <ScrollView ref={questionScroll} style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       {/* Step Indicator Header */}
       <View style={styles.stepHeader}>
         <View style={styles.stepBadge}>
           <Text style={[styles.stepBadgeText, { fontSize: fs(12) }]}>
-            {currentQuestion.category} • BƯỚC {currentStep}/{totalSteps}
+            {tr(currentQuestion.category)}{tr(" • BƯỚC ")}{currentStep}{tr("/")}{totalSteps}
           </Text>
         </View>
         <Text style={[styles.questionTitle, { fontSize: fs(21) }]}>
-          {currentQuestion.title}
+          {tr(currentQuestion.title)}
         </Text>
         <Text style={[styles.questionSubtitle, { fontSize: fs(13.5) }]}>
-          {currentQuestion.subtitle}
+          {tr(currentQuestion.subtitle)}
         </Text>
 
         {/* Step Progress Bar */}
@@ -488,8 +479,8 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
               style={[
                 styles.optionCard,
                 isSelected && {
-                  borderColor: opt.cardActiveBorder,
-                  backgroundColor: opt.cardActiveBg,
+                  borderColor: colors.background === baseColors.background ? opt.cardActiveBorder : colors.border,
+                  backgroundColor: colors.background === baseColors.background ? opt.cardActiveBg : colors.surfaceWarm,
                 },
               ]}
               onPress={() => handleSelectOption(opt.id)}
@@ -502,21 +493,21 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
                 style={[
                   styles.optionIconCircle,
                   {
-                    backgroundColor: opt.iconBg,
-                    borderColor: opt.iconBorder,
+                    backgroundColor: colors.background === baseColors.background ? opt.iconBg : colors.surfaceWarm,
+                    borderColor: colors.background === baseColors.background ? opt.iconBorder : colors.border,
                     borderWidth: 1.5,
                   },
                 ]}
               >
                 {opt.iconType === 'feather' ? (
                   <Feather
-                    name={opt.iconName}
+                    name={opt.iconName as React.ComponentProps<typeof Feather>['name']}
                     size={22}
                     color={opt.iconColor}
                   />
                 ) : (
                   <Ionicons
-                    name={opt.iconName}
+                    name={opt.iconName as React.ComponentProps<typeof Ionicons>['name']}
                     size={22}
                     color={opt.iconColor}
                   />
@@ -527,14 +518,14 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
                 <Text
                   style={[
                     styles.optionLabel,
-                    { fontSize: fs(16) },
-                    isSelected && { color: opt.iconColor, fontWeight: '800' },
+                    { fontSize: fs(20) },
+                    isSelected && { color: colors.background === baseColors.background ? opt.iconColor : colors.textPrimary, fontWeight: '800' },
                   ]}
                 >
-                  {opt.label}
+                  {tr(opt.label)}
                 </Text>
                 <Text style={[styles.optionDesc, { fontSize: fs(12.5) }]}>
-                  {opt.desc}
+                  {tr(opt.desc)}
                 </Text>
               </View>
 
@@ -553,12 +544,10 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
       {/* Step 4 Extra Note Box */}
       {currentStep === 4 && (
         <View style={styles.noteSection}>
-          <Text style={[styles.noteLabel, { fontSize: fs(13.5) }]}>
-            Ghi chú thêm cho con cháu hoặc bác sĩ (nếu có):
-          </Text>
+          <Text style={[styles.noteLabel, { fontSize: fs(13.5) }]}>{tr("Ghi chú thêm cho con cháu hoặc bác sĩ (nếu có):")}</Text>
           <TextInput
             style={[styles.noteInput, { fontSize: fs(14) }]}
-            placeholder="Ví dụ: Cụ thấy đau lưng nhẹ, sáng nay ăn cháo hạt sen..."
+            placeholder={tr("Ví dụ: Cụ thấy đau lưng nhẹ, sáng nay ăn cháo hạt sen...")}
             value={notes}
             onChangeText={setNotes}
             placeholderTextColor={colors.textMuted}
@@ -579,7 +568,7 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
             activeOpacity={0.7}
           >
             <Feather name="arrow-left" size={16} color={colors.textSecondary} style={{ marginRight: 6 }} />
-            <Text style={[styles.backBtnText, { fontSize: fs(14) }]}>Quay lại</Text>
+            <Text style={[styles.backBtnText, { fontSize: fs(14) }]}>{tr("Quay lại")}</Text>
           </TouchableOpacity>
         )}
 
@@ -590,16 +579,16 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
           activeOpacity={0.8}
         >
           {submitting ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
+            <ActivityIndicator color={colors.textInverse} size="small" />
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={[styles.nextBtnText, { fontSize: fs(15) }]}>
-                {currentStep === totalSteps ? 'Gửi điểm danh' : 'Tiếp theo'}
+                {currentStep === totalSteps ? tr("Gửi điểm danh") : tr("Tiếp theo")}
               </Text>
               <Feather
                 name={currentStep === totalSteps ? 'check' : 'arrow-right'}
                 size={16}
-                color="#FFFFFF"
+                color={colors.textInverse}
                 style={{ marginLeft: 6 }}
               />
             </View>
@@ -612,7 +601,7 @@ export const ElderlyCheckInScreen: React.FC<Props> = ({ onSuccess }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -640,7 +629,7 @@ const styles = StyleSheet.create({
   questionTitle: {
     fontWeight: '800',
     color: colors.textPrimary,
-    lineHeight: 28,
+
     marginBottom: 4,
   },
   questionSubtitle: {
@@ -679,7 +668,7 @@ const styles = StyleSheet.create({
   },
   optionIconCircle: {
     width: 44,
-    height: 44,
+    minHeight: 56,
     borderRadius: 22,
     backgroundColor: colors.surfaceWarm,
     alignItems: 'center',
@@ -753,7 +742,7 @@ const styles = StyleSheet.create({
   },
   nextBtnText: {
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: colors.textInverse,
   },
   completedContainer: {
     padding: 20,
@@ -769,7 +758,7 @@ const styles = StyleSheet.create({
   },
   backBtnCircle: {
     width: 40,
-    height: 40,
+    minHeight: 56,
     borderRadius: 20,
     backgroundColor: colors.surface,
     alignItems: 'center',
@@ -777,13 +766,13 @@ const styles = StyleSheet.create({
     ...shadows.subtle,
   },
   headerTagPill: {
-    backgroundColor: '#3E5C4B',
+    backgroundColor: colors.background === baseColors.background ? '#3E5C4B' : colors.surfaceWarm,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
   },
   headerTagText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '700',
     fontSize: 12,
   },
@@ -799,7 +788,7 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: 55,
-    backgroundColor: '#75B884',
+    backgroundColor: colors.background === baseColors.background ? '#75B884' : colors.surfaceWarm,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.card,
@@ -813,7 +802,7 @@ const styles = StyleSheet.create({
     left: '26%',
     width: 10,
     height: 16,
-    backgroundColor: '#F6D06F',
+    backgroundColor: colors.background === baseColors.background ? '#F6D06F' : colors.surfaceWarm,
     transform: [{ rotate: '-35deg' }],
   },
   petalTopRight: {
@@ -821,7 +810,7 @@ const styles = StyleSheet.create({
     right: '25%',
     width: 14,
     height: 14,
-    backgroundColor: '#F9B277',
+    backgroundColor: colors.background === baseColors.background ? '#F9B277' : colors.surfaceWarm,
     transform: [{ rotate: '40deg' }],
   },
   petalMidLeft: {
@@ -830,14 +819,14 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#85C292',
+    backgroundColor: colors.background === baseColors.background ? '#85C292' : colors.surfaceWarm,
   },
   petalMidRight: {
     top: 85,
     right: '18%',
     width: 12,
     height: 18,
-    backgroundColor: '#75B884',
+    backgroundColor: colors.background === baseColors.background ? '#75B884' : colors.surfaceWarm,
     transform: [{ rotate: '-50deg' }],
   },
   petalBottomLeft: {
@@ -845,7 +834,7 @@ const styles = StyleSheet.create({
     left: '24%',
     width: 12,
     height: 14,
-    backgroundColor: '#F6D06F',
+    backgroundColor: colors.background === baseColors.background ? '#F6D06F' : colors.surfaceWarm,
     transform: [{ rotate: '20deg' }],
   },
   petalBottomRight: {
@@ -853,29 +842,29 @@ const styles = StyleSheet.create({
     right: '24%',
     width: 10,
     height: 16,
-    backgroundColor: '#85C292',
+    backgroundColor: colors.background === baseColors.background ? '#85C292' : colors.surfaceWarm,
     transform: [{ rotate: '-25deg' }],
   },
   completedHeadline: {
     fontWeight: '900',
     color: colors.textPrimary,
     textAlign: 'center',
-    lineHeight: 32,
+
     marginBottom: 10,
   },
   completedSubhead: {
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
+
     marginBottom: 24,
   },
   screen7SummaryCard: {
-    backgroundColor: '#EDF5EF',
+    backgroundColor: colors.background === baseColors.background ? '#EDF5EF' : colors.surfaceWarm,
     borderRadius: 20,
     padding: 18,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#D4E6D9',
+    borderColor: colors.background === baseColors.background ? '#D4E6D9' : colors.border,
   },
   screen7SummaryTitle: {
     fontWeight: '800',
@@ -891,7 +880,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   screen7DoneBtn: {
-    backgroundColor: '#456B58',
+    backgroundColor: colors.background === baseColors.background ? '#456B58' : colors.surfaceWarm,
     borderRadius: 24,
     paddingVertical: 14,
     alignItems: 'center',
@@ -899,7 +888,7 @@ const styles = StyleSheet.create({
     ...shadows.subtle,
   },
   screen7DoneBtnText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '800',
   },
   successCard: {
@@ -929,7 +918,7 @@ const styles = StyleSheet.create({
   successSubtitle: {
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+
     marginBottom: 20,
   },
   summaryList: {
@@ -972,7 +961,7 @@ const styles = StyleSheet.create({
   },
   aiFeedbackText: {
     color: colors.textPrimary,
-    lineHeight: 20,
+
   },
   doneBtn: {
     width: '100%',
@@ -983,7 +972,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   doneBtnText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '800',
   },
 });

@@ -18,11 +18,13 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final SessionService sessions;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService, SessionService sessions) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.sessions = sessions;
     }
 
     @Transactional
@@ -46,8 +48,7 @@ public class AuthService {
 
         user = userRepository.save(user);
 
-        String token = jwtService.generateToken(user.getId(), user.getUsername(), user.getRole().name());
-        return new AuthResponse(token, UserDto.fromEntity(user));
+        return sessions.issue(user);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -66,8 +67,7 @@ public class AuthService {
             throw new ApiException(401, "Tên đăng nhập hoặc mật khẩu không chính xác");
         }
 
-        String token = jwtService.generateToken(user.getId(), user.getUsername(), user.getRole().name());
-        return new AuthResponse(token, UserDto.fromEntity(user));
+        return sessions.issue(user);
     }
 
     public UserDto getCurrentUser(Long userId) {
@@ -91,27 +91,13 @@ public class AuthService {
 
         user.setPasswordHash(passwordEncoder.encode(newPassword.trim()));
         userRepository.save(user);
+        sessions.revoke(userId);
     }
 
     @Transactional
     public void resetPassword(String usernameOrEmail, String newPassword) {
-        if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
-            throw new ApiException(400, "Vui lòng nhập tên đăng nhập hoặc email");
-        }
-
-        String identifier = usernameOrEmail.trim();
-        User user = userRepository.findByUsernameIgnoreCase(identifier)
-                .or(() -> userRepository.findByEmailIgnoreCase(identifier))
-                .or(() -> userRepository.findByUsername(identifier))
-                .or(() -> userRepository.findByEmail(identifier))
-                .orElseThrow(() -> new ApiException(404, "Không tìm thấy tài khoản với thông tin đã cung cấp"));
-
-        if (newPassword == null || newPassword.trim().length() < 6) {
-            throw new ApiException(400, "Mật khẩu mới phải có ít nhất 6 ký tự");
-        }
-
-        user.setPasswordHash(passwordEncoder.encode(newPassword.trim()));
-        userRepository.save(user);
+        // No account lookup or mutation until a verified recovery channel exists.
+        throw new ApiException(503, "PASSWORD_RECOVERY_UNAVAILABLE");
     }
 }
 

@@ -39,39 +39,34 @@ public class AlertService {
 
     @Transactional
     public CareAlertDto createAlert(Long elderlyId, AlertType alertType, AlertSeverity severity, String description) {
-        User elderly = userRepository.findById(elderlyId)
+        return createAlert(elderlyId, alertType, severity, description, alertType.name() + ":" + java.time.LocalDate.now());
+    }
+
+    @Transactional
+    public CareAlertDto createAlert(Long elderlyId, AlertType alertType, AlertSeverity severity, String description, String eventKey) {
+        User elderly = userRepository.findLockedById(elderlyId)
                 .orElseThrow(() -> new ApiException(404, "Elderly user not found"));
-
-        // Find linked caregiver if any
-        User caregiver = relationshipRepository.findByElderlyId(elderlyId)
-                .stream()
-                .findFirst()
-                .map(rel -> rel.getCaregiver())
-                .orElse(null);
-
-        CareAlert alert = new CareAlert();
-        alert.setElderly(elderly);
-        alert.setCaregiver(caregiver);
-        alert.setAlertType(alertType);
-        alert.setSeverity(severity);
-        alert.setDescription(description);
-        alert.setIsRead(false);
-        alert.setIsResolved(false);
-
-        alert = alertRepository.save(alert);
-
-        // Also notify caregiver directly
-        if (caregiver != null) {
-            notificationService.sendNotification(
-                    caregiver.getId(),
-                    "Cảnh báo chăm sóc: " + elderly.getFullName(),
-                    description,
-                    "ALERT",
-                    alert.getId()
-            );
+        var caregivers = relationshipRepository.findByElderlyId(elderlyId).stream()
+                .filter(link -> link.getStatus() == com.mimamori.userprofile.entity.RelationshipStatus.ACCEPTED)
+                .map(link -> link.getCaregiver()).toList();
+        var recipients = new java.util.ArrayList<User>(caregivers);
+        if (recipients.isEmpty()) recipients.add(elderly);
+        CareAlertDto first = null;
+        for (User recipient : recipients) {
+            String key = elderlyId + ":" + eventKey + ":" + recipient.getId();
+            CareAlert alert = alertRepository.findByEventKey(key).orElse(null);
+            if (alert == null) {
+                alert = new CareAlert();
+                alert.setElderly(elderly);
+                if (!recipient.getId().equals(elderlyId)) alert.setCaregiver(recipient);
+                alert.setAlertType(alertType); alert.setSeverity(severity);
+                alert.setDescription(description); alert.setEventKey(key);
+                alert = alertRepository.save(alert);
+                notificationService.sendNotification(recipient.getId(), "Mimamori", "Mở Mimamori để xem thông báo chăm sóc.", "ALERT", alert.getId());
+            }
+            if (first == null) first = CareAlertDto.fromEntity(alert);
         }
-
-        return CareAlertDto.fromEntity(alert);
+        return first;
     }
 
     public List<CareAlertDto> getAlerts(Long currentUserId) {
@@ -81,6 +76,7 @@ public class AlertService {
         if (user.getRole() == UserRole.CAREGIVER) {
             return alertRepository.findByCaregiverIdOrderByCreatedAtDesc(currentUserId)
                     .stream()
+                    .filter(alert -> relationshipRepository.existsByCaregiverIdAndElderlyId(currentUserId,alert.getElderly().getId()))
                     .map(CareAlertDto::fromEntity)
                     .collect(Collectors.toList());
         } else {
@@ -96,6 +92,7 @@ public class AlertService {
         CareAlert alert = alertRepository.findById(alertId)
                 .orElseThrow(() -> new ApiException(404, "Alert not found"));
 
+        requireAccess(currentUserId, alert);
         alert.setIsRead(true);
         alert = alertRepository.save(alert);
         return CareAlertDto.fromEntity(alert);
@@ -106,9 +103,18 @@ public class AlertService {
         CareAlert alert = alertRepository.findById(alertId)
                 .orElseThrow(() -> new ApiException(404, "Alert not found"));
 
+        requireAccess(currentUserId, alert);
+        if (Boolean.TRUE.equals(alert.getIsResolved())) return CareAlertDto.fromEntity(alert);
         alert.setIsResolved(true);
         alert.setResolvedAt(LocalDateTime.now());
         alert = alertRepository.save(alert);
         return CareAlertDto.fromEntity(alert);
+    }
+
+    private void requireAccess(Long userId, CareAlert alert) {
+        if (alert.getElderly().getId().equals(userId)) return;
+        if (alert.getCaregiver() != null && alert.getCaregiver().getId().equals(userId)
+                && relationshipRepository.existsByCaregiverIdAndElderlyId(userId, alert.getElderly().getId())) return;
+        throw new ApiException(403, "Access to this alert is not permitted");
     }
 }

@@ -1,106 +1,46 @@
-import React, { useEffect, useState } from 'react';
+import {useOriginalLabels,checkinSummaryLabel} from '../../core/localization/original';
+import {useColors} from '../../core/theme/useTheme';
+import {CareText as Text, CareTouchable as TouchableOpacity} from '../../components/CareText';
+import React from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
+    StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
+    ActivityIndicator,
   Alert,
   RefreshControl,
   Image,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, shadows } from '../../core/theme/colors';
-import { useAuthStore } from '../../core/auth/useAuthStore';
+import { colors as baseColors, shadows } from '../../core/theme/colors';
+import { useSession } from '../../core/auth/useSession';
 import { useAccessibilityStore } from '../../core/accessibility/useAccessibilityStore';
-import { apiClient } from '../../core/api/client';
+import { useDoseList } from '../medication/queries';
+import { useTodayCheckin } from '../navigation/queries';
+import { DoseActions } from '../medication/DoseActions';
+import { doseTime } from '../../core/config/time';
+import { Notice, Button } from '../../components/CareUI';
 import { SOSButton } from '../../components/SOSButton';
 import { getAvatarSource } from '../../core/theme/avatar';
-
-interface MedicationLog {
-  id: number;
-  medicationName: string;
-  dosage: string;
-  scheduledTime: string;
-  status: 'PENDING' | 'TAKEN' | 'MISSED' | 'SKIPPED';
-  instruction?: string;
-}
-
-interface CheckInRecord {
-  id: number;
-  checkInDate: string;
-  mood: string;
-  physicalHealth: string;
-  sleepQuality?: string;
-  appetite?: string;
-  aiAnalysis?: string;
-}
 
 interface Props {
   onNavigateTab: (tab: 'home' | 'companion' | 'medication' | 'checkin' | 'profile') => void;
 }
 
 export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
-  const { user } = useAuthStore();
-  const { fs } = useAccessibilityStore();
-  const [todayMeds, setTodayMeds] = useState<MedicationLog[]>([]);
-  const [todayCheckIn, setTodayCheckIn] = useState<CheckInRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [confirmingId, setConfirmingId] = useState<number | null>(null);
+  const tr=useOriginalLabels();
+  const colors=useColors();
+  const styles=buildStyles(colors);
 
-  const fetchHomeData = async () => {
-    try {
-      const [medsRes, checkInRes] = await Promise.allSettled([
-        apiClient<MedicationLog[]>('/api/medications/today'),
-        apiClient<CheckInRecord>('/api/checkins/today'),
-      ]);
-
-      if (medsRes.status === 'fulfilled' && medsRes.value.success) {
-        setTodayMeds(medsRes.value.data || []);
-      }
-      if (checkInRes.status === 'fulfilled' && checkInRes.value.success) {
-        setTodayCheckIn(checkInRes.value.data || null);
-      }
-    } catch {
-      // Handled
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchHomeData();
-  }, []);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchHomeData();
-  };
-
-  const handleConfirmMedication = async (logId: number) => {
-    try {
-      setConfirmingId(logId);
-      const res = await apiClient(`/api/medications/logs/${logId}/confirm`, {
-        method: 'POST',
-        body: JSON.stringify({
-          status: 'TAKEN',
-          note: 'Xác nhận trực tiếp từ màn hình chính',
-        }),
-      });
-      if (res.success) {
-        Alert.alert('Đã ghi nhận', 'Cảm ơn cụ đã uống thuốc đúng giờ! Chúc cụ luôn dồi dào sức khỏe.');
-        fetchHomeData();
-      }
-    } catch (err: any) {
-      Alert.alert('Thông báo', err.message || 'Không thể xác nhận uống thuốc');
-    } finally {
-      setConfirmingId(null);
-    }
-  };
-
+  const { user } = useSession();
+  const { fs,fontScale } = useAccessibilityStore();
+  const doses = useDoseList();
+  const checkin = useTodayCheckin();
+  const todayMeds = doses.data?.items ?? [];
+  const todayCheckIn = checkin.data;
+  const loading = doses.isPending;
+  const refreshing = doses.isRefetching || checkin.isRefetching;
+  const onRefresh = () => { void doses.refetch(); void checkin.refetch(); };
   const pendingMeds = todayMeds.filter((m) => m.status === 'PENDING');
   const nextPendingMed = pendingMeds[0];
   const takenCount = todayMeds.filter((m) => m.status === 'TAKEN').length;
@@ -116,13 +56,11 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
       {/* 1. Eldora-Style Greeting Top Bar */}
       <View style={styles.topGreetingBar}>
         <View style={styles.greetingTextCol}>
-          <Text style={[styles.greetingSub, { fontSize: fs(14) }]}>Chào buổi sáng,</Text>
+          <Text style={[styles.greetingSub, { fontSize: fs(14) }]}>{tr("Chào buổi sáng,")}</Text>
           <Text style={[styles.greetingName, { fontSize: fs(24) }]}>
-            {user?.fullName || 'Người cao tuổi'}
+            {user?.fullName || tr("Người cao tuổi")}
           </Text>
-          <Text style={[styles.greetingQuestion, { fontSize: fs(13) }]}>
-            Hôm nay cụ cảm thấy thế nào ạ?
-          </Text>
+          {fontScale <= 1.2 && <Text style={[styles.greetingQuestion, { fontSize: fs(13) }]}>{tr("Hôm nay cụ cảm thấy thế nào ạ?")}</Text>}
         </View>
 
         {/* Senior Photo Avatar Box */}
@@ -130,7 +68,7 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
           style={styles.seniorAvatarBox}
           onPress={() => onNavigateTab('profile')}
           activeOpacity={0.8}
-          accessibilityLabel="Xem hồ sơ"
+          accessibilityLabel={tr("Xem hồ sơ")}
         >
           <Image
             source={getAvatarSource(user?.avatarUrl)}
@@ -142,34 +80,85 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
 
       {/* 2. Emergency SOS Access (Discrete, non-overlapping) */}
       <View style={styles.sosContainer}>
-        <SOSButton emergencyContactName="Con gái (Nguyễn Thị Hoa)" />
+        <SOSButton />
       </View>
 
+      {doses.isError && <View style={styles.sectionWrap}><Notice tone="danger" text={tr("Không thể tải lịch thuốc. Vui lòng thử lại.")} /><Button title={tr("Thử lại")} onPress={onRefresh} /></View>}
+      {doses.data?.stale && <Notice tone="warning" text={tr("Đang xem lịch đã lưu. Chưa đồng bộ với máy chủ.")} />}
+      {checkin.isError && <Notice tone="warning" text={tr("Chưa tải được điểm danh hôm nay.")} />}
       {loading ? (
         <View style={styles.centerLoading}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { fontSize: fs(14) }]}>
-            Đang tải thông tin sức khỏe của cụ...
-          </Text>
+          <Text style={[styles.loadingText, { fontSize: fs(14) }]}>{tr("Đang tải thông tin sức khỏe của cụ...")}</Text>
         </View>
       ) : (
         <>
+          {/* 5. Upcoming (Sắp tới - Cữ thuốc hoặc sự kiện) */}
+          <View style={styles.sectionWrap}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={[styles.sectionTitle, { fontSize: fs(20) }]}>{tr("Sắp tới")}</Text>
+              <TouchableOpacity onPress={() => onNavigateTab('medication')} activeOpacity={0.7}>
+                <Text style={[styles.sectionActionText, { fontSize: fs(13) }]}>{tr("Xem tất cả ›")}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {doses.isError ? null : nextPendingMed ? (
+              <View style={styles.upcomingCard}>
+                <View style={styles.upcomingIconCircle}>
+                  <Feather name="clock" size={22} color={colors.primary} />
+                </View>
+
+                <View style={styles.upcomingTextCol}>
+                  <Text style={[styles.upcomingTime, { fontSize: fs(13) }]}>{tr("Cữ thuốc hôm nay • ")}{nextPendingMed.scheduledTime ? doseTime(nextPendingMed.scheduledAt, nextPendingMed.timeZone) : tr("Đúng giờ")}
+                  </Text>
+                  <Text style={[styles.upcomingMedName, { fontSize: fs(20) }]}>
+                    {nextPendingMed.medicationName}
+                  </Text>
+                  <Text style={[styles.upcomingMedDose, { fontSize: fs(12.5) }]}>{tr("Liều dùng: ")}{nextPendingMed.dosage}
+                    {nextPendingMed.instructions ? ` • ${nextPendingMed.instructions}` : ''}
+                  </Text>
+
+                    <DoseActions dose={nextPendingMed} />
+                </View>
+              </View>
+            ) : totalMeds > 0 && takenCount === totalMeds ? (
+              <View style={styles.allDoneUpcomingCard}>
+                <View style={styles.allDoneIconCircle}>
+                  <Feather name="check-circle" size={24} color={colors.successText} />
+                </View>
+                <View style={styles.allDoneTextCol}>
+                  <Text style={[styles.allDoneTitle, { fontSize: fs(15) }]}>{tr("Đã hoàn thành toàn bộ cữ thuốc hôm nay")}</Text>
+                  <Text style={[styles.allDoneSub, { fontSize: fs(12) }]}>{tr("Cụ đã uống đủ ")}{takenCount}{tr("/")}{totalMeds}{tr(" cữ thuốc đúng giờ. Rất tuyệt vời ạ!")}</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.emptyUpcomingCard}>
+                <View style={styles.allDoneIconCircle}>
+                  <Feather name="calendar" size={24} color={colors.primary} />
+                </View>
+                <View style={styles.allDoneTextCol}>
+                  <Text style={[styles.allDoneTitle, { fontSize: fs(15) }]}>{tr("Không có lịch nhắc cần xử lý")}</Text>
+                  <Text style={[styles.allDoneSub, { fontSize: fs(12) }]}>{tr("Chúc cụ một ngày thật bình an và vui vẻ bên con cháu!")}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+
           {/* 3. Daily Wellness Card (Eldora-Style Peach/Cream Hero) */}
           <View style={styles.sectionWrap}>
             <View style={styles.dailyWellnessCard}>
               <View style={styles.wellnessLeftCol}>
                 <View style={styles.wellnessBadge}>
-                  <Text style={[styles.wellnessBadgeText, { fontSize: fs(11) }]}>
-                    SỨC KHỎE HÔM NAY
-                  </Text>
+                  <Text style={[styles.wellnessBadgeText, { fontSize: fs(11) }]}>{tr("SỨC KHỎE HÔM NAY")}</Text>
                 </View>
-                <Text style={[styles.wellnessTitle, { fontSize: fs(18) }]}>
-                  {todayCheckIn ? 'Đã hoàn thành điểm danh' : 'Điểm danh sức khỏe'}
+                <Text style={[styles.wellnessTitle, { fontSize: fs(20) }]}>
+                  {todayCheckIn ? tr("Đã hoàn thành điểm danh") : tr("Điểm danh sức khỏe")}
                 </Text>
                 <Text style={[styles.wellnessDesc, { fontSize: fs(12.5) }]}>
                   {todayCheckIn
-                    ? `Tâm trạng: ${todayCheckIn.mood} • Thể trạng: ${todayCheckIn.physicalHealth}`
-                    : 'Chăm sóc sức khỏe cụ hôm nay cùng gia đình'}
+                    ? checkinSummaryLabel(todayCheckIn.mood,todayCheckIn.physicalHealth)
+                    : tr("Chăm sóc sức khỏe cụ hôm nay cùng gia đình")}
                 </Text>
 
                 <TouchableOpacity
@@ -178,12 +167,12 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.wellnessBtnText, { fontSize: fs(13) }]}>
-                    {todayCheckIn ? 'Xem lại kết quả' : 'Điểm danh ngay'}
+                    {todayCheckIn ? tr("Xem lại kết quả") : tr("Điểm danh ngay")}
                   </Text>
                   <Feather
                     name={todayCheckIn ? 'check' : 'arrow-right'}
                     size={14}
-                    color="#FFFFFF"
+                    color={colors.textInverse}
                     style={{ marginLeft: 6 }}
                   />
                 </TouchableOpacity>
@@ -203,9 +192,7 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
 
           {/* 4. Quick Actions Grid: "Cụ muốn làm gì hôm nay?" (Eldora 3x2 Grid with Vector Icons) */}
           <View style={styles.sectionWrap}>
-            <Text style={[styles.gridSectionTitle, { fontSize: fs(17) }]}>
-              Cụ muốn làm gì hôm nay?
-            </Text>
+            <Text style={[styles.gridSectionTitle, { fontSize: fs(20) }]}>{tr("Cụ muốn làm gì hôm nay?")}</Text>
 
             <View style={styles.actionsGrid}>
               {/* Item 1: Sức khỏe */}
@@ -214,11 +201,11 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
                 onPress={() => onNavigateTab('checkin')}
                 activeOpacity={0.75}
               >
-                <View style={[styles.gridIconCircle, { backgroundColor: '#FBEBEB' }]}>
-                  <Feather name="activity" size={20} color="#B83232" />
+                <View style={[styles.gridIconCircle, { backgroundColor: colors.background === baseColors.background ? '#FBEBEB' : colors.surfaceWarm }]}>
+                  <Feather name="activity" size={20} color={colors.background === baseColors.background ? "#B83232" : colors.primary} />
                 </View>
-                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>Sức khỏe</Text>
-                <Text style={[styles.gridCardSub, { fontSize: fs(11) }]}>Điểm danh</Text>
+                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>{tr("Sức khỏe")}</Text>
+                <Text style={[styles.gridCardSub, { fontSize: fs(11) }]}>{tr("Điểm danh")}</Text>
               </TouchableOpacity>
 
               {/* Item 2: Thuốc uống */}
@@ -227,12 +214,12 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
                 onPress={() => onNavigateTab('medication')}
                 activeOpacity={0.75}
               >
-                <View style={[styles.gridIconCircle, { backgroundColor: '#EAF3F9' }]}>
+                <View style={[styles.gridIconCircle, { backgroundColor: colors.background === baseColors.background ? '#EAF3F9' : colors.surfaceWarm }]}>
                   <MaterialCommunityIcons name="pill" size={22} color={colors.primary} />
                 </View>
-                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>Thuốc uống</Text>
+                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>{tr("Thuốc uống")}</Text>
                 <Text style={[styles.gridCardSub, { fontSize: fs(11) }]}>
-                  {totalMeds > 0 ? `${takenCount}/${totalMeds} cữ` : 'Nhắc cữ'}
+                  {totalMeds > 0 ? `${takenCount}/${totalMeds} cữ` : tr("Nhắc cữ")}
                 </Text>
               </TouchableOpacity>
 
@@ -242,11 +229,11 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
                 onPress={() => onNavigateTab('companion')}
                 activeOpacity={0.75}
               >
-                <View style={[styles.gridIconCircle, { backgroundColor: '#EDF5EF' }]}>
+                <View style={[styles.gridIconCircle, { backgroundColor: colors.background === baseColors.background ? '#EDF5EF' : colors.surfaceWarm }]}>
                   <Feather name="message-circle" size={20} color={colors.primary} />
                 </View>
-                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>Trợ lý AI</Text>
-                <Text style={[styles.gridCardSub, { fontSize: fs(11) }]}>Tâm sự cùng cụ</Text>
+                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>{tr("Trợ lý AI")}</Text>
+                <Text style={[styles.gridCardSub, { fontSize: fs(11) }]}>{tr("Tâm sự cùng cụ")}</Text>
               </TouchableOpacity>
 
               {/* Item 4: Gia đình */}
@@ -255,11 +242,11 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
                 onPress={() => onNavigateTab('profile')}
                 activeOpacity={0.75}
               >
-                <View style={[styles.gridIconCircle, { backgroundColor: '#FDF4E7' }]}>
-                  <Feather name="users" size={20} color="#995C17" />
+                <View style={[styles.gridIconCircle, { backgroundColor: colors.background === baseColors.background ? '#FDF4E7' : colors.surfaceWarm }]}>
+                  <Feather name="users" size={20} color={colors.background === baseColors.background ? "#995C17" : colors.primary} />
                 </View>
-                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>Gia đình</Text>
-                <Text style={[styles.gridCardSub, { fontSize: fs(11) }]}>Con cháu</Text>
+                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>{tr("Gia đình")}</Text>
+                <Text style={[styles.gridCardSub, { fontSize: fs(11) }]}>{tr("Con cháu")}</Text>
               </TouchableOpacity>
 
               {/* Item 5: Trợ giúp khẩn cấp */}
@@ -267,17 +254,17 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
                 style={styles.gridCard}
                 onPress={() => {
                   Alert.alert(
-                    'Trợ giúp khẩn cấp SOS',
-                    'Cụ có thể nhấn nút "Cần trợ giúp khẩn cấp?" ở đầu trang để gửi thông báo ngay cho con gái Nguyễn Thị Hoa.'
+                    tr("Trợ giúp khẩn cấp SOS"),
+                    tr("Cụ có thể nhấn nút \"Cần trợ giúp khẩn cấp?\" ở đầu trang để gửi thông báo ngay cho con gái Nguyễn Thị Hoa.")
                   );
                 }}
                 activeOpacity={0.75}
               >
-                <View style={[styles.gridIconCircle, { backgroundColor: '#FBEBEB' }]}>
+                <View style={[styles.gridIconCircle, { backgroundColor: colors.background === baseColors.background ? '#FBEBEB' : colors.surfaceWarm }]}>
                   <Feather name="alert-triangle" size={20} color={colors.dangerText} />
                 </View>
-                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>Khẩn cấp</Text>
-                <Text style={[styles.gridCardSub, { fontSize: fs(11) }]}>Hỗ trợ SOS</Text>
+                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>{tr("Khẩn cấp")}</Text>
+                <Text style={[styles.gridCardSub, { fontSize: fs(11) }]}>{tr("Hỗ trợ SOS")}</Text>
               </TouchableOpacity>
 
               {/* Item 6: Cài đặt / Cỡ chữ */}
@@ -286,105 +273,24 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
                 onPress={() => onNavigateTab('profile')}
                 activeOpacity={0.75}
               >
-                <View style={[styles.gridIconCircle, { backgroundColor: '#F3EFE6' }]}>
+                <View style={[styles.gridIconCircle, { backgroundColor: colors.background === baseColors.background ? '#F3EFE6' : colors.surfaceWarm }]}>
                   <Feather name="type" size={20} color={colors.textPrimary} />
                 </View>
-                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>Cỡ chữ</Text>
-                <Text style={[styles.gridCardSub, { fontSize: fs(11) }]}>Điều chỉnh</Text>
+                <Text style={[styles.gridCardTitle, { fontSize: fs(13.5) }]}>{tr("Cỡ chữ")}</Text>
+                <Text style={[styles.gridCardSub, { fontSize: fs(11) }]}>{tr("Điều chỉnh")}</Text>
               </TouchableOpacity>
             </View>
-          </View>
-
-          {/* 5. Upcoming (Sắp tới - Cữ thuốc hoặc sự kiện) */}
-          <View style={styles.sectionWrap}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, { fontSize: fs(17) }]}>Sắp tới</Text>
-              <TouchableOpacity onPress={() => onNavigateTab('medication')} activeOpacity={0.7}>
-                <Text style={[styles.sectionActionText, { fontSize: fs(13) }]}>Xem tất cả ›</Text>
-              </TouchableOpacity>
-            </View>
-
-            {nextPendingMed ? (
-              <View style={styles.upcomingCard}>
-                <View style={styles.upcomingIconCircle}>
-                  <Feather name="clock" size={22} color={colors.primary} />
-                </View>
-
-                <View style={styles.upcomingTextCol}>
-                  <Text style={[styles.upcomingTime, { fontSize: fs(13) }]}>
-                    Cữ thuốc hôm nay • {nextPendingMed.scheduledTime ? nextPendingMed.scheduledTime.slice(0, 5) : 'Đúng giờ'}
-                  </Text>
-                  <Text style={[styles.upcomingMedName, { fontSize: fs(16) }]}>
-                    {nextPendingMed.medicationName}
-                  </Text>
-                  <Text style={[styles.upcomingMedDose, { fontSize: fs(12.5) }]}>
-                    Liều dùng: {nextPendingMed.dosage}
-                    {nextPendingMed.instruction ? ` • ${nextPendingMed.instruction}` : ''}
-                  </Text>
-
-                  <TouchableOpacity
-                    style={styles.upcomingConfirmBtn}
-                    onPress={() => handleConfirmMedication(nextPendingMed.id)}
-                    disabled={confirmingId === nextPendingMed.id}
-                    activeOpacity={0.8}
-                  >
-                    {confirmingId === nextPendingMed.id ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                    ) : (
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Feather name="check" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                        <Text style={[styles.upcomingConfirmBtnText, { fontSize: fs(13) }]}>
-                          Tôi đã uống thuốc này
-                        </Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : totalMeds > 0 && takenCount === totalMeds ? (
-              <View style={styles.allDoneUpcomingCard}>
-                <View style={styles.allDoneIconCircle}>
-                  <Feather name="check-circle" size={24} color={colors.successText} />
-                </View>
-                <View style={styles.allDoneTextCol}>
-                  <Text style={[styles.allDoneTitle, { fontSize: fs(15) }]}>
-                    Đã hoàn thành toàn bộ cữ thuốc hôm nay
-                  </Text>
-                  <Text style={[styles.allDoneSub, { fontSize: fs(12) }]}>
-                    Cụ đã uống đủ {takenCount}/{totalMeds} cữ thuốc đúng giờ. Rất tuyệt vời ạ!
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.emptyUpcomingCard}>
-                <View style={styles.allDoneIconCircle}>
-                  <Feather name="calendar" size={24} color={colors.primary} />
-                </View>
-                <View style={styles.allDoneTextCol}>
-                  <Text style={[styles.allDoneTitle, { fontSize: fs(15) }]}>
-                    Không có lịch nhắc cần xử lý
-                  </Text>
-                  <Text style={[styles.allDoneSub, { fontSize: fs(12) }]}>
-                    Chúc cụ một ngày thật bình an và vui vẻ bên con cháu!
-                  </Text>
-                </View>
-              </View>
-            )}
           </View>
 
           {/* 6. Today's Tip Card (Eldora Soft Green Nature Card) */}
           <View style={styles.sectionWrap}>
             <View style={styles.tipCard}>
               <View style={styles.tipIconCircle}>
-                <Feather name="sun" size={20} color="#8F6624" />
+                <Feather name="sun" size={20} color={colors.background === baseColors.background ? "#8F6624" : colors.primary} />
               </View>
               <View style={styles.tipTextCol}>
-                <Text style={[styles.tipKicker, { fontSize: fs(11) }]}>
-                  LỜI KHUYÊN SỨC KHỎE TỪ MIMAMORI AI
-                </Text>
-                <Text style={[styles.tipBody, { fontSize: fs(13.5) }]}>
-                  Một ly nước ấm vào buổi sáng sau khi thức dậy sẽ giúp cơ thể cụ thanh lọc tự nhiên, tăng tuần hoàn máu và tinh thần sảng khoái suốt ngày dài!
-                </Text>
+                <Text style={[styles.tipKicker, { fontSize: fs(11) }]}>{tr("LỜI KHUYÊN SỨC KHỎE TỪ MIMAMORI AI")}</Text>
+                <Text style={[styles.tipBody, { fontSize: fs(13.5) }]}>{tr("Một ly nước ấm vào buổi sáng sau khi thức dậy sẽ giúp cơ thể cụ thanh lọc tự nhiên, tăng tuần hoàn máu và tinh thần sảng khoái suốt ngày dài!")}</Text>
               </View>
             </View>
           </View>
@@ -396,7 +302,7 @@ export const ElderlyHomeScreen: React.FC<Props> = ({ onNavigateTab }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (colors: typeof baseColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -428,8 +334,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   seniorAvatarBox: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: 24,
     backgroundColor: colors.primaryLight,
     borderWidth: 1.5,
@@ -459,11 +365,11 @@ const styles = StyleSheet.create({
   },
   dailyWellnessCard: {
     flexDirection: 'row',
-    backgroundColor: '#F7EFE2',
+    backgroundColor: colors.background === baseColors.background ? '#F7EFE2' : colors.surfaceWarm,
     borderRadius: 24,
     padding: 18,
     borderWidth: 1,
-    borderColor: '#EBDDC5',
+    borderColor: colors.background === baseColors.background ? '#EBDDC5' : colors.border,
     ...shadows.subtle,
   },
   wellnessLeftCol: {
@@ -471,7 +377,7 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   wellnessBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: colors.background===baseColors.background ? 'rgba(255,255,255,0.7)' : colors.primaryLight,
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -480,7 +386,7 @@ const styles = StyleSheet.create({
   },
   wellnessBadgeText: {
     fontWeight: '800',
-    color: '#8F6624',
+    color: colors.background === baseColors.background ? '#8F6624' : colors.textPrimary,
     letterSpacing: 0.5,
   },
   wellnessTitle: {
@@ -490,7 +396,7 @@ const styles = StyleSheet.create({
   },
   wellnessDesc: {
     color: colors.textSecondary,
-    lineHeight: 18,
+
     marginBottom: 12,
   },
   wellnessBtn: {
@@ -506,7 +412,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.successText,
   },
   wellnessBtnText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '700',
   },
   wellnessRightCol: {
@@ -516,9 +422,9 @@ const styles = StyleSheet.create({
   },
   smileFaceCircle: {
     width: 54,
-    height: 54,
+    minHeight: 56,
     borderRadius: 27,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: colors.background===baseColors.background ? 'rgba(255,255,255,0.85)' : colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -545,7 +451,7 @@ const styles = StyleSheet.create({
   },
   gridIconCircle: {
     width: 44,
-    height: 44,
+    minHeight: 56,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
@@ -587,6 +493,7 @@ const styles = StyleSheet.create({
   upcomingIconCircle: {
     width: 44,
     height: 44,
+    alignSelf: 'flex-start',
     borderRadius: 22,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
@@ -620,7 +527,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   upcomingConfirmBtnText: {
-    color: '#FFFFFF',
+    color: colors.textInverse,
     fontWeight: '700',
   },
   allDoneUpcomingCard: {
@@ -634,9 +541,9 @@ const styles = StyleSheet.create({
   },
   allDoneIconCircle: {
     width: 40,
-    height: 40,
+    minHeight: 56,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: colors.background===baseColors.background ? 'rgba(255,255,255,0.7)' : colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -651,7 +558,7 @@ const styles = StyleSheet.create({
   },
   allDoneSub: {
     color: colors.successText,
-    lineHeight: 18,
+
   },
   emptyUpcomingCard: {
     flexDirection: 'row',
@@ -664,17 +571,17 @@ const styles = StyleSheet.create({
   },
   tipCard: {
     flexDirection: 'row',
-    backgroundColor: '#EEF4EF',
+    backgroundColor: colors.background === baseColors.background ? '#EEF4EF' : colors.surfaceWarm,
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#D7E5D9',
+    borderColor: colors.background === baseColors.background ? '#D7E5D9' : colors.border,
   },
   tipIconCircle: {
     width: 40,
-    height: 40,
+    minHeight: 56,
     borderRadius: 20,
-    backgroundColor: '#FDF7EB',
+    backgroundColor: colors.background === baseColors.background ? '#FDF7EB' : colors.surfaceWarm,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -684,12 +591,12 @@ const styles = StyleSheet.create({
   },
   tipKicker: {
     fontWeight: '800',
-    color: '#8F6624',
+    color: colors.background === baseColors.background ? '#8F6624' : colors.textPrimary,
     marginBottom: 4,
     letterSpacing: 0.5,
   },
   tipBody: {
     color: colors.textPrimary,
-    lineHeight: 20,
+
   },
 });

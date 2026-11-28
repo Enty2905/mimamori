@@ -1,0 +1,2212 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "servers" : [ {
+    "url" : "http://localhost",
+    "description" : "Generated server url"
+  } ],
+  "tags" : [ {
+    "name" : "AI Companion Conversations",
+    "description" : "Endpoints for friendly AI companion chatting and message history"
+  }, {
+    "name" : "Caregiver & Elderly Dashboard",
+    "description" : "Endpoints for remote monitoring, status overview, adherence and summaries"
+  }, {
+    "name" : "User Profile",
+    "description" : "Endpoints for user profile management"
+  }, {
+    "name" : "Authentication",
+    "description" : "Endpoints for user registration and authentication"
+  }, {
+    "name" : "Care Alerts",
+    "description" : "Endpoints for care alerts, missed checkin/medication warnings, and resolution"
+  }, {
+    "name" : "Medication Management",
+    "description" : "Endpoints for managing medications, schedules, reminders and confirmation"
+  }, {
+    "name" : "Family Linking",
+    "description" : "Endpoints for linking Caregiver with Elderly users"
+  }, {
+    "name" : "Daily Check-in",
+    "description" : "Endpoints for elderly daily health & wellbeing check-ins"
+  }, {
+    "name" : "Push Notifications",
+    "description" : "Endpoints for in-app reminders and notifications"
+  } ],
+  "paths" : {
+    "/api/users/me" : {
+      "get" : {
+        "tags" : [ "User Profile" ],
+        "summary" : "Get current user profile",
+        "operationId" : "getProfile",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseUserDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "User Profile" ],
+        "summary" : "Update current user profile",
+        "operationId" : "updateProfile",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseUserDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/{id}/read" : {
+      "put" : {
+        "tags" : [ "Push Notifications" ],
+        "summary" : "Mark a notification as read",
+        "operationId" : "markAsRead",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/medications/{id}" : {
+      "put" : {
+        "tags" : [ "Medication Management" ],
+        "operationId" : "updateMedication",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateMedicationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseMedicationDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Medication Management" ],
+        "summary" : "Deactivate/delete a medication",
+        "operationId" : "deleteMedication",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family/link/{id}/accept" : {
+      "put" : {
+        "tags" : [ "Family Linking" ],
+        "operationId" : "accept",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseFamilyMemberDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/devices/{id}" : {
+      "put" : {
+        "tags" : [ "device-controller" ],
+        "operationId" : "register",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Registration"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "device-controller" ],
+        "operationId" : "remove",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/devices/{id}/mirrors" : {
+      "put" : {
+        "tags" : [ "device-controller" ],
+        "operationId" : "mirrors",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MirrorReceipt"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/{id}/resolve" : {
+      "put" : {
+        "tags" : [ "Care Alerts" ],
+        "summary" : "Mark an alert as resolved / acknowledged",
+        "operationId" : "resolveAlert",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseCareAlertDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/{id}/read" : {
+      "put" : {
+        "tags" : [ "Care Alerts" ],
+        "summary" : "Mark an alert as read",
+        "operationId" : "markAsRead_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseCareAlertDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/medications" : {
+      "get" : {
+        "tags" : [ "Medication Management" ],
+        "summary" : "Get list of active medications for user or linked elderly",
+        "operationId" : "getMedications",
+        "parameters" : [ {
+          "name" : "elderlyId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListMedicationDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Medication Management" ],
+        "summary" : "Create a new medication with reminder schedules",
+        "operationId" : "createMedication",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateMedicationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseMedicationDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/medications/logs/{id}/confirm" : {
+      "post" : {
+        "tags" : [ "Medication Management" ],
+        "summary" : "Confirm medication has been taken or skipped",
+        "operationId" : "confirmMedication",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfirmMedicationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseMedicationLogDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family/link" : {
+      "post" : {
+        "tags" : [ "Family Linking" ],
+        "summary" : "Link a caregiver with an elderly member by username",
+        "operationId" : "linkElderly",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LinkFamilyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseFamilyMemberDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/emergencies" : {
+      "post" : {
+        "tags" : [ "emergency-controller" ],
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EmergencyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseReceipt"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/conversations/{id}/messages" : {
+      "get" : {
+        "tags" : [ "AI Companion Conversations" ],
+        "summary" : "Get message history of a conversation",
+        "operationId" : "getMessages",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListChatMessageDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "AI Companion Conversations" ],
+        "summary" : "Send a message to AI companion and receive empathetic response",
+        "operationId" : "sendMessage",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChatMessageRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseChatMessageDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/conversations/{id}/messages/stream" : {
+      "post" : {
+        "tags" : [ "conversation-stream-controller" ],
+        "operationId" : "stream",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChatMessageRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "text/event-stream;charset=UTF-8" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SseEmitter"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checkins" : {
+      "post" : {
+        "tags" : [ "Daily Check-in" ],
+        "summary" : "Submit today's daily wellbeing check-in",
+        "operationId" : "submitCheckIn",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DailyCheckInRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseDailyCheckInDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register" : {
+      "post" : {
+        "tags" : [ "Authentication" ],
+        "summary" : "Register a new user (ELDERLY or CAREGIVER)",
+        "operationId" : "register_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseAuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh" : {
+      "post" : {
+        "tags" : [ "Authentication" ],
+        "operationId" : "refresh",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseAuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout" : {
+      "post" : {
+        "tags" : [ "Authentication" ],
+        "operationId" : "logout",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login" : {
+      "post" : {
+        "tags" : [ "Authentication" ],
+        "summary" : "Authenticate user and retrieve JWT token",
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseAuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/forgot-password" : {
+      "post" : {
+        "tags" : [ "Authentication" ],
+        "summary" : "Reset password using registered username or email",
+        "operationId" : "forgotPassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/change-password" : {
+      "post" : {
+        "tags" : [ "Authentication" ],
+        "summary" : "Change password for authenticated user",
+        "operationId" : "changePassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reminders/upcoming" : {
+      "get" : {
+        "tags" : [ "reminder-controller" ],
+        "operationId" : "upcoming",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListMedicationLogDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications" : {
+      "get" : {
+        "tags" : [ "Push Notifications" ],
+        "summary" : "Get notifications for authenticated user",
+        "operationId" : "getNotifications",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListNotificationDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/medications/today" : {
+      "get" : {
+        "tags" : [ "Medication Management" ],
+        "summary" : "Get today's medication reminder schedules and statuses",
+        "operationId" : "getTodaySchedule",
+        "parameters" : [ {
+          "name" : "elderlyId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListMedicationLogDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/medications/logs/{id}" : {
+      "get" : {
+        "tags" : [ "Medication Management" ],
+        "operationId" : "dose",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseMedicationLogDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/medications/history" : {
+      "get" : {
+        "tags" : [ "Medication Management" ],
+        "summary" : "Get medication adherence history",
+        "operationId" : "getHistory",
+        "parameters" : [ {
+          "name" : "elderlyId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListMedicationLogDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family/members" : {
+      "get" : {
+        "tags" : [ "Family Linking" ],
+        "summary" : "List linked family members for current user",
+        "operationId" : "getFamilyMembers",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListFamilyMemberDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/overview" : {
+      "get" : {
+        "tags" : [ "Caregiver & Elderly Dashboard" ],
+        "summary" : "Get aggregated health, medication, check-in, alert, and status overview",
+        "operationId" : "getOverview",
+        "parameters" : [ {
+          "name" : "elderlyId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseDashboardOverviewDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/conversations/active" : {
+      "get" : {
+        "tags" : [ "AI Companion Conversations" ],
+        "summary" : "Get or create active conversation for elderly user",
+        "operationId" : "getActiveConversation",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseConversationDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checkins/today" : {
+      "get" : {
+        "tags" : [ "Daily Check-in" ],
+        "summary" : "Get today's check-in status for user or linked elderly",
+        "operationId" : "getTodayCheckIn",
+        "parameters" : [ {
+          "name" : "elderlyId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseDailyCheckInDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checkins/history" : {
+      "get" : {
+        "tags" : [ "Daily Check-in" ],
+        "summary" : "Get check-in history",
+        "operationId" : "getHistory_1",
+        "parameters" : [ {
+          "name" : "elderlyId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListDailyCheckInDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me" : {
+      "get" : {
+        "tags" : [ "Authentication" ],
+        "summary" : "Retrieve current authenticated user profile",
+        "operationId" : "getMe",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseUserDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts" : {
+      "get" : {
+        "tags" : [ "Care Alerts" ],
+        "summary" : "Get care alerts for current user",
+        "operationId" : "getAlerts",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseListCareAlertDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/family/link/{id}" : {
+      "delete" : {
+        "tags" : [ "Family Linking" ],
+        "summary" : "Remove a family relationship",
+        "operationId" : "removeLink",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiResponseVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "UpdateProfileRequest" : {
+        "type" : "object",
+        "properties" : {
+          "fullName" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 1,
+            "pattern" : "(?s).*\\S.*"
+          },
+          "phone" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "minLength" : 0
+          },
+          "emergencyContact" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "minLength" : 0
+          },
+          "avatarUrl" : {
+            "type" : "string",
+            "maxLength" : 2048,
+            "minLength" : 0
+          },
+          "languagePreference" : {
+            "type" : "string",
+            "pattern" : "ja|vi"
+          },
+          "timeZone" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          }
+        }
+      },
+      "ApiResponseUserDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/UserDto"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "UserDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "timeZone" : {
+            "type" : "string"
+          },
+          "username" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string",
+            "enum" : [ "ELDERLY", "CAREGIVER" ]
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "emergencyContact" : {
+            "type" : "string"
+          },
+          "avatarUrl" : {
+            "type" : "string"
+          },
+          "languagePreference" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ApiResponseVoid" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : { },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CreateMedicationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "elderlyId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "timeZone" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "dosage" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "instructions" : {
+            "type" : "string"
+          },
+          "startDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "endDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "reminderTimes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "minItems" : 1
+          }
+        },
+        "required" : [ "dosage", "name", "reminderTimes", "startDate" ]
+      },
+      "ApiResponseMedicationDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/MedicationDto"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "MedicationDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "timeZone" : {
+            "type" : "string"
+          },
+          "elderlyId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "dosage" : {
+            "type" : "string"
+          },
+          "instructions" : {
+            "type" : "string"
+          },
+          "startDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "endDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "isActive" : {
+            "type" : "boolean"
+          },
+          "schedules" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MedicationScheduleDto"
+            }
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "MedicationScheduleDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "reminderTime" : {
+            "type" : "string"
+          },
+          "dosageAmount" : {
+            "type" : "string"
+          },
+          "daysOfWeek" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ApiResponseFamilyMemberDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/FamilyMemberDto"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "FamilyMemberDto" : {
+        "type" : "object",
+        "properties" : {
+          "relationshipId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "member" : {
+            "$ref" : "#/components/schemas/UserDto"
+          },
+          "relationshipType" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "ACCEPTED", "REJECTED" ]
+          },
+          "canViewConversations" : {
+            "type" : "boolean"
+          },
+          "linkedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "Registration" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          },
+          "platform" : {
+            "type" : "string"
+          }
+        }
+      },
+      "MirrorReceipt" : {
+        "type" : "object",
+        "properties" : {
+          "occurrenceIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "ApiResponseCareAlertDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/CareAlertDto"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CareAlertDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "elderlyId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "elderlyName" : {
+            "type" : "string"
+          },
+          "caregiverId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "alertType" : {
+            "type" : "string",
+            "enum" : [ "MISSED_MEDICATION", "MISSED_CHECKIN", "CHECKIN_CONCERN", "SYSTEM_NOTIFICATION", "EMERGENCY" ]
+          },
+          "severity" : {
+            "type" : "string",
+            "enum" : [ "LOW", "MEDIUM", "HIGH", "CRITICAL" ]
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "isRead" : {
+            "type" : "boolean"
+          },
+          "isResolved" : {
+            "type" : "boolean"
+          },
+          "resolvedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ConfirmMedicationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "TAKEN", "MISSED", "SKIPPED" ]
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "confirmedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ApiResponseMedicationLogDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/MedicationLogDto"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "MedicationLogDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "occurrenceId" : {
+            "type" : "string"
+          },
+          "scheduledAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "confirmedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "timeZone" : {
+            "type" : "string"
+          },
+          "canceled" : {
+            "type" : "boolean"
+          },
+          "instructions" : {
+            "type" : "string"
+          },
+          "scheduleId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "medicationId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "medicationName" : {
+            "type" : "string"
+          },
+          "dosage" : {
+            "type" : "string"
+          },
+          "scheduledTime" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "takenTime" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "TAKEN", "MISSED", "SKIPPED" ]
+          },
+          "notes" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LinkFamilyRequest" : {
+        "type" : "object",
+        "properties" : {
+          "elderlyUsername" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "relationshipType" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "elderlyUsername" ]
+      },
+      "EmergencyRequest" : {
+        "type" : "object",
+        "properties" : {
+          "requestId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        },
+        "required" : [ "requestId" ]
+      },
+      "ApiResponseReceipt" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/Receipt"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "Receipt" : {
+        "type" : "object",
+        "properties" : {
+          "requestId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "recipientCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "ChatMessageRequest" : {
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "requestId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
+      "ApiResponseChatMessageDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/ChatMessageDto"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ChatMessageDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "conversationId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sender" : {
+            "type" : "string",
+            "enum" : [ "USER", "AI", "SYSTEM" ]
+          },
+          "content" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "SseEmitter" : {
+        "type" : "object",
+        "properties" : {
+          "timeout" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "DailyCheckInRequest" : {
+        "type" : "object",
+        "properties" : {
+          "mood" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "physicalHealth" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "sleepQuality" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "appetite" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "notes" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "appetite", "mood", "physicalHealth", "sleepQuality" ]
+      },
+      "ApiResponseDailyCheckInDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/DailyCheckInDto"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "DailyCheckInDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "elderlyId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "checkinDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "mood" : {
+            "type" : "string"
+          },
+          "physicalHealth" : {
+            "type" : "string"
+          },
+          "sleepQuality" : {
+            "type" : "string"
+          },
+          "appetite" : {
+            "type" : "string"
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "concerningFlag" : {
+            "type" : "boolean"
+          },
+          "aiAnalysisSummary" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "RegisterRequest" : {
+        "type" : "object",
+        "properties" : {
+          "username" : {
+            "type" : "string",
+            "maxLength" : 50,
+            "minLength" : 3
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "minLength" : 1
+          },
+          "password" : {
+            "type" : "string",
+            "maxLength" : 2147483647,
+            "minLength" : 6
+          },
+          "fullName" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "role" : {
+            "type" : "string",
+            "enum" : [ "ELDERLY", "CAREGIVER" ]
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "emergencyContact" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "fullName", "password", "role", "username" ]
+      },
+      "ApiResponseAuthResponse" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/AuthResponse"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "AuthResponse" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          },
+          "tokenType" : {
+            "type" : "string"
+          },
+          "user" : {
+            "$ref" : "#/components/schemas/UserDto"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RefreshRequest" : {
+        "type" : "object",
+        "properties" : {
+          "refreshToken" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "refreshToken" ]
+      },
+      "LoginRequest" : {
+        "type" : "object",
+        "properties" : {
+          "usernameOrEmail" : {
+            "type" : "string"
+          },
+          "username" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "password" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ForgotPasswordRequest" : {
+        "type" : "object",
+        "properties" : {
+          "usernameOrEmail" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "newPassword" : {
+            "type" : "string",
+            "maxLength" : 2147483647,
+            "minLength" : 6
+          }
+        },
+        "required" : [ "newPassword", "usernameOrEmail" ]
+      },
+      "ChangePasswordRequest" : {
+        "type" : "object",
+        "properties" : {
+          "currentPassword" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "newPassword" : {
+            "type" : "string",
+            "maxLength" : 2147483647,
+            "minLength" : 6
+          }
+        },
+        "required" : [ "currentPassword", "newPassword" ]
+      },
+      "ApiResponseListMedicationLogDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MedicationLogDto"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ApiResponseListNotificationDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/NotificationDto"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "NotificationDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "userId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "body" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          },
+          "referenceId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "isRead" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ApiResponseListMedicationDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MedicationDto"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ApiResponseListFamilyMemberDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FamilyMemberDto"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ApiResponseDashboardOverviewDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/DashboardOverviewDto"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "DailySummaryDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "elderlyId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "summaryDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "medicationAdherenceRate" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "checkinSummary" : {
+            "type" : "string"
+          },
+          "alertCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "aiHealthNote" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "DashboardOverviewDto" : {
+        "type" : "object",
+        "properties" : {
+          "elderly" : {
+            "$ref" : "#/components/schemas/UserDto"
+          },
+          "careStatus" : {
+            "type" : "string"
+          },
+          "todayCheckIn" : {
+            "$ref" : "#/components/schemas/DailyCheckInDto"
+          },
+          "todayMedications" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MedicationLogDto"
+            }
+          },
+          "medicationAdherence" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "activeAlerts" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CareAlertDto"
+            }
+          },
+          "recentSummary" : {
+            "$ref" : "#/components/schemas/DailySummaryDto"
+          }
+        }
+      },
+      "ApiResponseListChatMessageDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ChatMessageDto"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ApiResponseConversationDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/ConversationDto"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ConversationDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "elderlyId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "lastMessageAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "messages" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ChatMessageDto"
+            }
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ApiResponseListDailyCheckInDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DailyCheckInDto"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ApiResponseListCareAlertDto" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CareAlertDto"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      }
+    }
+  }
+}
